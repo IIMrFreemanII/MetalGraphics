@@ -106,17 +106,6 @@ public class MyMTKView: MTKView {
   }
 }
 
-public struct Time {
-  static var time: Float = 0
-  static var deltaTime: Float = 0
-  
-  static var cursorTime = Float()
-  static var cursorSinBlinking = Float()
-  static func resetCursorBlinking() {
-    Self.cursorTime = 0
-  }
-}
-
 open class ViewRenderer: NSObject {
   public var metalView: MTKView!
   

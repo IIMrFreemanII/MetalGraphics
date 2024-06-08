@@ -34,7 +34,9 @@
 		15941A072C149A7500C56203 /* float4x4.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15941A062C149A7500C56203 /* float4x4.swift */; };
 		15941A092C149AE000C56203 /* float2x2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15941A082C149AE000C56203 /* float2x2.swift */; };
 		15941A0B2C149B6700C56203 /* float3x3.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15941A0A2C149B6700C56203 /* float3x3.swift */; };
-		15941A0D2C149DE300C56203 /* Renderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15941A0C2C149DE300C56203 /* Renderer.swift */; };
+		15941A0D2C149DE300C56203 /* TestViewRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15941A0C2C149DE300C56203 /* TestViewRenderer.swift */; };
+		15941A0F2C14A2C100C56203 /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15941A0E2C14A2C100C56203 /* Shaders.metal */; };
+		15941A112C14A64100C56203 /* Time.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15941A102C14A64100C56203 /* Time.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -90,7 +92,9 @@
 		15941A062C149A7500C56203 /* float4x4.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = float4x4.swift; sourceTree = "<group>"; };
 		15941A082C149AE000C56203 /* float2x2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = float2x2.swift; sourceTree = "<group>"; };
 		15941A0A2C149B6700C56203 /* float3x3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = float3x3.swift; sourceTree = "<group>"; };
-		15941A0C2C149DE300C56203 /* Renderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Renderer.swift; sourceTree = "<group>"; };
+		15941A0C2C149DE300C56203 /* TestViewRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestViewRenderer.swift; sourceTree = "<group>"; };
+		15941A0E2C14A2C100C56203 /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
+		15941A102C14A64100C56203 /* Time.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Time.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,7 +143,8 @@
 				159419AA2C147B0F00C56203 /* Assets.xcassets */,
 				159419AF2C147B0F00C56203 /* GPURayMarching.entitlements */,
 				159419AC2C147B0F00C56203 /* Preview Content */,
-				15941A0C2C149DE300C56203 /* Renderer.swift */,
+				15941A0C2C149DE300C56203 /* TestViewRenderer.swift */,
+				15941A0E2C14A2C100C56203 /* Shaders.metal */,
 			);
 			path = GPURayMarching;
 			sourceTree = "<group>";
@@ -199,6 +204,7 @@
 				159419D62C14858300C56203 /* Rect.swift */,
 				159419D82C1485B000C56203 /* Inset.swift */,
 				159419E52C1490A200C56203 /* MetalGraphicsLib.h */,
+				15941A102C14A64100C56203 /* Time.swift */,
 			);
 			path = MetalGraphicsLib;
 			sourceTree = "<group>";
@@ -315,8 +321,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				15941A0F2C14A2C100C56203 /* Shaders.metal in Sources */,
 				159419A92C147B0E00C56203 /* ContentView.swift in Sources */,
-				15941A0D2C149DE300C56203 /* Renderer.swift in Sources */,
+				15941A0D2C149DE300C56203 /* TestViewRenderer.swift in Sources */,
 				159419A72C147B0E00C56203 /* GPURayMarchingApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -334,6 +341,7 @@
 				159419F42C14916C00C56203 /* MathLib.swift in Sources */,
 				159419F52C14917200C56203 /* Array.swift in Sources */,
 				159419FF2C1499CC00C56203 /* float4.swift in Sources */,
+				15941A112C14A64100C56203 /* Time.swift in Sources */,
 				159419EC2C1490B700C56203 /* Input.swift in Sources */,
 				159419ED2C1490B700C56203 /* Inset.swift in Sources */,
 				159419FB2C1498C800C56203 /* float2.swift in Sources */,
