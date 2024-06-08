@@ -69,7 +69,7 @@ public class MyMTKView: MTKView {
   }
   
   public override func mouseMoved(with event: NSEvent) {
-    let position = event.locationInWindow
+    let position = self.convert(event.locationInWindow, from: nil)
     
     let newX = Float(position.x.clamped(to: 0.0...CGFloat.greatestFiniteMagnitude))
     // flip because origin in bottom-left corner
