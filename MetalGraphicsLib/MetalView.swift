@@ -14,33 +14,33 @@ public struct MetalView: View {
       .onAppear {
         viewRenderer.initialize(metalView: metalView)
       }
-      .gesture(
-        DragGesture(minimumDistance: 1)
-          .onChanged { gesture in
-            let startLocation = float2(Float(gesture.startLocation.x), Float(gesture.startLocation.y))
-            let location = float2(Float(gesture.location.x), Float(gesture.location.y))
-            let delta = location - Input.prevMousePosition
-            Input.mouseDelta += float2(delta.x, -delta.y)
-            Input.prevMousePosition = location
-            let translation = location - startLocation
-            
-            Input.drag = true
-            Input.dragGesture = Drag(
-              start: startLocation,
-              location: location,
-              translation: translation
-            )
-          }
-          .onEnded { gesture in
-            Input.dragGesture = Drag(
-              start: float2(Float(gesture.startLocation.x), Float(gesture.startLocation.y)),
-              location: float2(Float(gesture.location.x), Float(gesture.location.x)),
-              translation: float2(Float(gesture.translation.width), Float(gesture.translation.height))
-            )
-            Input.dragEnded = true
-            Input.drag = false
-          }
-      )
+//      .gesture(
+//        DragGesture(minimumDistance: 0)
+//          .onChanged { gesture in
+//            let startLocation = float2(Float(gesture.startLocation.x), Float(gesture.startLocation.y))
+//            let location = float2(Float(gesture.location.x), Float(gesture.location.y))
+//            let delta = location - Input.prevMousePosition
+//            Input.mouseDelta = float2(delta.x, -delta.y)
+//            Input.prevMousePosition = location
+//            let translation = location - startLocation
+//            
+//            Input.drag = true
+//            Input.dragGesture = Drag(
+//              start: startLocation,
+//              location: location,
+//              translation: translation
+//            )
+//          }
+//          .onEnded { gesture in
+//            Input.dragGesture = Drag(
+//              start: float2(Float(gesture.startLocation.x), Float(gesture.startLocation.y)),
+//              location: float2(Float(gesture.location.x), Float(gesture.location.x)),
+//              translation: float2(Float(gesture.translation.width), Float(gesture.translation.height))
+//            )
+//            Input.dragEnded = true
+//            Input.drag = false
+//          }
+//      )
   }
 }
 

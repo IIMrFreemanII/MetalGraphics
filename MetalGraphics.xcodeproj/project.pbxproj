@@ -35,8 +35,10 @@
 		15941A092C149AE000C56203 /* float2x2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15941A082C149AE000C56203 /* float2x2.swift */; };
 		15941A0B2C149B6700C56203 /* float3x3.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15941A0A2C149B6700C56203 /* float3x3.swift */; };
 		15941A0D2C149DE300C56203 /* TestViewRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15941A0C2C149DE300C56203 /* TestViewRenderer.swift */; };
-		15941A0F2C14A2C100C56203 /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15941A0E2C14A2C100C56203 /* Shaders.metal */; };
 		15941A112C14A64100C56203 /* Time.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15941A102C14A64100C56203 /* Time.swift */; };
+		15941A132C15BCC000C56203 /* MyMTKView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15941A122C15BCC000C56203 /* MyMTKView.swift */; };
+		15941A1A2C15DD9200C56203 /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15941A0E2C14A2C100C56203 /* Shaders.metal */; };
+		15941A282C15E32D00C56203 /* Math.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15941A152C15DC2F00C56203 /* Math.metal */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -95,6 +97,9 @@
 		15941A0C2C149DE300C56203 /* TestViewRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestViewRenderer.swift; sourceTree = "<group>"; };
 		15941A0E2C14A2C100C56203 /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
 		15941A102C14A64100C56203 /* Time.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Time.swift; sourceTree = "<group>"; };
+		15941A122C15BCC000C56203 /* MyMTKView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyMTKView.swift; sourceTree = "<group>"; };
+		15941A152C15DC2F00C56203 /* Math.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Math.metal; sourceTree = "<group>"; };
+		15941A212C15E31900C56203 /* MetalShaders.metallib */ = {isa = PBXFileReference; explicitFileType = "archive.metal-library"; includeInIndex = 0; path = MetalShaders.metallib; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -121,6 +126,7 @@
 			children = (
 				159419A52C147B0E00C56203 /* GPURayMarching */,
 				159419E42C1490A200C56203 /* MetalGraphicsLib */,
+				15941A222C15E31900C56203 /* MetalShaders */,
 				1594198F2C147A6900C56203 /* Products */,
 				159419D22C14831000C56203 /* Frameworks */,
 			);
@@ -131,6 +137,7 @@
 			children = (
 				159419A42C147B0E00C56203 /* GPURayMarching.app */,
 				159419E32C1490A200C56203 /* MetalGraphicsLib.framework */,
+				15941A212C15E31900C56203 /* MetalShaders.metallib */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -205,8 +212,17 @@
 				159419D82C1485B000C56203 /* Inset.swift */,
 				159419E52C1490A200C56203 /* MetalGraphicsLib.h */,
 				15941A102C14A64100C56203 /* Time.swift */,
+				15941A122C15BCC000C56203 /* MyMTKView.swift */,
 			);
 			path = MetalGraphicsLib;
+			sourceTree = "<group>";
+		};
+		15941A222C15E31900C56203 /* MetalShaders */ = {
+			isa = PBXGroup;
+			children = (
+				15941A152C15DC2F00C56203 /* Math.metal */,
+			);
+			path = MetalShaders;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -260,6 +276,21 @@
 			productReference = 159419E32C1490A200C56203 /* MetalGraphicsLib.framework */;
 			productType = "com.apple.product-type.framework";
 		};
+		15941A202C15E31900C56203 /* MetalShaders */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 15941A252C15E31900C56203 /* Build configuration list for PBXNativeTarget "MetalShaders" */;
+			buildPhases = (
+				15941A1F2C15E31900C56203 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MetalShaders;
+			productName = MetalShaders;
+			productReference = 15941A212C15E31900C56203 /* MetalShaders.metallib */;
+			productType = "com.apple.product-type.metal-library";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -274,6 +305,9 @@
 						CreatedOnToolsVersion = 15.4;
 					};
 					159419E22C1490A200C56203 = {
+						CreatedOnToolsVersion = 15.4;
+					};
+					15941A202C15E31900C56203 = {
 						CreatedOnToolsVersion = 15.4;
 					};
 				};
@@ -293,6 +327,7 @@
 			targets = (
 				159419A32C147B0E00C56203 /* GPURayMarching */,
 				159419E22C1490A200C56203 /* MetalGraphicsLib */,
+				15941A202C15E31900C56203 /* MetalShaders */,
 			);
 		};
 /* End PBXProject section */
@@ -321,10 +356,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				15941A0F2C14A2C100C56203 /* Shaders.metal in Sources */,
 				159419A92C147B0E00C56203 /* ContentView.swift in Sources */,
 				15941A0D2C149DE300C56203 /* TestViewRenderer.swift in Sources */,
 				159419A72C147B0E00C56203 /* GPURayMarchingApp.swift in Sources */,
+				15941A1A2C15DD9200C56203 /* Shaders.metal in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -335,6 +370,7 @@
 				159419EE2C1490B700C56203 /* ViewRenderer.swift in Sources */,
 				159419F92C14917A00C56203 /* String.swift in Sources */,
 				15941A052C149A4600C56203 /* uchar4.swift in Sources */,
+				15941A132C15BCC000C56203 /* MyMTKView.swift in Sources */,
 				15941A072C149A7500C56203 /* float4x4.swift in Sources */,
 				159419F62C14917400C56203 /* Comparable.swift in Sources */,
 				15941A032C149A2A00C56203 /* int3.swift in Sources */,
@@ -353,6 +389,14 @@
 				159419EB2C1490B700C56203 /* Rect.swift in Sources */,
 				159419F72C14917600C56203 /* Float.swift in Sources */,
 				15941A012C149A1400C56203 /* int2.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		15941A1F2C15E31900C56203 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				15941A282C15E32D00C56203 /* Math.metal in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -505,6 +549,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/MetalShaders";
 				PRODUCT_BUNDLE_IDENTIFIER = com.company.GPURayMarching;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -532,6 +577,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/MetalShaders";
 				PRODUCT_BUNDLE_IDENTIFIER = com.company.GPURayMarching;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -563,6 +609,7 @@
 				MARKETING_VERSION = 1.0;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				MTL_HEADER_SEARCH_PATHS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.company.MetalGraphicsLib;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
@@ -598,6 +645,7 @@
 				MARKETING_VERSION = 1.0;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				MTL_HEADER_SEARCH_PATHS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.company.MetalGraphicsLib;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				SKIP_INSTALL = YES;
@@ -606,6 +654,26 @@
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		15941A262C15E31900C56203 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 3KB6K4T6NP;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VERSIONING_SYSTEM = "";
+			};
+			name = Debug;
+		};
+		15941A272C15E31900C56203 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 3KB6K4T6NP;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				VERSIONING_SYSTEM = "";
 			};
 			name = Release;
 		};
@@ -635,6 +703,15 @@
 			buildConfigurations = (
 				159419E82C1490A200C56203 /* Debug */,
 				159419E92C1490A200C56203 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		15941A252C15E31900C56203 /* Build configuration list for PBXNativeTarget "MetalShaders" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				15941A262C15E31900C56203 /* Debug */,
+				15941A272C15E31900C56203 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

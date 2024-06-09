@@ -94,7 +94,7 @@ extension float4x4 {
     let rotationX = float4x4(rotationX: angle.x)
     let rotationY = float4x4(rotationY: angle.y)
     let rotationZ = float4x4(rotationZ: angle.z)
-    self = rotationX * rotationY * rotationZ
+    self = rotationZ * rotationY * rotationZ
   }
   
   public init(rotationYXZ angle: float3) {

@@ -2,6 +2,30 @@ import simd
 
 public let π = Float.pi
 
+public func toRadians(_ value: Float) -> Float {
+  return (value / 180) * π
+}
+
+public func toDegrees(_ value: Float) -> Float {
+  return (value / π) * 180
+}
+
+public func toRadians(_ value: float2) -> float2 {
+  return float2(toRadians(value.x), toRadians(value.y))
+}
+
+public func toDegrees(_ value: float2) -> float2 {
+  return float2(toDegrees(value.x), toDegrees(value.y))
+}
+
+public func toRadians(_ value: float3) -> float3 {
+  return float3(toRadians(value.x), toRadians(value.y), toRadians(value.z))
+}
+
+public func toDegrees(_ value: float3) -> float3 {
+  return float3(toDegrees(value.x), toDegrees(value.y), toDegrees(value.z))
+}
+
 public func modelFrom(trans: float3, rot: float3, scale: float3) -> matrix_float4x4 {
   let translation = float4x4(translation: trans)
   let rotation = float4x4(rotation: rot)

@@ -17,14 +17,6 @@ extension Float {
     }
 }
 
-public func toRadians(_ value: Float) -> Float {
-  return (value / 180) * π
-}
-
-public func toDegrees(_ value: Float) -> Float {
-  return (value / π) * 180
-}
-
 extension Float {
   public var radiansToDegrees: Float {
     (self / π) * 180
