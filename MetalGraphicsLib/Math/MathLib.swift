@@ -58,7 +58,7 @@ public func remap(
   }
 
 public func lerp(min: Float, max: Float, t: Float) -> Float {
-  return (max - min) * t + min
+  return min + (max - min) * t
 }
 
 public func normalize(value: Float, min: Float, max: Float) -> Float {

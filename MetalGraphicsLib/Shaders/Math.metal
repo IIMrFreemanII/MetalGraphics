@@ -8,8 +8,12 @@ float remap(float value, float2 inputMinMax, float2 outputMinMax) {
   return outputMinMax.x + (outputMinMax.y - outputMinMax.x) * ((value - inputMinMax.x) / (inputMinMax.y - inputMinMax.x));
 }
 
+float2 remap(float2 value, float2 inputMinMax, float2 outputMinMax) {
+  return outputMinMax.x + (outputMinMax.y - outputMinMax.x) * ((value - inputMinMax.x) / (inputMinMax.y - inputMinMax.x));
+}
+
 float lerp(float min, float max, float t) {
-  return (max - min) * t + min;
+  return min + (max - min) * t;
 }
 
 float normalize(float value, float min, float max) {

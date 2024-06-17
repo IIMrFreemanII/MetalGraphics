@@ -135,8 +135,8 @@ class TestViewRenderer : ViewRenderer {
     super.draw(in: view)
     
     Graphics.context(in: view) { r in
-      Graphics.draw(circle: Circle(position: float2(-0.6, 0), radius: Float(0.5), color: float4(1, 0, 0, 1)))
-      Graphics.draw(square: Square(position: float2(0.6, 0), size: float2(1, 1), color: float4(0, 1, 0, 1)))
+      Graphics.draw(circle: Circle(position: float2(0, 0), radius: Float(50), color: float4(1, 0, 0, 1)))
+//      Graphics.draw(square: Square(position: float2(100, 0), size: float2(100, 100), color: float4(0, 1, 0, 1)))
     }
 //    self.update()
 //    defer {

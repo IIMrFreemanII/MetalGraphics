@@ -10,6 +10,7 @@ float dot2(float3 v);
 float ndot(float2 a, float2 b);
 
 float remap(float value, float2 inputMinMax, float2 outputMinMax);
+float2 remap(float2 value, float2 inputMinMax, float2 outputMinMax);
 float lerp(float min, float max, float t);
 float normalize(float value, float min, float max);
 

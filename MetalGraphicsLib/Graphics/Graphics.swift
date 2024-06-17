@@ -8,6 +8,11 @@ struct ShapeArgBuffer {
   var squaresCount: Int32 = 0
 }
 
+struct SceneData {
+  var windowSize = SIMD2<Int32>()
+  var time = Float()
+}
+
 public class Graphics {
   static var shared: Graphics = {
     var result = Graphics()
@@ -114,7 +119,9 @@ public class Graphics {
     commandEncoder.setComputePipelineState(shared.pipelineState)
     let texture = drawable.texture
     commandEncoder.setTexture(texture, index: 0)
-    commandEncoder.setBytes(&Time.time, length: MemoryLayout<Float>.stride, index: 0)
+    
+    var sceneData = SceneData(windowSize: SIMD2<Int32>(Int32(Input.windowSize.x), Int32(Input.windowSize.y)), time: Time.time)
+    commandEncoder.setBytes(&sceneData, length: MemoryLayout<SceneData>.stride, index: 0)
     commandEncoder.setBuffer(shared.shapeArgBuffer, offset: 0, index: 1)
     
     let width = shared.pipelineState.threadExecutionWidth
