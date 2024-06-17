@@ -7,17 +7,20 @@
 		<key>GPURayMarching.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>2</integer>
+			<integer>0</integer>
 		</dict>
 		<key>MetalGraphicsLib.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>1</integer>
 		</dict>
-		<key>MetalShaders.xcscheme_^#shared#^_</key>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>159419A32C147B0E00C56203</key>
 		<dict>
-			<key>orderHint</key>
-			<integer>0</integer>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>

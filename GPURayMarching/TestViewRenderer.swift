@@ -88,12 +88,11 @@ class TestViewRenderer : ViewRenderer {
     self.camera = Camera(position: float3(0, 0, -3), rotation: float3(), fov: 60)
     
     self.addSphere(Sphere(color: float4(1, 0, 0, 1), position: float3(-1, 0, 0), radius: 0.5))
-    self.addSphere(Sphere(color: float4(1, 0, 0, 1), position: float3(0, 0, 0), radius: 0.5))
-    self.addSphere(Sphere(color: float4(1, 0, 0, 1), position: float3(1, 0, 0), radius: 0.5))
+    self.addSphere(Sphere(color: float4(0, 1, 0, 1), position: float3(0, 0, 0), radius: 0.5))
+    self.addSphere(Sphere(color: float4(0, 0, 1, 1), position: float3(1, 0, 0), radius: 0.5))
     
     self.spheresBuffer = self.device.makeBuffer(bytes: &self.spheres, length: MemoryLayout<Sphere>.stride * self.spheres.count)
     self.spheresBuffer.label = "Spheres buffer"
-    print(MemoryLayout<GridItem>.stride)
     self.gridItemsBuffer = self.device.makeBuffer(bytes: &self.gridItems, length: MemoryLayout<GridItem>.stride * self.gridItems.count)
     self.gridItemsBuffer.label = "Grid items buffer"
     
@@ -106,69 +105,77 @@ class TestViewRenderer : ViewRenderer {
   }
   
   func update() {
+    let speed = Float(4)
+    let rotationSpeed = Float(15)
     Input.keyPress(.keyW) {
-      self.camera.position += (self.camera.rotationMatrix * float3.forward) * Time.deltaTime
+      self.camera.position += (self.camera.rotationMatrix * float3.forward) * Time.deltaTime * speed
     }
     Input.keyPress(.keyS) {
-      self.camera.position += (self.camera.rotationMatrix * float3.back) * Time.deltaTime
+      self.camera.position += (self.camera.rotationMatrix * float3.back) * Time.deltaTime * speed
     }
     Input.keyPress(.keyA) {
-      self.camera.position += (self.camera.rotationMatrix * float3.left) * Time.deltaTime
+      self.camera.position += (self.camera.rotationMatrix * float3.left) * Time.deltaTime * speed
     }
     Input.keyPress(.keyD) {
-      self.camera.position += (self.camera.rotationMatrix * float3.right) * Time.deltaTime
+      self.camera.position += (self.camera.rotationMatrix * float3.right) * Time.deltaTime * speed
     }
     Input.keyPress(.keyQ) {
-      self.camera.position += (self.camera.rotationMatrix * float3.down) * Time.deltaTime
+      self.camera.position += (self.camera.rotationMatrix * float3.down) * Time.deltaTime * speed
     }
     Input.keyPress(.keyE) {
-      self.camera.position += (self.camera.rotationMatrix * float3.up) * Time.deltaTime
+      self.camera.position += (self.camera.rotationMatrix * float3.up) * Time.deltaTime * speed
     }
     if Input.mousePressed {
-      self.camera.rotation.x += Input.mouseDelta.y
-      self.camera.rotation.y += Input.mouseDelta.x
+      self.camera.rotation.x += Input.mouseDelta.y * Time.deltaTime * rotationSpeed
+      self.camera.rotation.y += Input.mouseDelta.x * Time.deltaTime * rotationSpeed
     }
   }
   
   override func draw(in view: MTKView) {
     super.draw(in: view)
-    self.update()
-    defer {
-      Input.mouseDelta = float2()
-    }
     
-    guard
-      let commandBuffer = commandQueue.makeCommandBuffer(),
-      let drawable = view.currentDrawable,
-      let commandEncoder = commandBuffer.makeComputeCommandEncoder() else {
-      return
+    Graphics.context(in: view) { r in
+      Graphics.draw(circle: Circle(position: float2(-0.6, 0), radius: Float(0.5), color: float4(1, 0, 0, 1)))
+      Graphics.draw(square: Square(position: float2(0.6, 0), size: float2(1, 1), color: float4(0, 1, 0, 1)))
     }
-    
-    commandEncoder.setComputePipelineState(pipelineState)
-    let texture = drawable.texture
-    commandEncoder.setTexture(texture, index: 0)
-    commandEncoder.setBytes(&Time.time, length: MemoryLayout<Float>.stride, index: 0)
-    commandEncoder.setBytes(&self.camera, length: MemoryLayout<Camera>.stride, index: 1)
-    commandEncoder.setBuffer(self.gridArgBuffer, offset: 0, index: 2)
-
-    let width = pipelineState.threadExecutionWidth
-    let height = pipelineState.maxTotalThreadsPerThreadgroup / width
-    let threadsPerThreadgroup = MTLSize(
-      width: width, height: height, depth: 1)
-    let gridWidth = texture.width
-    let gridHeight = texture.height
-    let threadGroupCount = MTLSize(
-      width: (gridWidth + width - 1) / width,
-      height: (gridHeight + height - 1) / height,
-      depth: 1
-    )
-    commandEncoder.dispatchThreadgroups(
-      threadGroupCount,
-      threadsPerThreadgroup: threadsPerThreadgroup
-    )
-
-    commandEncoder.endEncoding()
-    commandBuffer.present(drawable)
-    commandBuffer.commit()
+//    self.update()
+//    defer {
+//      Input.mouseDelta = float2()
+//    }
+//    
+//    guard
+//      let commandBuffer = commandQueue.makeCommandBuffer(),
+//      let drawable = view.currentDrawable,
+//      let commandEncoder = commandBuffer.makeComputeCommandEncoder() else {
+//      return
+//    }
+//    
+//    commandEncoder.setComputePipelineState(pipelineState)
+//    let texture = drawable.texture
+//    commandEncoder.setTexture(texture, index: 0)
+//    commandEncoder.setBytes(&Time.time, length: MemoryLayout<Float>.stride, index: 0)
+//    commandEncoder.setBytes(&self.camera, length: MemoryLayout<Camera>.stride, index: 1)
+//    commandEncoder.setBuffer(self.gridArgBuffer, offset: 0, index: 2)
+//
+//    let width = pipelineState.threadExecutionWidth
+//    let height = pipelineState.maxTotalThreadsPerThreadgroup / width
+//    let threadsPerThreadgroup = MTLSize(
+//      width: width, height: height, depth: 1)
+//    let gridWidth = texture.width
+//    let gridHeight = texture.height
+//    let threadGroupCount = MTLSize(
+//      width: (gridWidth + width - 1) / width,
+//      height: (gridHeight + height - 1) / height,
+//      depth: 1
+//    )
+//    commandEncoder.dispatchThreadgroups(
+//      threadGroupCount,
+//      threadsPerThreadgroup: threadsPerThreadgroup
+//    )
+//
+//    commandEncoder.endEncoding()
+//    commandBuffer.present(drawable)
+//    commandBuffer.commit()
+//    commandBuffer.waitUntilCompleted()
   }
 }

@@ -11,7 +11,6 @@
 		159419A92C147B0E00C56203 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419A82C147B0E00C56203 /* ContentView.swift */; };
 		159419AB2C147B0F00C56203 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 159419AA2C147B0F00C56203 /* Assets.xcassets */; };
 		159419AE2C147B0F00C56203 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 159419AD2C147B0F00C56203 /* Preview Assets.xcassets */; };
-		159419E62C1490A200C56203 /* MetalGraphicsLib.h in Headers */ = {isa = PBXBuildFile; fileRef = 159419E52C1490A200C56203 /* MetalGraphicsLib.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		159419EA2C1490B700C56203 /* MetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419B42C147BAA00C56203 /* MetalView.swift */; };
 		159419EB2C1490B700C56203 /* Rect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419D62C14858300C56203 /* Rect.swift */; };
 		159419EC2C1490B700C56203 /* Input.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419B62C147BD300C56203 /* Input.swift */; };
@@ -38,7 +37,13 @@
 		15941A112C14A64100C56203 /* Time.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15941A102C14A64100C56203 /* Time.swift */; };
 		15941A132C15BCC000C56203 /* MyMTKView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15941A122C15BCC000C56203 /* MyMTKView.swift */; };
 		15941A1A2C15DD9200C56203 /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15941A0E2C14A2C100C56203 /* Shaders.metal */; };
-		15941A282C15E32D00C56203 /* Math.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15941A152C15DC2F00C56203 /* Math.metal */; };
+		15A049D02C207E0700D28009 /* MetalGraphicsLib.h in Headers */ = {isa = PBXBuildFile; fileRef = 159419E52C1490A200C56203 /* MetalGraphicsLib.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		15C91D362C1F1A1500A2857F /* Circle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D352C1F1A1500A2857F /* Circle.swift */; };
+		15C91D392C1F1B1B00A2857F /* Square.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D382C1F1B1B00A2857F /* Square.swift */; };
+		15C91D3B2C1F1B9F00A2857F /* Graphics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D3A2C1F1B9F00A2857F /* Graphics.swift */; };
+		15C91D3D2C1F350200A2857F /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D3C2C1F350200A2857F /* Shaders.metal */; };
+		15C91D3E2C1F43E100A2857F /* Math.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15941A152C15DC2F00C56203 /* Math.metal */; };
+		15C91D3F2C1F43E300A2857F /* SDF.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D322C1EF88B00A2857F /* SDF.metal */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -99,7 +104,13 @@
 		15941A102C14A64100C56203 /* Time.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Time.swift; sourceTree = "<group>"; };
 		15941A122C15BCC000C56203 /* MyMTKView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyMTKView.swift; sourceTree = "<group>"; };
 		15941A152C15DC2F00C56203 /* Math.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Math.metal; sourceTree = "<group>"; };
-		15941A212C15E31900C56203 /* MetalShaders.metallib */ = {isa = PBXFileReference; explicitFileType = "archive.metal-library"; includeInIndex = 0; path = MetalShaders.metallib; sourceTree = BUILT_PRODUCTS_DIR; };
+		15C91D322C1EF88B00A2857F /* SDF.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = SDF.metal; sourceTree = "<group>"; };
+		15C91D352C1F1A1500A2857F /* Circle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Circle.swift; sourceTree = "<group>"; };
+		15C91D382C1F1B1B00A2857F /* Square.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Square.swift; sourceTree = "<group>"; };
+		15C91D3A2C1F1B9F00A2857F /* Graphics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Graphics.swift; sourceTree = "<group>"; };
+		15C91D3C2C1F350200A2857F /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
+		15C91D402C1F46A000A2857F /* SDF.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SDF.h; sourceTree = "<group>"; };
+		15C91D422C1F46B600A2857F /* Math.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Math.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -126,7 +137,6 @@
 			children = (
 				159419A52C147B0E00C56203 /* GPURayMarching */,
 				159419E42C1490A200C56203 /* MetalGraphicsLib */,
-				15941A222C15E31900C56203 /* MetalShaders */,
 				1594198F2C147A6900C56203 /* Products */,
 				159419D22C14831000C56203 /* Frameworks */,
 			);
@@ -137,7 +147,6 @@
 			children = (
 				159419A42C147B0E00C56203 /* GPURayMarching.app */,
 				159419E32C1490A200C56203 /* MetalGraphicsLib.framework */,
-				15941A212C15E31900C56203 /* MetalShaders.metallib */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -203,6 +212,8 @@
 		159419E42C1490A200C56203 /* MetalGraphicsLib */ = {
 			isa = PBXGroup;
 			children = (
+				15C91D4F2C1F5DE500A2857F /* Shaders */,
+				15C91D342C1F1A0200A2857F /* Graphics */,
 				159419D02C147EA900C56203 /* ViewRenderer.swift */,
 				159419BA2C147C7F00C56203 /* Extentions */,
 				159419B32C147B7400C56203 /* Math */,
@@ -217,12 +228,34 @@
 			path = MetalGraphicsLib;
 			sourceTree = "<group>";
 		};
-		15941A222C15E31900C56203 /* MetalShaders */ = {
+		15C91D342C1F1A0200A2857F /* Graphics */ = {
 			isa = PBXGroup;
 			children = (
-				15941A152C15DC2F00C56203 /* Math.metal */,
+				15C91D372C1F1ADA00A2857F /* Shapes */,
+				15C91D3A2C1F1B9F00A2857F /* Graphics.swift */,
 			);
-			path = MetalShaders;
+			path = Graphics;
+			sourceTree = "<group>";
+		};
+		15C91D372C1F1ADA00A2857F /* Shapes */ = {
+			isa = PBXGroup;
+			children = (
+				15C91D352C1F1A1500A2857F /* Circle.swift */,
+				15C91D382C1F1B1B00A2857F /* Square.swift */,
+			);
+			path = Shapes;
+			sourceTree = "<group>";
+		};
+		15C91D4F2C1F5DE500A2857F /* Shaders */ = {
+			isa = PBXGroup;
+			children = (
+				15C91D3C2C1F350200A2857F /* Shaders.metal */,
+				15941A152C15DC2F00C56203 /* Math.metal */,
+				15C91D322C1EF88B00A2857F /* SDF.metal */,
+				15C91D402C1F46A000A2857F /* SDF.h */,
+				15C91D422C1F46B600A2857F /* Math.h */,
+			);
+			path = Shaders;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -232,7 +265,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				159419E62C1490A200C56203 /* MetalGraphicsLib.h in Headers */,
+				15A049D02C207E0700D28009 /* MetalGraphicsLib.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -276,21 +309,6 @@
 			productReference = 159419E32C1490A200C56203 /* MetalGraphicsLib.framework */;
 			productType = "com.apple.product-type.framework";
 		};
-		15941A202C15E31900C56203 /* MetalShaders */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 15941A252C15E31900C56203 /* Build configuration list for PBXNativeTarget "MetalShaders" */;
-			buildPhases = (
-				15941A1F2C15E31900C56203 /* Sources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = MetalShaders;
-			productName = MetalShaders;
-			productReference = 15941A212C15E31900C56203 /* MetalShaders.metallib */;
-			productType = "com.apple.product-type.metal-library";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -305,9 +323,6 @@
 						CreatedOnToolsVersion = 15.4;
 					};
 					159419E22C1490A200C56203 = {
-						CreatedOnToolsVersion = 15.4;
-					};
-					15941A202C15E31900C56203 = {
 						CreatedOnToolsVersion = 15.4;
 					};
 				};
@@ -327,7 +342,6 @@
 			targets = (
 				159419A32C147B0E00C56203 /* GPURayMarching */,
 				159419E22C1490A200C56203 /* MetalGraphicsLib */,
-				15941A202C15E31900C56203 /* MetalShaders */,
 			);
 		};
 /* End PBXProject section */
@@ -367,20 +381,25 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				15C91D392C1F1B1B00A2857F /* Square.swift in Sources */,
 				159419EE2C1490B700C56203 /* ViewRenderer.swift in Sources */,
+				15C91D3D2C1F350200A2857F /* Shaders.metal in Sources */,
 				159419F92C14917A00C56203 /* String.swift in Sources */,
 				15941A052C149A4600C56203 /* uchar4.swift in Sources */,
 				15941A132C15BCC000C56203 /* MyMTKView.swift in Sources */,
+				15C91D362C1F1A1500A2857F /* Circle.swift in Sources */,
 				15941A072C149A7500C56203 /* float4x4.swift in Sources */,
 				159419F62C14917400C56203 /* Comparable.swift in Sources */,
 				15941A032C149A2A00C56203 /* int3.swift in Sources */,
 				159419F42C14916C00C56203 /* MathLib.swift in Sources */,
 				159419F52C14917200C56203 /* Array.swift in Sources */,
+				15C91D3B2C1F1B9F00A2857F /* Graphics.swift in Sources */,
 				159419FF2C1499CC00C56203 /* float4.swift in Sources */,
 				15941A112C14A64100C56203 /* Time.swift in Sources */,
 				159419EC2C1490B700C56203 /* Input.swift in Sources */,
 				159419ED2C1490B700C56203 /* Inset.swift in Sources */,
 				159419FB2C1498C800C56203 /* float2.swift in Sources */,
+				15C91D3E2C1F43E100A2857F /* Math.metal in Sources */,
 				159419EA2C1490B700C56203 /* MetalView.swift in Sources */,
 				15941A0B2C149B6700C56203 /* float3x3.swift in Sources */,
 				159419F82C14917800C56203 /* Int.swift in Sources */,
@@ -389,14 +408,7 @@
 				159419EB2C1490B700C56203 /* Rect.swift in Sources */,
 				159419F72C14917600C56203 /* Float.swift in Sources */,
 				15941A012C149A1400C56203 /* int2.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		15941A1F2C15E31900C56203 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				15941A282C15E32D00C56203 /* Math.metal in Sources */,
+				15C91D3F2C1F43E300A2857F /* SDF.metal in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -549,7 +561,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/MetalShaders";
+				MTLLINKER_FLAGS = "";
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/MetalGraphicsLib/Shaders";
 				PRODUCT_BUNDLE_IDENTIFIER = com.company.GPURayMarching;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -577,7 +590,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/MetalShaders";
+				MTLLINKER_FLAGS = "";
+				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/MetalGraphicsLib/Shaders";
 				PRODUCT_BUNDLE_IDENTIFIER = com.company.GPURayMarching;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -657,26 +671,6 @@
 			};
 			name = Release;
 		};
-		15941A262C15E31900C56203 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3KB6K4T6NP;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				VERSIONING_SYSTEM = "";
-			};
-			name = Debug;
-		};
-		15941A272C15E31900C56203 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = 3KB6K4T6NP;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				VERSIONING_SYSTEM = "";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -703,15 +697,6 @@
 			buildConfigurations = (
 				159419E82C1490A200C56203 /* Debug */,
 				159419E92C1490A200C56203 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		15941A252C15E31900C56203 /* Build configuration list for PBXNativeTarget "MetalShaders" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				15941A262C15E31900C56203 /* Debug */,
-				15941A272C15E31900C56203 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

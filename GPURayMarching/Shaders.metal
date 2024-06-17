@@ -54,8 +54,23 @@ float sdCircle( float3 p, float r )
   return length(p) - r;
 }
 
-float distanceToScene(Ray r, constant GridArgBuffer* grid) {
+struct SceneData {
+  float4 color;
+  float distance;
+  bool hit;
+  
+  SceneData(float d, float4 c, bool h) {
+    color = c;
+    distance = d;
+    hit = h;
+  }
+};
+
+SceneData distanceToScene(Ray r, constant GridArgBuffer* grid) {
   float dist = MAXFLOAT;
+  float4 bg = float4(0, 0, 0, 1);
+  float4 color = bg;
+  bool hit = false;
   
   int count = grid->gridItemsCount;
   for (int i = 0; i < count; i++) {
@@ -66,24 +81,17 @@ float distanceToScene(Ray r, constant GridArgBuffer* grid) {
       case 0: {
         Sphere sphere = grid->spheres[item.index];
         dist = min(dist, sdCircle(r.position - sphere.position, sphere.radius));
+        
+        if (dist < 0.001) {
+          color = sphere.color;
+          hit = true;
+          return SceneData(dist, color, hit);
+        }
       }
     }
   }
   
-  //  Ray repeatedRay = r;
-  //  repeatedRay.position.x = fmod(abs(repeatedRay.position.x), 1);
-  
-  //  {
-  //    Sphere s = Sphere(float3(0.5, 0, 0), 0.5);
-  //    dist = min(dist, sdCircle(repeatedRay.position - s.position, s.radius));
-  //  }
-  
-  //  {
-  //    Sphere s = Sphere(float3(3, 0, 0), 1.0);
-  //    dist = min(dist, sdCircle(r.position - s.position, s.radius));
-  //  }
-  
-  return dist;
+  return SceneData(dist, color, hit);
 }
 
 kernel void compute(
@@ -102,16 +110,19 @@ kernel void compute(
   
   float focalLength = 1 / tan(toRadians(camera.fov) / 2);
   float4x4 rotationMatrix = rotation(float3(toRadians(camera.rotation.x), toRadians(camera.rotation.y), toRadians(camera.rotation.z)));
+//  float focalLength = 1;
+//  float4x4 rotationMatrix = float4x4();
   float3 rayDir = (rotationMatrix * float4(normalize(float3(uv, focalLength)), 1)).xyz;
   Ray ray = Ray(float3(camera.position), rayDir);
   
   for (int i = 0.0; i < 100.0; i++) {
-    float distance = distanceToScene(ray, grid);
-    if (distance < 0.001) {
-      color = float4(1);
+    SceneData data = distanceToScene(ray, grid);
+    if (data.hit) {
+      color = data.color;
       break;
     }
-    ray.position += ray.direction * distance;
+    ray.position += ray.direction * data.distance;
+//    ray.position += ray.direction * 1;
   }
   
   output.write(color, gid);

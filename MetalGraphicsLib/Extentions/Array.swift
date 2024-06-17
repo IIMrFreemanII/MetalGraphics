@@ -6,6 +6,10 @@
 //
 
 extension Array {
+  var byteCount: Int {
+    return MemoryLayout<Element>.stride * self.count
+  }
+  
   mutating func forEach(_ body: (inout Element) -> Void) {
     self.withUnsafeMutableBufferPointer { buffer in
       for i in 0..<buffer.count {

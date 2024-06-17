@@ -14,5 +14,3 @@ FOUNDATION_EXPORT double MetalGraphicsLibVersionNumber;
 FOUNDATION_EXPORT const unsigned char MetalGraphicsLibVersionString[];
 
 // In this header, you should import all the public headers of your framework using statements like #import <MetalGraphicsLib/PublicHeader.h>
-
-
