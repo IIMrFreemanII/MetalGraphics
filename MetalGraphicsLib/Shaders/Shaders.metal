@@ -12,13 +12,13 @@ using namespace metal;
 #include "SDF.h"
 
 struct Circle {
-  float2 position;
+  float3 position;
   float radius;
   float4 color;
 };
 
 struct Square {
-  float2 position;
+  float3 position;
   float2 size;
   float rotation;
   float4 color;
@@ -73,18 +73,34 @@ kernel void compute2D(
   int circlesCount = args.circlesCount;
   int squaresCount = args.squaresCount;
   
+  // todo: set cameraPos based on the biggest depth value
+  float cameraPos = 1000000;
+  float distToCamera = cameraPos;
+  
   for (int i = 0; i < circlesCount; i++) {
     Circle circle = args.circles[i];
-    float dist = sdCircle(uv - circle.position, circle.radius);
-    color = mix(color, circle.color, 1 - step(0, dist));
+    float dist = sdCircle(uv - circle.position.xy, circle.radius);
+    float newDistToCamera = cameraPos - circle.position.z;
+    float intersect = step(dist, 0);
+    float closestToTheCamera = step(newDistToCamera, distToCamera);
+    int hit = int(intersect) & int(closestToTheCamera);
+    color = mix(color, circle.color, hit);
+    distToCamera = select(distToCamera, newDistToCamera, hit);
   }
   
   for (int i = 0; i < squaresCount; i++) {
     Square square = args.squares[i];
-    float dist = sdBox(uv - square.position, square.size * 0.5);
-    color = mix(color, square.color, 1 - step(0, dist));
+    float dist = sdBox(rotation(square.rotation) * (uv - square.position.xy), square.size * 0.5);
+    float newDistToCamera = cameraPos - square.position.z;
+    float intersect = step(dist, 0);
+    float closestToTheCamera = step(newDistToCamera, distToCamera);
+    int hit = int(intersect) & int(closestToTheCamera);
+    color = mix(color, square.color, hit);
+    distToCamera = select(distToCamera, newDistToCamera, hit);
   }
   
   output.write(color, gid);
-//  output.write(float4(uv.x, uv.y, 0, 1), gid);
+  
+//  float2 tempUv = rotation(data.time) * uv;
+//  output.write(float4(tempUv.x, tempUv.y, 0, 1), gid);
 }

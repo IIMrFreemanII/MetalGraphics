@@ -5,7 +5,7 @@
 //  Created by Nikolay Diahovets on 17.05.2024.
 //
 
-extension Array {
+public extension Array {
   var byteCount: Int {
     return MemoryLayout<Element>.stride * self.count
   }

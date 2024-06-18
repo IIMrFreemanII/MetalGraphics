@@ -1,5 +1,18 @@
 #include "Math.h"
 
+float2 select(float2 a, float2 b, bool t) {
+  float2 values[2] = {a, b};
+  return values[t];
+}
+float3 select(float3 a, float3 b, bool t) {
+  float3 values[2] = {a, b};
+  return values[t];
+}
+float4 select(float4 a, float4 b, bool t) {
+  float4 values[2] = {a, b};
+  return values[t];
+}
+
 float dot2(float2 v ) { return dot(v,v); }
 float dot2(float3 v ) { return dot(v,v); }
 float ndot(float2 a, float2 b ) { return a.x*b.x - a.y*b.y; }
@@ -18,6 +31,16 @@ float lerp(float min, float max, float t) {
 
 float normalize(float value, float min, float max) {
   return (value - min) / (max - min);
+}
+
+float2x2 rotation(float angle) {
+  float s = sin(angle);
+  float c = cos(angle);
+  
+  return float2x2(
+                  float2( c, s),
+                  float2(-s, c)
+                  );
 }
 
 float4x4 rotationX(float angle) {

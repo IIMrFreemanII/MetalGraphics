@@ -102,6 +102,17 @@ class TestViewRenderer : ViewRenderer {
     argPointer.pointee.gridItems = self.gridItemsBuffer.gpuAddress
     argPointer.pointee.spheres = self.spheresBuffer.gpuAddress
     argPointer.pointee.gridItemsCount = Int32(self.gridItems.count)
+    
+    // ----------------
+    
+//    let cellSize = Float(40)
+//    let spacing = Float(20)
+//    let gridSize = float2(10, 10)
+//    for y in 0..<Int(gridSize.y) {
+//      for x in 0..<Int(gridSize.x) {
+//        self.squares.append(Square(position: float2(0, 0) + (float2(Float(x), Float(y)) * (cellSize + spacing)) - (gridSize * 0.5 * (cellSize + spacing * 0.5)), size: float2(cellSize, cellSize), color: float4(0, 1, 0, 1)))
+//      }
+//    }
   }
   
   func update() {
@@ -131,12 +142,15 @@ class TestViewRenderer : ViewRenderer {
     }
   }
   
+//  var squares: [Square] = []
+  
   override func draw(in view: MTKView) {
     super.draw(in: view)
     
     Graphics.context(in: view) { r in
-      Graphics.draw(circle: Circle(position: float2(0, 0), radius: Float(50), color: float4(1, 0, 0, 1)))
-//      Graphics.draw(square: Square(position: float2(100, 0), size: float2(100, 100), color: float4(0, 1, 0, 1)))
+      Graphics.draw(circle: Circle(position: float3(0, 0, 3), radius: Float(50), color: float4(1, 0, 0, 1)))
+      Graphics.draw(circle: Circle(position: float3(50, 0, 1), radius: Float(50), color: float4(0, 1, 0, 1)))
+      Graphics.draw(circle: Circle(position: float3(100, 0, 2), radius: Float(50), color: float4(0, 0, 1, 1)))
     }
 //    self.update()
 //    defer {
