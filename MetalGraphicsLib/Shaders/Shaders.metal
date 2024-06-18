@@ -11,24 +11,38 @@ using namespace metal;
 #include "Math.h"
 #include "SDF.h"
 
+struct Line {
+  float2 start;
+  float2 end;
+  float4 color;
+  float depth;
+  float thickness;
+};
+
 struct Circle {
-  float3 position;
+  float2 position;
   float radius;
+  float depth;
   float4 color;
 };
 
 struct Square {
-  float3 position;
+  float2 position;
   float2 size;
+  float depth;
   float rotation;
   float4 color;
 };
 
 struct ShapeArgBuffer {
   device Circle* circles [[id(0)]];
-  device Square* squares [[id(1)]];
-  int circlesCount [[id(2)]];
+  int circlesCount [[id(1)]];
+  
+  device Square* squares [[id(2)]];
   int squaresCount [[id(3)]];
+  
+  device Line* lines [[id(4)]];
+  int linesCount [[id(5)]];
 };
 
 struct SceneData {
@@ -67,11 +81,12 @@ kernel void compute2D(
   uv.y += (top + bottom) * 0.5;
   // --------------------------
   
-  float4 color = float4(0.0, 0.0, 0.0, 1.0);
+  float4 color = float4(0.93, 0.93, 1.0, 1.0);
   
   ShapeArgBuffer args = buffers[0];
   int circlesCount = args.circlesCount;
   int squaresCount = args.squaresCount;
+  int linesCount = args.linesCount;
   
   // todo: set cameraPos based on the biggest depth value
   float cameraPos = 1000000;
@@ -80,7 +95,7 @@ kernel void compute2D(
   for (int i = 0; i < circlesCount; i++) {
     Circle circle = args.circles[i];
     float dist = sdCircle(uv - circle.position.xy, circle.radius);
-    float newDistToCamera = cameraPos - circle.position.z;
+    float newDistToCamera = cameraPos - circle.depth;
     float intersect = step(dist, 0);
     float closestToTheCamera = step(newDistToCamera, distToCamera);
     int hit = int(intersect) & int(closestToTheCamera);
@@ -91,11 +106,22 @@ kernel void compute2D(
   for (int i = 0; i < squaresCount; i++) {
     Square square = args.squares[i];
     float dist = sdBox(rotation(square.rotation) * (uv - square.position.xy), square.size * 0.5);
-    float newDistToCamera = cameraPos - square.position.z;
+    float newDistToCamera = cameraPos - square.depth;
     float intersect = step(dist, 0);
     float closestToTheCamera = step(newDistToCamera, distToCamera);
     int hit = int(intersect) & int(closestToTheCamera);
     color = mix(color, square.color, hit);
+    distToCamera = select(distToCamera, newDistToCamera, hit);
+  }
+  
+  for (int i = 0; i < linesCount; i++) {
+    Line line = args.lines[i];
+    float dist = sdSegment(uv, line.start, line.end) - line.thickness;
+    float newDistToCamera = cameraPos - line.depth;
+    float intersect = step(dist, 0);
+    float closestToTheCamera = step(newDistToCamera, distToCamera);
+    int hit = int(intersect) & int(closestToTheCamera);
+    color = mix(color, line.color, hit);
     distToCamera = select(distToCamera, newDistToCamera, hit);
   }
   
