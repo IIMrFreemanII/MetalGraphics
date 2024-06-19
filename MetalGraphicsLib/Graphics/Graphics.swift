@@ -1,5 +1,16 @@
 import MetalKit
 
+enum ShapeType: Int32 {
+  case Circle
+  case Sqaure
+  case Line
+}
+
+struct GridItem {
+  var index: Int32;
+  var shapeType: Int32;
+}
+
 struct ShapeArgBuffer {
   var circles: UInt64 = 0
   var circlesCount: Int32 = 0
