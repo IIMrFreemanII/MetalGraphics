@@ -1,10 +1,3 @@
-//
-//  GPURayMarchingApp.swift
-//  GPURayMarching
-//
-//  Created by Nikolay Diahovets on 08.06.2024.
-//
-
 import SwiftUI
 import MetalGraphicsLib
 

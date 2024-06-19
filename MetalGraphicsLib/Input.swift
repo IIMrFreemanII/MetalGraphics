@@ -56,6 +56,10 @@ public struct Input {
   
   public static var prevMousePosition = float2()
   public static var mousePosition = float2()
+  public static var mousePositionFromCenter: float2 {
+    return Self.mousePosition - Self.windowSize * 0.5
+  }
+  
   public static var mouseDelta = float2()
   public static var mouseScroll = float2()
   
