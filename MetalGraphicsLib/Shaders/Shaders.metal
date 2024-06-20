@@ -163,10 +163,7 @@ kernel void compute2D(
     // Color customization
     float4 gridColor = float4(0, 0, 0, 1);
     
-    if (abs(fmod(uv.x, grid.cellSize)) < lineThickness) {
-      color = gridColor;
-    }
-    if (abs(fmod(uv.y, grid.cellSize)) < lineThickness) {
+    if (abs(fmod(uv.x, grid.cellSize)) < lineThickness || abs(fmod(uv.y, grid.cellSize)) < lineThickness) {
       color = gridColor;
     }
   }
