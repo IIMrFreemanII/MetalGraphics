@@ -46,10 +46,10 @@ public class Grid2D {
     let boxBottomRight = box.bottomRight
     var usedIndecies: [Int] = []
     
-    iterateWithStep(from: boxBottomRight.y, to: boxTopLeft.y, step: self.cellSize) { y in
+    for y in StepSequence(from: boxBottomRight.y, to: boxTopLeft.y, step: self.cellSize) {
       if y.isBetween(gridBottomRight.y...gridTopLeft.y) {
         let yIndex = floor(remap(y, float2(self.bounds.bottom, self.bounds.top), float2(0, Float(self.size.y))))
-        iterateWithStep(from: boxTopLeft.x, to: boxBottomRight.x, step: self.cellSize) { x in
+        for x in StepSequence(from: boxTopLeft.x, to: boxBottomRight.x, step: self.cellSize) {
           if x.isBetween(gridTopLeft.x...gridBottomRight.x) {
             let xIndex = floor(remap(x, float2(self.bounds.left, self.bounds.right), float2(0, Float(self.size.x))))
             

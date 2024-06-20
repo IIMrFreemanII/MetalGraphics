@@ -43,6 +43,7 @@
 		15A049D62C23218100D28009 /* BoundingBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049D52C23218100D28009 /* BoundingBox.swift */; };
 		15A049D82C23220800D28009 /* Grid2D.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049D72C23220800D28009 /* Grid2D.swift */; };
 		15A049DA2C236C8500D28009 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049D92C236C8500D28009 /* Utils.swift */; };
+		15A049DC2C243DB200D28009 /* StepSequence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049DB2C243DB200D28009 /* StepSequence.swift */; };
 		15C91D362C1F1A1500A2857F /* Circle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D352C1F1A1500A2857F /* Circle.swift */; };
 		15C91D392C1F1B1B00A2857F /* Square.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D382C1F1B1B00A2857F /* Square.swift */; };
 		15C91D3B2C1F1B9F00A2857F /* Graphics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D3A2C1F1B9F00A2857F /* Graphics.swift */; };
@@ -114,6 +115,7 @@
 		15A049D52C23218100D28009 /* BoundingBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoundingBox.swift; sourceTree = "<group>"; };
 		15A049D72C23220800D28009 /* Grid2D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Grid2D.swift; sourceTree = "<group>"; };
 		15A049D92C236C8500D28009 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
+		15A049DB2C243DB200D28009 /* StepSequence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepSequence.swift; sourceTree = "<group>"; };
 		15C91D322C1EF88B00A2857F /* SDF.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = SDF.metal; sourceTree = "<group>"; };
 		15C91D352C1F1A1500A2857F /* Circle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Circle.swift; sourceTree = "<group>"; };
 		15C91D382C1F1B1B00A2857F /* Square.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Square.swift; sourceTree = "<group>"; };
@@ -238,6 +240,7 @@
 				15A049D52C23218100D28009 /* BoundingBox.swift */,
 				15A049D72C23220800D28009 /* Grid2D.swift */,
 				15A049D92C236C8500D28009 /* Utils.swift */,
+				15A049DB2C243DB200D28009 /* StepSequence.swift */,
 			);
 			path = MetalGraphicsLib;
 			sourceTree = "<group>";
@@ -422,6 +425,7 @@
 				15A049D42C22D58000D28009 /* SDF.swift in Sources */,
 				15941A0B2C149B6700C56203 /* float3x3.swift in Sources */,
 				159419F82C14917800C56203 /* Int.swift in Sources */,
+				15A049DC2C243DB200D28009 /* StepSequence.swift in Sources */,
 				15941A092C149AE000C56203 /* float2x2.swift in Sources */,
 				159419FD2C14997900C56203 /* float3.swift in Sources */,
 				159419EB2C1490B700C56203 /* Rect.swift in Sources */,
