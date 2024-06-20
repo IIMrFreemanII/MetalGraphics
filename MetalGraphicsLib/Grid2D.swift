@@ -130,7 +130,7 @@ class Grid2D {
             let coord = int2(Int(xIndex), Int(yIndex))
             let index = from2DTo1DArray(coord, self.size)
             
-            if !usedIndecies.contains(where: { $0 == index })  {
+            if !usedIndecies.contains(where: { $0 == index }) && index < self.cells.count  {
               self.cells[index].shapes.append(shape)
               usedIndecies.append(index)
             }

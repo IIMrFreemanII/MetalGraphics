@@ -103,7 +103,7 @@ public class Graphics {
     
     do {
       if shared.circleBufferCount < shared.circles.count {
-        shared.circleBufferCount += 10
+        shared.circleBufferCount += shared.circles.count + 10
         shared.circleBuffer = shared.device.makeBuffer(length: MemoryLayout<Circle>.stride * shared.circleBufferCount)
         shared.circleBuffer.label = "Circle buffer"
       }
@@ -113,7 +113,7 @@ public class Graphics {
     
     do {
       if shared.squareBufferCount < shared.squares.count {
-        shared.squareBufferCount += 10
+        shared.squareBufferCount += shared.squares.count + 10
         shared.squareBuffer = shared.device.makeBuffer(length: MemoryLayout<Square>.stride * shared.squareBufferCount)
         shared.squareBuffer.label = "Square buffer"
       }
@@ -123,7 +123,7 @@ public class Graphics {
     
     do {
       if shared.lineBufferCount < shared.lines.count {
-        shared.lineBufferCount += 10
+        shared.lineBufferCount += shared.lines.count + 10
         shared.lineBuffer = shared.device.makeBuffer(length: MemoryLayout<Line>.stride * shared.lineBufferCount)
         shared.lineBuffer.label = "Line buffer"
       }
