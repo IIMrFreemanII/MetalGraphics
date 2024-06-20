@@ -44,6 +44,7 @@
 		15A049D82C23220800D28009 /* Grid2D.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049D72C23220800D28009 /* Grid2D.swift */; };
 		15A049DA2C236C8500D28009 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049D92C236C8500D28009 /* Utils.swift */; };
 		15A049DC2C243DB200D28009 /* StepSequence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049DB2C243DB200D28009 /* StepSequence.swift */; };
+		15A049DE2C24B21800D28009 /* Utils.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15A049DD2C24B21800D28009 /* Utils.metal */; };
 		15C91D362C1F1A1500A2857F /* Circle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D352C1F1A1500A2857F /* Circle.swift */; };
 		15C91D392C1F1B1B00A2857F /* Square.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D382C1F1B1B00A2857F /* Square.swift */; };
 		15C91D3B2C1F1B9F00A2857F /* Graphics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D3A2C1F1B9F00A2857F /* Graphics.swift */; };
@@ -116,6 +117,8 @@
 		15A049D72C23220800D28009 /* Grid2D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Grid2D.swift; sourceTree = "<group>"; };
 		15A049D92C236C8500D28009 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
 		15A049DB2C243DB200D28009 /* StepSequence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepSequence.swift; sourceTree = "<group>"; };
+		15A049DD2C24B21800D28009 /* Utils.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Utils.metal; sourceTree = "<group>"; };
+		15A049DF2C24B22500D28009 /* Utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Utils.h; sourceTree = "<group>"; };
 		15C91D322C1EF88B00A2857F /* SDF.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = SDF.metal; sourceTree = "<group>"; };
 		15C91D352C1F1A1500A2857F /* Circle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Circle.swift; sourceTree = "<group>"; };
 		15C91D382C1F1B1B00A2857F /* Square.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Square.swift; sourceTree = "<group>"; };
@@ -272,6 +275,8 @@
 				15C91D322C1EF88B00A2857F /* SDF.metal */,
 				15C91D402C1F46A000A2857F /* SDF.h */,
 				15C91D422C1F46B600A2857F /* Math.h */,
+				15A049DD2C24B21800D28009 /* Utils.metal */,
+				15A049DF2C24B22500D28009 /* Utils.h */,
 			);
 			path = Shaders;
 			sourceTree = "<group>";
@@ -403,6 +408,7 @@
 				159419EE2C1490B700C56203 /* ViewRenderer.swift in Sources */,
 				15C91D3D2C1F350200A2857F /* Shaders.metal in Sources */,
 				159419F92C14917A00C56203 /* String.swift in Sources */,
+				15A049DE2C24B21800D28009 /* Utils.metal in Sources */,
 				15941A052C149A4600C56203 /* uchar4.swift in Sources */,
 				15A049D62C23218100D28009 /* BoundingBox.swift in Sources */,
 				15941A132C15BCC000C56203 /* MyMTKView.swift in Sources */,

@@ -13,7 +13,8 @@ public struct BoundingBox2D {
   
   public init(center: float2, radius: Float) {
     self.center = center
-    self.size = float2(radius, radius)
+    let temp = radius * 2
+    self.size = float2(temp, temp)
   }
   
   public var left: Float {

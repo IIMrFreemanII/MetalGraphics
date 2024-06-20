@@ -18,6 +18,9 @@ struct SceneData {
 
 public class Graphics {
   private static var depth = Float()
+  static var grid: Grid2D = {
+    return Grid2D(position: float2(), size: int2(10, 10), cellSize: Float(50))
+  }()
   
   static var shared: Graphics = {
     var result = Graphics()
@@ -87,6 +90,17 @@ public class Graphics {
   static func endFrame() {
     let shared = Self.shared
     
+    Self.grid.reset()
+    
+    for (i, item) in shared.circles.enumerated() {
+      Self.grid.mapShapeBoundingBoxToGrid(item.bounds, Shape(index: Int32(i), shapeType: ShapeType2D.Circle.rawValue))
+    }
+    for (i, item) in shared.squares.enumerated() {
+      Self.grid.mapShapeBoundingBoxToGrid(item.bounds, Shape(index: Int32(i), shapeType: ShapeType2D.Square.rawValue))
+    }
+    
+    Self.grid.updateBuffers()
+    
     do {
       if shared.circleBufferCount < shared.circles.count {
         shared.circleBufferCount += 10
@@ -145,6 +159,7 @@ public class Graphics {
     var sceneData = SceneData(windowSize: SIMD2<Int32>(Int32(Input.windowSize.x), Int32(Input.windowSize.y)), time: Time.time)
     commandEncoder.setBytes(&sceneData, length: MemoryLayout<SceneData>.stride, index: 0)
     commandEncoder.setBuffer(shared.shapeArgBuffer, offset: 0, index: 1)
+    commandEncoder.setBuffer(Self.grid.gridArgBuffer, offset: 0, index: 2)
     
     let width = shared.pipelineState.threadExecutionWidth
     let height = shared.pipelineState.maxTotalThreadsPerThreadgroup / width
@@ -168,6 +183,19 @@ public class Graphics {
     commandBuffer.waitUntilCompleted()
   }
   
+  static func getDepth(of shape: Shape) -> Float {
+    switch ShapeType2D(rawValue: shape.shapeType) {
+    case .Circle:
+      return Self.shared.circles[Int(shape.index)].depth
+    case .Square:
+      return Self.shared.squares[Int(shape.index)].depth
+    case .Line:
+      return Self.shared.lines[Int(shape.index)].depth
+    default:
+      fatalError("Unsupported Shape: \(shape)")
+    }
+  }
+  
   public static func context(in view: MTKView, _ cb: (Rect) -> Void) {
     let windowRect = Rect(position: Input.windowPosition, size: Input.windowSize)
     
@@ -176,6 +204,36 @@ public class Graphics {
     Self.endFrame()
     
     Self.drawData(at: view)
+  }
+  
+  // for testing
+  public static func testGrid(in view: MTKView) {
+    Self.grid.reset()
+    
+    let boundsSize = float2(30, 30)
+    let bounds = BoundingBox2D(center: Input.mousePositionFromCenter, size: boundsSize)
+    Self.grid.mapShapeBoundingBoxToGrid(bounds, Shape(index: Int32(), shapeType: Int32()))
+    
+    for cell in Self.grid.cells {
+      if cell.shapes.count > 1 {
+        print("has duplicates")
+      }
+    }
+    
+    let spacing = Float(0)
+    
+    Graphics.context(in: view) { r in
+      Graphics.draw(square: Square(position: bounds.center, size: boundsSize, color: float4(0, 0, 1, 1)))
+      for y in 0..<Self.grid.size.y {
+        for x in 0..<Self.grid.size.x {
+          let index = from2DTo1DArray(int2(x, y), Self.grid.size)
+          let isEmply = Self.grid.cells[index].shapes.isEmpty
+          let size = float2(Self.grid.cellSize, Self.grid.cellSize)
+          
+          Graphics.draw(square: Square(position: float2((Float(x) - Float(Self.grid.size.x) * 0.5) * (Self.grid.cellSize + spacing), (Float(y) - Float(Self.grid.size.y) * 0.5) * (Self.grid.cellSize + spacing)) + size * 0.5, size: size, color: isEmply ? float4(1, 0, 0, 1) : float4(0, 1, 0, 1)))
+        }
+      }
+    }
   }
   
   public static func draw(circle: Circle) {
