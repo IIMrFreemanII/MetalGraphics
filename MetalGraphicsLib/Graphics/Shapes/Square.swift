@@ -1,3 +1,5 @@
+import simd
+
 public struct Square {
   public var position = float2()
   public var size = float2()
@@ -5,7 +7,29 @@ public struct Square {
   public var rotation = Float()
   public var color = float4(0, 0, 0, 1)
   
-  var bounds: BoundingBox2D {
+  public var bounds: BoundingBox2D {
+    if rotation != 0 {
+      let rotMat = float2x2(rotation: rotation)
+      let rotTopleft = rotMat * float2(-self.size.x, self.size.y) * 0.5
+      let rotTopRight = rotMat * float2(self.size.x, self.size.y) * 0.5
+      
+      var minX: Float = Float.greatestFiniteMagnitude
+      minX = min(minX, rotTopleft.x)
+      minX = min(minX, -rotTopleft.x)
+      minX = min(minX, rotTopRight.x)
+      minX = min(minX, -rotTopRight.x)
+      
+      var minY: Float = Float.greatestFiniteMagnitude
+      minY = min(minY, rotTopleft.y)
+      minY = min(minY, -rotTopleft.y)
+      minY = min(minY, rotTopRight.y)
+      minY = min(minY, -rotTopRight.y)
+      
+      let newSize = abs(float2(minX, minY)) * 2
+      
+      return BoundingBox2D(center: position, size: newSize)
+    }
+    
     return BoundingBox2D(center: position, size: size)
   }
   

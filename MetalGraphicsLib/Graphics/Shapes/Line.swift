@@ -5,7 +5,7 @@ public struct Line {
   public var depth = Float()
   public var thickness = Float()
   
-  var bounds: BoundingBox2D {
+  public var bounds: BoundingBox2D {
     // MARK: calc bounding box for line
     return BoundingBox2D(center: float2(), size: float2())
   }

@@ -18,10 +18,12 @@ extension Float {
 }
 
 extension Float {
-  public var radiansToDegrees: Float {
+  /// Converts radians to degrees
+  public var degrees: Float {
     (self / π) * 180
   }
-  public var degreesToRadians: Float {
+  /// Converts degrees to radians
+  public var radians: Float {
     (self / 180) * π
   }
   public var isNegative: Bool {

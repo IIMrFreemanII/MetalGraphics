@@ -4,7 +4,7 @@ public struct Circle {
   public var depth = Float()
   public var color = float4(0, 0, 0, 1)
   
-  var bounds: BoundingBox2D {
+  public var bounds: BoundingBox2D {
     return BoundingBox2D(center: position, radius: radius)
   }
   
