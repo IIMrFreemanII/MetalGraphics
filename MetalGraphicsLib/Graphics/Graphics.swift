@@ -98,6 +98,9 @@ public class Graphics {
     for (i, item) in shared.squares.enumerated() {
       Self.grid.mapShapeBoundingBoxToGrid(item.bounds, Shape(index: Int32(i), shapeType: ShapeType2D.Square.rawValue))
     }
+    for (i, item) in shared.lines.enumerated() {
+      Self.grid.mapShapeBoundingBoxToGrid(item.bounds, Shape(index: Int32(i), shapeType: ShapeType2D.Line.rawValue))
+    }
     
     Self.grid.updateBuffers()
     

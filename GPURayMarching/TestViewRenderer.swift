@@ -16,9 +16,13 @@ class TestViewRenderer : ViewRenderer {
 //          Graphics.draw(circle: Circle(position: float2(x, y), radius: Float(50), color: float4(1, 0, 0, 1)))
 //        }
 //      }
-      let temp = Square(position: Input.mousePositionFromCenter, size: float2(150, 100), rotation: Time.time, color: float4(1, 0, 0, 1))
-      Graphics.draw(square: Square(position: Input.mousePositionFromCenter, size: temp.bounds.size, color: float4(0, 0, 1, 1)))
-      Graphics.draw(square: temp)
+//      let temp = Square(position: Input.mousePositionFromCenter, size: float2(150, 100), rotation: Time.time, color: float4(1, 0, 0, 1))
+//      Graphics.draw(square: Square(position: Input.mousePositionFromCenter, size: temp.bounds.size, color: float4(0, 0, 1, 1)))
+//      Graphics.draw(square: temp)
+      let temp = float2(cos(Time.time), sin(Time.time)) * 100
+      let line = Line(start: Input.mousePositionFromCenter + temp, end: Input.mousePositionFromCenter - temp, color: float4(1, 0, 0, 1), thickness: 4)
+//      Graphics.draw(square: Square(position: line.bounds.center, size: line.bounds.size, color: float4(0, 0, 1, 1)))
+      Graphics.draw(line: line)
 //      Graphics.draw(circle: Circle(position: Input.mousePositionFromCenter, radius: Float(50), color: float4(0, 1, 0, 1)))
 //      Graphics.draw(line: Line(start: float2(0, 0), end: float2(cos(Time.time) * 100, sin(Time.time) * 100), color: float4(0, 0, 0, 1), thickness: 1))
     }
