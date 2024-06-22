@@ -1,0 +1,30 @@
+# Use 4 spaces for indentation
+--indent 2
+
+# Use LF for linebreaks
+--linebreaks lf
+
+# Insert self where required
+--self insert
+
+# Use lowercase for hex literals
+--hexliterals lowercase
+
+# Wrap braces in accordance with selected style (K&R or Allman).
+--allman false
+
+# Organize import statements alphabetically
+--importgrouping alphabetized
+
+# Ensure trailing commas in arrays and dictionaries
+--commas inline
+
+# Use trailing closure syntax where possible
+--trailingclosures
+
+# Ensure spacing around operators
+--operatorfunc spaced
+
+# Remove redundant semicolons
+--semicolons never
+

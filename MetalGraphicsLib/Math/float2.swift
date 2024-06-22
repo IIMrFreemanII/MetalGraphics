@@ -1,17 +1,21 @@
 public typealias float2 = SIMD2<Float>
 
-extension float2 {
-  public var width: Float {
-    self.x
+public extension float2 {
+  var width: Float {
+    x
   }
-  
-  public var height: Float {
-    self.y
+
+  var height: Float {
+    y
   }
-  
+
   /// returns new float2 with greatest component and other components set to 0
-  public var greatestComponent: float2 {
-    let condition = self.x > self.y
-    return float2(self.x * Float(condition), self.y * Float(!condition))
+  var greatestComponent: float2 {
+    let condition = x > y
+    return float2(x * Float(condition), y * Float(!condition))
+  }
+
+  var asInt2: int2 {
+    int2(Int(x), Int(y))
   }
 }

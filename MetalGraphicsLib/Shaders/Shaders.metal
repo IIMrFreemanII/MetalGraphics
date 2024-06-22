@@ -63,9 +63,15 @@ struct ShapeArgBuffer {
   int linesCount [[id(5)]];
 };
 
+struct DebugData {
+  bool drawGrid;
+  bool showFilledCells;
+};
+
 struct SceneData {
   int2 windowSize;
   float time;
+  DebugData debug;
 };
 
 kernel void compute2D(
@@ -100,7 +106,8 @@ kernel void compute2D(
   uv.y += (top + bottom) * 0.5;
   // --------------------------
   
-  float4 color = float4(0.93, 0.93, 1.0, 1.0);
+  float4 bgColor = color::white;
+  float4 color = bgColor;
   
   GridArgBuffer grid = gridBuffer[0];
   float2 gridSize = float2(grid.gridSize) * grid.cellSize;
@@ -158,62 +165,25 @@ kernel void compute2D(
       }
     }
     
-    // Basic grid parameters
-    float lineThickness = 1; // Width of the lines
-    // Color customization
-    float4 gridColor = float4(0, 0, 0, 1);
-    
-    if (abs(fmod(uv.x, grid.cellSize)) < lineThickness) {
-      color = gridColor;
-    }
-    if (abs(fmod(uv.y, grid.cellSize)) < lineThickness) {
-      color = gridColor;
+    if (data.debug.drawGrid) {
+      float4 gridColor = color::black;
+      float4 nonEmptyColor = color::green;
+      float2 offset = float2(grid.cellSize) * 0.5;
+      float2 repeatedCoord = abs(fmod(uv - offset, float2(grid.cellSize)));
+      float4 prevColor = color;
+      {
+        float dist = sdBox(repeatedCoord - offset, grid.cellSize * 0.5);
+        int intersect = step(dist, 0);
+        color = mix(color, shapesCount && data.debug.showFilledCells ? nonEmptyColor : gridColor, intersect);
+      }
+      {
+        float inset = 2;
+        float dist = sdBox(repeatedCoord - offset, (grid.cellSize - inset) * 0.5);
+        int intersect = step(dist, 0);
+        color = mix(color, prevColor, intersect);
+      }
     }
   }
   
-  //  int circlesCount = args.circlesCount;
-  //  int squaresCount = args.squaresCount;
-  //  int linesCount = args.linesCount;
-  
-  // todo: set cameraPos based on the biggest depth value
-  //  float cameraPos = 1000000;
-  //  float distToCamera = cameraPos;
-  
-  //  for (int i = 0; i < circlesCount; i++) {
-  //    Circle circle = args.circles[i];
-  //    float dist = sdCircle(uv - circle.position.xy, circle.radius);
-  //    float newDistToCamera = cameraPos - circle.depth;
-  //    float intersect = step(dist, 0);
-  //    float closestToTheCamera = step(newDistToCamera, distToCamera);
-  //    int hit = int(intersect) & int(closestToTheCamera);
-  //    color = mix(color, circle.color, hit);
-  //    distToCamera = select(distToCamera, newDistToCamera, hit);
-  //  }
-  //
-  //  for (int i = 0; i < squaresCount; i++) {
-  //    Square square = args.squares[i];
-  //    float dist = sdBox(rotation(square.rotation) * (uv - square.position.xy), square.size * 0.5);
-  //    float newDistToCamera = cameraPos - square.depth;
-  //    float intersect = step(dist, 0);
-  //    float closestToTheCamera = step(newDistToCamera, distToCamera);
-  //    int hit = int(intersect) & int(closestToTheCamera);
-  //    color = mix(color, square.color, hit);
-  //    distToCamera = select(distToCamera, newDistToCamera, hit);
-  //  }
-  //
-  //  for (int i = 0; i < linesCount; i++) {
-  //    Line line = args.lines[i];
-  //    float dist = sdSegment(uv, line.start, line.end) - line.thickness;
-  //    float newDistToCamera = cameraPos - line.depth;
-  //    float intersect = step(dist, 0);
-  //    float closestToTheCamera = step(newDistToCamera, distToCamera);
-  //    int hit = int(intersect) & int(closestToTheCamera);
-  //    color = mix(color, line.color, hit);
-  //    distToCamera = select(distToCamera, newDistToCamera, hit);
-  //  }
-  
   output.write(color, gid);
-  
-  //  float2 tempUv = rotation(data.time) * uv;
-  //  output.write(float4(tempUv.x, tempUv.y, 0, 1), gid);
 }

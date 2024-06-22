@@ -10,24 +10,24 @@ public extension uchar4 {
   static let gray = uchar4(127, 127, 127, 255)
   static let lightGray = uchar4(150, 150, 150, 255)
   static let white = uchar4(255, 255, 255, 255)
-  
+
   var r: UInt8 {
-    get { self.x }
-    set { self.x = newValue }
+    get { x }
+    set { x = newValue }
   }
-  
+
   var g: UInt8 {
-    get { self.y }
-    set { self.y = newValue }
+    get { y }
+    set { y = newValue }
   }
-  
+
   var b: UInt8 {
-    get { self.z }
-    set { self.z = newValue }
+    get { z }
+    set { z = newValue }
   }
-  
+
   var a: UInt8 {
-    get { self.w }
-    set { self.w = newValue }
+    get { w }
+    set { w = newValue }
   }
 }

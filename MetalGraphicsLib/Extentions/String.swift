@@ -9,14 +9,14 @@ import Foundation
 
 extension String {
   var uint32: [UInt32] {
-    return self.unicodeScalars.map { $0.value }
+    unicodeScalars.map(\.value)
   }
-  
-  init(values: [UInt32])  {
+
+  init(values: [UInt32]) {
     self = String(values.map { Character(Unicode.Scalar($0)!) })
   }
-  
-  init(values: inout [UInt32])  {
+
+  init(values: inout [UInt32]) {
     self = String(values.map { Character(Unicode.Scalar($0)!) })
   }
 }

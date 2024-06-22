@@ -7,12 +7,12 @@
 
 public extension Array {
   var byteCount: Int {
-    return MemoryLayout<Element>.stride * self.count
+    MemoryLayout<Element>.stride * count
   }
-  
+
   mutating func forEach(_ body: (inout Element) -> Void) {
-    self.withUnsafeMutableBufferPointer { buffer in
-      for i in 0..<buffer.count {
+    withUnsafeMutableBufferPointer { buffer in
+      for i in 0 ..< buffer.count {
         var elem = buffer[i]
         body(&elem)
         buffer[i] = elem

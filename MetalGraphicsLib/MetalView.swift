@@ -1,18 +1,18 @@
-import SwiftUI
 import MetalKit
+import SwiftUI
 
 public struct MetalView: View {
   @State private var metalView: MTKView = MyMTKView()
   public let viewRenderer: ViewRenderer
-  
+
   public init(viewRenderer: ViewRenderer) {
     self.viewRenderer = viewRenderer
   }
-  
+
   public var body: some View {
-    MetalViewRepresentable(metalView: $metalView)
+    MetalViewRepresentable(metalView: self.$metalView)
       .onAppear {
-        viewRenderer.initialize(metalView: metalView)
+        self.viewRenderer.initialize(metalView: self.metalView)
       }
 //      .gesture(
 //        DragGesture(minimumDistance: 0)
@@ -23,7 +23,7 @@ public struct MetalView: View {
 //            Input.mouseDelta = float2(delta.x, -delta.y)
 //            Input.prevMousePosition = location
 //            let translation = location - startLocation
-//            
+//
 //            Input.drag = true
 //            Input.dragGesture = Drag(
 //              start: startLocation,
@@ -45,33 +45,35 @@ public struct MetalView: View {
 }
 
 #if os(macOS)
-public typealias ViewRepresentable = NSViewRepresentable
+  public typealias ViewRepresentable = NSViewRepresentable
 #elseif os(iOS)
-public typealias ViewRepresentable = UIViewRepresentable
+  public typealias ViewRepresentable = UIViewRepresentable
 #endif
 
 public struct MetalViewRepresentable: ViewRepresentable {
   @Binding var metalView: MTKView
-  
-#if os(macOS)
-  public func makeNSView(context: Context) -> some NSView {
-    print("makeMetalView")
-    return metalView
-  }
-  public func updateNSView(_ uiView: NSViewType, context: Context) {
-    updateMetalView()
-  }
-#elseif os(iOS)
-  func makeUIView(context: Context) -> MTKView {
-    print("makeMetalView")
-    return metalView
-  }
-  
-  func updateUIView(_ uiView: MTKView, context: Context) {
-    updateMetalView()
-  }
-#endif
-  
+
+  #if os(macOS)
+    public func makeNSView(context _: Context) -> some NSView {
+      print("makeMetalView")
+      return self.metalView
+    }
+
+    public func updateNSView(_: NSViewType, context _: Context) {
+      self.updateMetalView()
+    }
+
+  #elseif os(iOS)
+    func makeUIView(context _: Context) -> MTKView {
+      print("makeMetalView")
+      return self.metalView
+    }
+
+    func updateUIView(_: MTKView, context _: Context) {
+      self.updateMetalView()
+    }
+  #endif
+
   func updateMetalView() {
     print("updateMetalView")
   }

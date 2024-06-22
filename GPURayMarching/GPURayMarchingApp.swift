@@ -1,19 +1,34 @@
 import SwiftUI
-import MetalGraphicsLib
+
+// import MetalGraphicsLib
+
+class Reload: ObservableObject {
+  @Published private var value = true
+
+  func toggle() {
+    self.value.toggle()
+  }
+}
+
+class Global {
+  static let reload = Reload()
+}
 
 @main
 struct GPURayMarchingApp: App {
   init() {
-    Input.initialize()
-    
-//    var arr: [Float] = [3, 5, 6, 2, 1]
-//    print("before: \(arr)")
-////    arr.sort(by: { $0 > $1 })
-//    print("after: \(arr)")
+//    Input.initialize()
+//    print(Color.white.resolve(in: EnvironmentValues()).cgColor.components!)
+//    print(Color.black.resolve(in: EnvironmentValues()).cgColor.components!)
+//    print(Color.red.resolve(in: EnvironmentValues()).cgColor.components!)
+//    print(Color.green.resolve(in: EnvironmentValues()).cgColor.components!)
+//    print(Color.blue.resolve(in: EnvironmentValues()).cgColor.components!)
   }
+
   var body: some Scene {
     WindowGroup {
       ContentView()
+        .environmentObject(Global.reload)
     }
   }
 }
