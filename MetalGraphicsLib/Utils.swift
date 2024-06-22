@@ -9,3 +9,7 @@ public func iterateWithStep(from start: Float, to end: Float, step: Float, actio
 
   action(end)
 }
+
+public func name<T>(of _: T.Type) -> String {
+  String(describing: T.self)
+}
