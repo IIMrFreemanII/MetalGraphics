@@ -166,10 +166,12 @@ kernel void compute2D(
     }
     
     if (data.debug.drawGrid) {
+      float2 center = (float2(xIndex, yIndex) - float2(grid.gridSize) * 0.5) * grid.cellSize + grid.cellSize * 0.5;
+      
       float4 gridColor = color::black;
       float4 nonEmptyColor = color::green;
-      float2 offset = float2(grid.cellSize) * 0.5;
-      float2 repeatedCoord = abs(fmod(uv - offset, float2(grid.cellSize)));
+      float2 offset = center;
+      float2 repeatedCoord = uv;
       float4 prevColor = color;
       {
         float dist = sdBox(repeatedCoord - offset, grid.cellSize * 0.5);

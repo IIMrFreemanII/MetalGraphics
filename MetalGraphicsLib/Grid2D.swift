@@ -36,6 +36,7 @@ class Grid2D {
 
     init() {
       self.shapeBuffer = Graphics.shared.device.makeBuffer(length: MemoryLayout<Shape>.stride * 1)
+      self.shapeBuffer.label = "Shape buffer"
     }
 
     public func updateBuffer(_ grid: Grid2D, _ index: Int) {
@@ -75,7 +76,9 @@ class Grid2D {
     self.resources = self.cells.map { $0.shapeBuffer }
 
     self.cellBuffer = Graphics.shared.device.makeBuffer(length: MemoryLayout<GridCellArgBuffer>.stride * self.cellBufferCount)
+    self.cellBuffer.label = "Cell buffer"
     self.gridArgBuffer = Graphics.shared.device.makeBuffer(length: MemoryLayout<GridArgBuffer>.stride * 1)
+    self.gridArgBuffer.label = "Grid arg buffer"
   }
 
   public func reset() {

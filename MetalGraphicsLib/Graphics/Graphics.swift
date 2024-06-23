@@ -166,7 +166,7 @@ public class Graphics {
     }
     
     commandEncoder.useResources(Self.grid.resources, usage: .read)
-    commandEncoder.useResource(grid.cellBuffer, usage: .read)
+    commandEncoder.useResources([grid.cellBuffer, shared.circleBuffer, shared.squareBuffer, shared.lineBuffer], usage: .read)
     
     commandEncoder.setComputePipelineState(shared.pipelineState)
     let texture = drawable.texture
