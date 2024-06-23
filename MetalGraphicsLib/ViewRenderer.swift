@@ -72,7 +72,7 @@ extension ViewRenderer: MTKViewDelegate {
     Input.windowSize = float2(width, height)
     Input.framebufferSize = resolution
 
-    var newGridSize = int2(floor(Input.windowSize / Graphics.grid.cellSize)) &+ 1
+    let newGridSize = int2(floor(Input.windowSize / Graphics.grid.cellSize)) &+ 1
     let prevCellSize = Graphics.grid.cellSize
     let prevPosition = Graphics.grid.position
     let notZero = newGridSize.x > 0 && newGridSize.y > 0

@@ -25,7 +25,8 @@ public struct SceneData {
 public class Graphics {
   private static var depth = Float()
   static var grid: Grid2D = .init(position: float2(), size: int2(10, 10), cellSize: Float(50))
-
+  static var resizeGrid = false
+  
   public static var shared: Graphics = {
     var result = Graphics()
     guard let device = MTLCreateSystemDefaultDevice()
@@ -163,7 +164,10 @@ public class Graphics {
     else {
       return
     }
-
+    
+    commandEncoder.useResources(Self.grid.resources, usage: .read)
+    commandEncoder.useResource(grid.cellBuffer, usage: .read)
+    
     commandEncoder.setComputePipelineState(shared.pipelineState)
     let texture = drawable.texture
     commandEncoder.setTexture(texture, index: 0)
@@ -222,34 +226,34 @@ public class Graphics {
   }
 
   // for testing
-  public static func testGrid(in view: MTKView) {
-    self.grid.reset()
-
-    let boundsSize = float2(30, 30)
-    let bounds = BoundingBox2D(center: Input.mousePositionFromCenter, size: boundsSize)
-    Self.grid.mapShapeBoundingBoxToGrid(bounds, Shape(index: Int32(), shapeType: Int32()))
-
-    for cell in Self.grid.cells {
-      if cell.shapes.count > 1 {
-        print("has duplicates")
-      }
-    }
-
-    let spacing = Float(0)
-
-    Graphics.context(in: view) { _ in
-      Graphics.draw(square: Square(position: bounds.center, size: boundsSize, color: float4(0, 0, 1, 1)))
-      for y in 0 ..< Self.grid.size.y {
-        for x in 0 ..< Self.grid.size.x {
-          let index = from2DTo1DArray(int2(x, y), Self.grid.size)
-          let isEmply = Self.grid.cells[index].shapes.isEmpty
-          let size = float2(Self.grid.cellSize, Self.grid.cellSize)
-
-          Graphics.draw(square: Square(position: float2((Float(x) - Float(Self.grid.size.x) * 0.5) * (Self.grid.cellSize + spacing), (Float(y) - Float(Self.grid.size.y) * 0.5) * (Self.grid.cellSize + spacing)) + size * 0.5, size: size, color: isEmply ? float4(1, 0, 0, 1) : float4(0, 1, 0, 1)))
-        }
-      }
-    }
-  }
+//  public static func testGrid(in view: MTKView) {
+//    self.grid.reset()
+//
+//    let boundsSize = float2(30, 30)
+//    let bounds = BoundingBox2D(center: Input.mousePositionFromCenter, size: boundsSize)
+//    Self.grid.mapShapeBoundingBoxToGrid(bounds, Shape(index: Int32(), shapeType: Int32()))
+//
+//    for cell in Self.grid.cells {
+//      if cell.shapes.count > 1 {
+//        print("has duplicates")
+//      }
+//    }
+//
+//    let spacing = Float(0)
+//
+//    Graphics.context(in: view) { _ in
+//      Graphics.draw(square: Square(position: bounds.center, size: boundsSize, color: float4(0, 0, 1, 1)))
+//      for y in 0 ..< Self.grid.size.y {
+//        for x in 0 ..< Self.grid.size.x {
+//          let index = from2DTo1DArray(int2(x, y), Self.grid.size)
+//          let isEmply = Self.grid.cells[index].shapes.isEmpty
+//          let size = float2(Self.grid.cellSize, Self.grid.cellSize)
+//
+//          Graphics.draw(square: Square(position: float2((Float(x) - Float(Self.grid.size.x) * 0.5) * (Self.grid.cellSize + spacing), (Float(y) - Float(Self.grid.size.y) * 0.5) * (Self.grid.cellSize + spacing)) + size * 0.5, size: size, color: isEmply ? float4(1, 0, 0, 1) : float4(0, 1, 0, 1)))
+//        }
+//      }
+//    }
+//  }
 
   public static func draw(circle: Circle) {
     var temp = circle

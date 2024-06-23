@@ -1,11 +1,14 @@
 import SwiftUI
-import MetalGraphicsLib
 
 @main
 struct GPURayMarchingApp: App {
   init() {
-    // MARK: make use of lazy initializing
-    Input.initialize()
+//    let mirror = Mirror(reflecting: Text("Some text").background(.red).foregroundStyle(.red))
+//    for child in mirror.children {
+//      let fieldName = child.label
+//      let value: Any = child.value
+//      print("\(fieldName!): \(value)")
+//    }
   }
 
   var body: some Scene {

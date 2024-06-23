@@ -38,11 +38,13 @@ class Grid2D {
       self.shapeBuffer = Graphics.shared.device.makeBuffer(length: MemoryLayout<Shape>.stride * 1)
     }
 
-    public func updateBuffer() {
+    public func updateBuffer(_ grid: Grid2D, _ index: Int) {
       if self.shapeBufferCount < self.shapes.count {
         self.shapeBufferCount += 10
         self.shapeBuffer = Graphics.shared.device.makeBuffer(length: MemoryLayout<Shape>.stride * self.shapeBufferCount)
         self.shapeBuffer.label = "Shape buffer"
+        
+        grid.resources[index] = self.shapeBuffer
       }
 
       self.shapeBuffer.contents().copyMemory(from: &self.shapes, byteCount: self.shapes.byteCount)
@@ -57,6 +59,7 @@ class Grid2D {
   public var cellBuffer: MTLBuffer!
   public var cellBufferCount: Int = 0
   public var gridArgBuffer: MTLBuffer!
+  public var resources: [MTLResource] = []
 
   public init(position: float2, size: int2, cellSize: Float) {
     self.size = size
@@ -69,6 +72,7 @@ class Grid2D {
     for _ in 0 ..< self.cellBufferCount {
       self.cells.append(Cell())
     }
+    self.resources = self.cells.map { $0.shapeBuffer }
 
     self.cellBuffer = Graphics.shared.device.makeBuffer(length: MemoryLayout<GridCellArgBuffer>.stride * self.cellBufferCount)
     self.gridArgBuffer = Graphics.shared.device.makeBuffer(length: MemoryLayout<GridArgBuffer>.stride * 1)
@@ -95,7 +99,7 @@ class Grid2D {
     self.sortShapesByDepth()
 
     for i in 0 ..< self.cells.count {
-      self.cells[i].updateBuffer()
+      self.cells[i].updateBuffer(self, i)
     }
 
     let gridCellBuffer = self.cellBuffer.contents().bindMemory(to: GridCellArgBuffer.self, capacity: self.cellBufferCount)
