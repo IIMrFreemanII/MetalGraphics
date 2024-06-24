@@ -1,4 +1,6 @@
 import MetalKit
+import Foundation
+import Dispatch
 
 struct ShapeArgBuffer {
   var circles: UInt64 = 0
@@ -39,11 +41,12 @@ public class Graphics {
 
     var library: MTLLibrary!
     do {
-      if let path = Bundle(for: Graphics.self).path(forResource: "default", ofType: "metallib") {
-        library = try device.makeLibrary(URL: URL(fileURLWithPath: path))
-      } else {
-        fatalError("Could not find metallib file in bundle")
-      }
+      library = try device.makeDefaultLibrary(bundle: Bundle(for: Graphics.self))
+//      if let path = Bundle(for: Graphics.self).path(forResource: "default", ofType: "metallib") {
+//        library = try device.makeLibrary(URL: URL(fileURLWithPath: path))
+//      } else {
+//        fatalError("Could not find metallib file in bundle")
+//      }
     } catch {
       fatalError("Could not create Metal library: \(error)")
     }
@@ -64,10 +67,11 @@ public class Graphics {
     } catch {
       fatalError()
     }
-
+  
     return result
   }()
 
+  let debouncer = Debouncer()
   var device: MTLDevice!
   var commandQueue: MTLCommandQueue!
   var library: MTLLibrary!

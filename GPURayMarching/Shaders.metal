@@ -8,7 +8,7 @@
 #include <metal_stdlib>
 using namespace metal;
 
-#include "Math.metal"
+#include "Math.h"
 
 struct Camera {
   float3 position;

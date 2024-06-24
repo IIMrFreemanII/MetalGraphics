@@ -3,10 +3,11 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 63;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		153A260C2C2951A5008F836B /* Math.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15941A152C15DC2F00C56203 /* Math.metal */; };
 		159419A72C147B0E00C56203 /* GPURayMarchingApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419A62C147B0E00C56203 /* GPURayMarchingApp.swift */; };
 		159419A92C147B0E00C56203 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419A82C147B0E00C56203 /* ContentView.swift */; };
 		159419AB2C147B0F00C56203 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 159419AA2C147B0F00C56203 /* Assets.xcassets */; };
@@ -365,7 +366,7 @@
 				};
 			};
 			buildConfigurationList = 159419892C147A6900C56203 /* Build configuration list for PBXProject "MetalGraphics" */;
-			compatibilityVersion = "Xcode 14.0";
+			compatibilityVersion = "Xcode 15.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -411,6 +412,7 @@
 				15941A0D2C149DE300C56203 /* TestViewRenderer.swift in Sources */,
 				159419A72C147B0E00C56203 /* GPURayMarchingApp.swift in Sources */,
 				15941A1A2C15DD9200C56203 /* Shaders.metal in Sources */,
+				153A260C2C2951A5008F836B /* Math.metal in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -525,6 +527,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.5;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
+				MTL_HEADER_SEARCH_PATHS = "";
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
@@ -582,6 +585,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.5;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				MTL_HEADER_SEARCH_PATHS = "";
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
