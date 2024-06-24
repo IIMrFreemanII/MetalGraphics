@@ -125,21 +125,32 @@ class Grid2D {
     let gridBottomRight = self.bounds.bottomRight
     let boxTopLeft = box.topLeft
     let boxBottomRight = box.bottomRight
-    var usedIndecies: [Int] = []
 
+    var prevY = Int(-1)
     for y in StepSequence(from: boxBottomRight.y, to: boxTopLeft.y, step: self.cellSize) {
       if y.isBetween(gridBottomRight.y ... gridTopLeft.y) {
-        let yIndex = floor(remap(y, float2(bounds.bottom, self.bounds.top), float2(0, Float(self.size.y))))
+        let yIndex = Int(floor(remap(y, float2(bounds.bottom, self.bounds.top), float2(0, Float(self.size.y)))))
+        
+        if prevY == yIndex {
+          continue
+        }
+        prevY = yIndex
+        
+        var prevX = Int(-1)
         for x in StepSequence(from: boxTopLeft.x, to: boxBottomRight.x, step: self.cellSize) {
           if x.isBetween(gridTopLeft.x ... gridBottomRight.x) {
-            let xIndex = floor(remap(x, float2(bounds.left, self.bounds.right), float2(0, Float(self.size.x))))
+            let xIndex = Int(floor(remap(x, float2(bounds.left, self.bounds.right), float2(0, Float(self.size.x)))))
+            
+            if prevX == xIndex {
+              continue
+            }
+            prevX = xIndex
 
-            let coord = int2(Int(xIndex), Int(yIndex))
+            let coord = int2(xIndex, yIndex)
             let index = from2DTo1DArray(coord, size)
 
-            if !usedIndecies.contains(where: { $0 == index }), index < self.cells.count {
+            if index < self.cells.count {
               self.cells[index].shapes.append(shape)
-              usedIndecies.append(index)
             }
           }
         }
