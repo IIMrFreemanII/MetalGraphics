@@ -1,8 +1,5 @@
 #include "Sorting.h"
 
-template <typename T>
-using SortCb = bool(*)(T, T);
-
 constant const int MIN_MERGE = 32;
 
 int minRunLength(int n) {
