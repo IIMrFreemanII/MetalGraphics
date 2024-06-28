@@ -5,30 +5,26 @@
 //  Created by Nikolay Diahovets on 12.02.2023.
 //
 
-public extension Float {
-  init(_ boolean: Bool) {
+extension Float {
+  public init(_ boolean: Bool) {
     self = boolean ? 1 : 0
   }
-}
-
-public extension Float {
-  func isBetween(_ range: ClosedRange<Float>) -> Bool {
+  
+  public func isBetween(_ range: ClosedRange<Float>) -> Bool {
     range.contains(self)
   }
-}
-
-public extension Float {
+  
   /// Converts radians to degrees
-  var degrees: Float {
+  public var degrees: Float {
     (self / π) * 180
   }
-
+  
   /// Converts degrees to radians
-  var radians: Float {
+  public var radians: Float {
     (self / 180) * π
   }
-
-  var isNegative: Bool {
+  
+  public var isNegative: Bool {
     sign == .minus
   }
 }

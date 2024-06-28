@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		153A260C2C2951A5008F836B /* Math.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15941A152C15DC2F00C56203 /* Math.metal */; };
 		159419A72C147B0E00C56203 /* GPURayMarchingApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419A62C147B0E00C56203 /* GPURayMarchingApp.swift */; };
 		159419A92C147B0E00C56203 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419A82C147B0E00C56203 /* ContentView.swift */; };
 		159419AB2C147B0F00C56203 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 159419AA2C147B0F00C56203 /* Assets.xcassets */; };
@@ -54,6 +53,9 @@
 		15C91D3D2C1F350200A2857F /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D3C2C1F350200A2857F /* Shaders.metal */; };
 		15C91D3E2C1F43E100A2857F /* Math.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15941A152C15DC2F00C56203 /* Math.metal */; };
 		15C91D3F2C1F43E300A2857F /* SDF.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D322C1EF88B00A2857F /* SDF.metal */; };
+		15DF1C222C2B167D00E8E7E6 /* Benchmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15DF1C212C2B167D00E8E7E6 /* Benchmark.swift */; };
+		15DF1C292C2E862300E8E7E6 /* Sorting.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15DF1C282C2E862300E8E7E6 /* Sorting.metal */; };
+		15DF1C312C2F1E4F00E8E7E6 /* Math.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15941A152C15DC2F00C56203 /* Math.metal */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -131,6 +133,9 @@
 		15C91D3C2C1F350200A2857F /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
 		15C91D402C1F46A000A2857F /* SDF.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SDF.h; sourceTree = "<group>"; };
 		15C91D422C1F46B600A2857F /* Math.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Math.h; sourceTree = "<group>"; };
+		15DF1C212C2B167D00E8E7E6 /* Benchmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Benchmark.swift; sourceTree = "<group>"; };
+		15DF1C282C2E862300E8E7E6 /* Sorting.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Sorting.metal; sourceTree = "<group>"; };
+		15DF1C2A2C2E863000E8E7E6 /* Sorting.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Sorting.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -251,6 +256,7 @@
 				15A049D92C236C8500D28009 /* Utils.swift */,
 				15A049DB2C243DB200D28009 /* StepSequence.swift */,
 				15A049E72C27163400D28009 /* Global.swift */,
+				15DF1C212C2B167D00E8E7E6 /* Benchmark.swift */,
 			);
 			path = MetalGraphicsLib;
 			sourceTree = "<group>";
@@ -285,13 +291,15 @@
 		15C91D4F2C1F5DE500A2857F /* Shaders */ = {
 			isa = PBXGroup;
 			children = (
-				15C91D3C2C1F350200A2857F /* Shaders.metal */,
 				15941A152C15DC2F00C56203 /* Math.metal */,
 				15C91D322C1EF88B00A2857F /* SDF.metal */,
 				15C91D402C1F46A000A2857F /* SDF.h */,
 				15C91D422C1F46B600A2857F /* Math.h */,
 				15A049DD2C24B21800D28009 /* Utils.metal */,
 				15A049DF2C24B22500D28009 /* Utils.h */,
+				15DF1C282C2E862300E8E7E6 /* Sorting.metal */,
+				15DF1C2A2C2E863000E8E7E6 /* Sorting.h */,
+				15C91D3C2C1F350200A2857F /* Shaders.metal */,
 			);
 			path = Shaders;
 			sourceTree = "<group>";
@@ -412,7 +420,7 @@
 				15941A0D2C149DE300C56203 /* TestViewRenderer.swift in Sources */,
 				159419A72C147B0E00C56203 /* GPURayMarchingApp.swift in Sources */,
 				15941A1A2C15DD9200C56203 /* Shaders.metal in Sources */,
-				153A260C2C2951A5008F836B /* Math.metal in Sources */,
+				15DF1C312C2F1E4F00E8E7E6 /* Math.metal in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -427,6 +435,7 @@
 				15A049E82C27163400D28009 /* Global.swift in Sources */,
 				15A049DE2C24B21800D28009 /* Utils.metal in Sources */,
 				15941A052C149A4600C56203 /* uchar4.swift in Sources */,
+				15DF1C222C2B167D00E8E7E6 /* Benchmark.swift in Sources */,
 				15A049D62C23218100D28009 /* BoundingBox.swift in Sources */,
 				15941A132C15BCC000C56203 /* MyMTKView.swift in Sources */,
 				15C91D362C1F1A1500A2857F /* Circle.swift in Sources */,
@@ -455,6 +464,7 @@
 				159419EB2C1490B700C56203 /* Rect.swift in Sources */,
 				15A049DA2C236C8500D28009 /* Utils.swift in Sources */,
 				159419F72C14917600C56203 /* Float.swift in Sources */,
+				15DF1C292C2E862300E8E7E6 /* Sorting.metal in Sources */,
 				15941A012C149A1400C56203 /* int2.swift in Sources */,
 				15C91D3F2C1F43E300A2857F /* SDF.metal in Sources */,
 			);
@@ -673,6 +683,8 @@
 				MARKETING_VERSION = 1.0;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				MTL_COMPILER_FLAGS = "";
+				MTL_ENABLE_MODULES = STDLIB;
 				MTL_HEADER_SEARCH_PATHS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.company.MetalGraphicsLib;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
@@ -709,6 +721,8 @@
 				MARKETING_VERSION = 1.0;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
+				MTL_COMPILER_FLAGS = "";
+				MTL_ENABLE_MODULES = STDLIB;
 				MTL_HEADER_SEARCH_PATHS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.company.MetalGraphicsLib;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";

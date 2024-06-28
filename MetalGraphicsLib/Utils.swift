@@ -37,3 +37,12 @@ public class Debouncer {
     }
   }
 }
+
+public func forEachGridCell(_ gridSize: int2, _ cellSize: Float, _ spacing: Float, _ cb: (float2) -> Void) -> Void {
+  for y in 0..<gridSize.y {
+    for x in 0..<gridSize.x {
+      let coord = (float2(Float(x), Float(y)) * (cellSize + spacing)) - (float2(Float(gridSize.x), Float(gridSize.y)) * cellSize * 0.5) + float2(cellSize * 0.5, cellSize * 0.5)
+      cb(coord)
+    }
+  }
+}

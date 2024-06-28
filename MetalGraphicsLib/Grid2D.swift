@@ -41,7 +41,7 @@ class Grid2D {
 
     public func updateBuffer(_ grid: Grid2D, _ index: Int) {
       if self.shapeBufferCount < self.shapes.count {
-        self.shapeBufferCount += 10
+        self.shapeBufferCount = self.shapes.count + 10
         self.shapeBuffer = Graphics.shared.device.makeBuffer(length: MemoryLayout<Shape>.stride * self.shapeBufferCount)
         self.shapeBuffer.label = "Shape buffer"
         

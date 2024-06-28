@@ -78,8 +78,11 @@ extension ViewRenderer: MTKViewDelegate {
     let notZero = newGridSize.x > 0 && newGridSize.y > 0
 
     if newGridSize != Graphics.grid.size, notZero {
-      print("newGridSize: \(newGridSize)")
-      Graphics.grid = Grid2D(position: prevPosition, size: newGridSize, cellSize: prevCellSize)
+//      print("trigger newGridSize: \(newGridSize)")
+      Graphics.resizeCb = {
+//        print("newGridSize: \(newGridSize)")
+        Graphics.grid = Grid2D(position: prevPosition, size: newGridSize, cellSize: prevCellSize)
+      }
     }
   }
 

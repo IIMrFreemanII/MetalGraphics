@@ -6,13 +6,11 @@
 //
 
 extension Int {
-  init(_ boolean: Bool) {
+  public init(_ boolean: Bool) {
     self = boolean ? 1 : 0
   }
-}
-
-extension Int {
-  func isBetween(_ range: ClosedRange<Int>) -> Bool {
+  
+  public func isBetween(_ range: ClosedRange<Int>) -> Bool {
     range.contains(self)
   }
 }
