@@ -32,21 +32,21 @@ public class Input {
       let mouse = notification.object as? GCMouse
       // 1
       mouse?.mouseInput?.leftButton.pressedChangedHandler = { _, _, pressed in
-        result._leftMousePressed = pressed
+        result.leftMousePressed = pressed
 
         if pressed {
-          result._leftMouseDown = true
+          result.leftMouseDown = true
         } else {
-          result._leftMouseUp = true
+          result.leftMouseUp = true
         }
       }
       mouse?.mouseInput?.rightButton?.pressedChangedHandler = { _, _, pressed in
-        result._rightMousePressed = pressed
+        result.rightMousePressed = pressed
 
         if pressed {
-          result._rightMouseDown = true
+          result.rightMouseDown = true
         } else {
-          result._rightMouseUp = true
+          result.rightMouseUp = true
         }
       }
     }
@@ -64,9 +64,9 @@ public class Input {
 
           switch keyCode {
           case .leftGUI, .rightGUI:
-            result._commandPressed = true
+            result.commandPressed = true
           case .leftShift, .rightShift:
-            result._shiftPressed = true
+            result.shiftPressed = true
           default:
             break
           }
@@ -76,9 +76,9 @@ public class Input {
 
           switch keyCode {
           case .leftGUI, .rightGUI:
-            result._commandPressed = false
+            result.commandPressed = false
           case .leftShift, .rightShift:
-            result._shiftPressed = false
+            result.shiftPressed = false
           default:
             break
           }
@@ -107,161 +107,161 @@ public class Input {
   public let rightArrow = UInt32(63235)
   public let escape = UInt32(27)
 
-  private var _characters: String?
+  private var characters: String?
   public static var characters: String? {
-    get { Input.shared._characters }
-    set { Input.shared._characters = newValue }
+    get { Input.shared.characters }
+    set { Input.shared.characters = newValue }
   }
 
-  private var _charactersCode: UInt32?
+  private var charactersCode: UInt32?
   public static var charactersCode: UInt32? {
-    get { Input.shared._charactersCode }
-    set { Input.shared._charactersCode = newValue }
+    get { Input.shared.charactersCode }
+    set { Input.shared.charactersCode = newValue }
   }
 
-  private var _modifierFlags: NSEvent.ModifierFlags?
+  private var modifierFlags: NSEvent.ModifierFlags?
   public static var modifierFlags: NSEvent.ModifierFlags? {
-    get { Input.shared._modifierFlags }
-    set { Input.shared._modifierFlags = newValue }
+    get { Input.shared.modifierFlags }
+    set { Input.shared.modifierFlags = newValue }
   }
 
   public var keysPressed: Set<GCKeyCode> = []
   public var keysDown: Set<GCKeyCode> = []
   public var keysUp: Set<GCKeyCode> = []
 
-  private var _dragGesture = Drag()
+  private var dragGesture = Drag()
   public static var dragGesture: Drag {
-    get { Input.shared._dragGesture }
-    set { Input.shared._dragGesture = newValue }
+    get { Input.shared.dragGesture }
+    set { Input.shared.dragGesture = newValue }
   }
 
-  private var _drag = false
+  private var drag = false
   public static var drag: Bool {
-    get { Input.shared._drag }
-    set { Input.shared._drag = newValue }
+    get { Input.shared.drag }
+    set { Input.shared.drag = newValue }
   }
 
-  private var _dragEnded = false
+  private var dragEnded = false
   public static var dragEnded: Bool {
-    get { Input.shared._dragEnded }
-    set { Input.shared._dragEnded = newValue }
+    get { Input.shared.dragEnded }
+    set { Input.shared.dragEnded = newValue }
   }
 
-  private var _commandPressed = false
+  private var commandPressed = false
   public static var commandPressed: Bool {
-    get { Input.shared._commandPressed }
-    set { Input.shared._commandPressed = newValue }
+    get { Input.shared.commandPressed }
+    set { Input.shared.commandPressed = newValue }
   }
 
-  private var _shiftPressed = false
+  private var shiftPressed = false
   public static var shiftPressed: Bool {
-    get { Input.shared._shiftPressed }
-    set { Input.shared._shiftPressed = newValue }
+    get { Input.shared.shiftPressed }
+    set { Input.shared.shiftPressed = newValue }
   }
 
-  private var _doubleClick = false
+  private var doubleClick = false
   public static var doubleClick: Bool {
-    get { Input.shared._doubleClick }
-    set { Input.shared._doubleClick = newValue }
+    get { Input.shared.doubleClick }
+    set { Input.shared.doubleClick = newValue }
   }
 
-  private var _clickCount = 0
+  private var clickCount = 0
   public static var clickCount: Int {
-    get { Input.shared._clickCount }
-    set { Input.shared._clickCount = newValue }
+    get { Input.shared.clickCount }
+    set { Input.shared.clickCount = newValue }
   }
 
-  private var _leftMousePressed = false
+  private var leftMousePressed = false
   public static var leftMousePressed: Bool {
-    get { Input.shared._leftMousePressed }
-    set { Input.shared._leftMousePressed = newValue }
+    get { Input.shared.leftMousePressed }
+    set { Input.shared.leftMousePressed = newValue }
   }
 
-  private var _rightMousePressed = false
+  private var rightMousePressed = false
   public static var rightMousePressed: Bool {
-    get { Input.shared._rightMousePressed }
-    set { Input.shared._rightMousePressed = newValue }
+    get { Input.shared.rightMousePressed }
+    set { Input.shared.rightMousePressed = newValue }
   }
 
-  private var _leftMouseDown = false
+  private var leftMouseDown = false
   public static var leftMouseDown: Bool {
-    get { Input.shared._leftMouseDown }
-    set { Input.shared._leftMouseDown = newValue }
+    get { Input.shared.leftMouseDown }
+    set { Input.shared.leftMouseDown = newValue }
   }
 
-  private var _rightMouseDown = false
+  private var rightMouseDown = false
   public static var rightMouseDown: Bool {
-    get { Input.shared._rightMouseDown }
-    set { Input.shared._rightMouseDown = newValue }
+    get { Input.shared.rightMouseDown }
+    set { Input.shared.rightMouseDown = newValue }
   }
 
-  private var _leftMouseUp = false
+  private var leftMouseUp = false
   public static var leftMouseUp: Bool {
-    get { Input.shared._leftMouseUp }
-    set { Input.shared._leftMouseUp = newValue }
+    get { Input.shared.leftMouseUp }
+    set { Input.shared.leftMouseUp = newValue }
   }
 
-  private var _rightMouseUp = false
+  private var rightMouseUp = false
   public static var rightMouseUp: Bool {
-    get { Input.shared._rightMouseUp }
-    set { Input.shared._rightMouseUp = newValue }
+    get { Input.shared.rightMouseUp }
+    set { Input.shared.rightMouseUp = newValue }
   }
 
-  private var _prevMousePosition = float2()
+  private var prevMousePosition = float2()
   public static var prevMousePosition: float2 {
-    get { Input.shared._prevMousePosition }
-    set { Input.shared._prevMousePosition = newValue }
+    get { Input.shared.prevMousePosition }
+    set { Input.shared.prevMousePosition = newValue }
   }
 
-  private var _mousePosition = float2()
+  private var mousePosition = float2()
   public static var mousePosition: float2 {
-    get { Input.shared._mousePosition }
-    set { Input.shared._mousePosition = newValue }
+    get { Input.shared.mousePosition }
+    set { Input.shared.mousePosition = newValue }
   }
 
   public static var mousePositionFromCenter: float2 {
     Input.mousePosition - Input.windowSize * 0.5
   }
 
-  private var _mouseDelta = float2()
+  private var mouseDelta = float2()
   public static var mouseDelta: float2 {
-    get { Input.shared._mouseDelta }
-    set { Input.shared._mouseDelta = newValue }
+    get { Input.shared.mouseDelta }
+    set { Input.shared.mouseDelta = newValue }
   }
 
-  private var _mouseScroll = float2()
+  private var mouseScroll = float2()
   public static var mouseScroll: float2 {
-    get { Input.shared._mouseScroll }
-    set { Input.shared._mouseScroll = newValue }
+    get { Input.shared.mouseScroll }
+    set { Input.shared.mouseScroll = newValue }
   }
 
-  private var _hScrollTimer: Timer?
+  private var hScrollTimer: Timer?
   public static var hScrollTimer: Timer? {
-    get { Input.shared._hScrollTimer }
-    set { Input.shared._hScrollTimer = newValue }
+    get { Input.shared.hScrollTimer }
+    set { Input.shared.hScrollTimer = newValue }
   }
 
-  private var _vScrollTimer: Timer?
+  private var vScrollTimer: Timer?
   public static var vScrollTimer: Timer? {
-    get { Input.shared._vScrollTimer }
-    set { Input.shared._vScrollTimer = newValue }
+    get { Input.shared.vScrollTimer }
+    set { Input.shared.vScrollTimer = newValue }
   }
 
-  private let _delay: Double = 1.5
+  private let delay: Double = 1.5
   public static var delay: Double {
-    Input.shared._delay
+    Input.shared.delay
   }
 
-  private var _hScrolling = false
+  private var hScrolling = false
   public static var hScrolling: Bool {
-    get { Input.shared._hScrolling }
-    set { Input.shared._hScrolling = newValue }
+    get { Input.shared.hScrolling }
+    set { Input.shared.hScrolling = newValue }
   }
 
-  private var _vScrolling = false
+  var vScrolling = false
   public static var vScrolling: Bool {
-    get { Input.shared._vScrolling }
-    set { Input.shared._vScrolling = newValue }
+    get { Input.shared.vScrolling }
+    set { Input.shared.vScrolling = newValue }
   }
 
   public init() {}
@@ -269,76 +269,76 @@ public class Input {
   public static func hideHScrollDebounced() {
     let shared = Input.shared
 
-    shared._hScrollTimer?.invalidate()
-    shared._hScrollTimer = Timer.scheduledTimer(withTimeInterval: shared._delay, repeats: false) { _ in
-      shared._hScrolling = false
+    shared.hScrollTimer?.invalidate()
+    shared.hScrollTimer = Timer.scheduledTimer(withTimeInterval: shared.delay, repeats: false) { _ in
+      shared.hScrolling = false
     }
   }
 
   public static func hideVScrollDebounced() {
     let shared = Input.shared
 
-    shared._vScrollTimer?.invalidate()
-    shared._vScrollTimer = Timer.scheduledTimer(withTimeInterval: shared._delay, repeats: false) { _ in
-      shared._vScrolling = false
+    shared.vScrollTimer?.invalidate()
+    shared.vScrollTimer = Timer.scheduledTimer(withTimeInterval: shared.delay, repeats: false) { _ in
+      shared.vScrolling = false
     }
   }
 
-  private var _magnification = Float()
+  private var magnification = Float()
   public static var magnification: Float {
-    get { Input.shared._magnification }
-    set { Input.shared._magnification = newValue }
+    get { Input.shared.magnification }
+    set { Input.shared.magnification = newValue }
   }
 
-  private var _rotation = Float()
+  private var rotation = Float()
   public static var rotation: Float {
-    get { Input.shared._rotation }
-    set { Input.shared._rotation = newValue }
+    get { Input.shared.rotation }
+    set { Input.shared.rotation = newValue }
   }
 
-  private var _windowSize = float2()
+  private var windowSize = float2()
   public static var windowSize: float2 {
-    get { Input.shared._windowSize }
-    set { Input.shared._windowSize = newValue }
+    get { Input.shared.windowSize }
+    set { Input.shared.windowSize = newValue }
   }
 
-  private var _framebufferSize = float2()
+  private var framebufferSize = float2()
   public static var framebufferSize: float2 {
-    get { Input.shared._framebufferSize }
-    set { Input.shared._framebufferSize = newValue }
+    get { Input.shared.framebufferSize }
+    set { Input.shared.framebufferSize = newValue }
   }
 
-  private var _windowPosition = float2()
+  private var windowPosition = float2()
   public static var windowPosition: float2 {
-    get { Input.shared._windowPosition }
-    set { Input.shared._windowPosition = newValue }
+    get { Input.shared.windowPosition }
+    set { Input.shared.windowPosition = newValue }
   }
 
   public static func endFrame() {
     let shared = Input.shared
 
-    shared._charactersCode = nil
-    shared._characters = nil
-    shared._modifierFlags = nil
+    shared.charactersCode = nil
+    shared.characters = nil
+    shared.modifierFlags = nil
 
-    shared._dragEnded = false
+    shared.dragEnded = false
 
-    shared._mouseDelta = float2()
-    shared._mouseScroll = float2()
+    shared.mouseDelta = float2()
+    shared.mouseScroll = float2()
 
     shared.keysDown.removeAll(keepingCapacity: true)
     shared.keysUp.removeAll(keepingCapacity: true)
 
-    shared._clickCount = 0
-    shared._doubleClick = false
-    shared._leftMouseDown = false
-    shared._leftMouseUp = false
+    shared.clickCount = 0
+    shared.doubleClick = false
+    shared.leftMouseDown = false
+    shared.leftMouseUp = false
 
-    shared._rightMouseDown = false
-    shared._rightMouseUp = false
+    shared.rightMouseDown = false
+    shared.rightMouseUp = false
 
-    shared._magnification = 0
-    shared._rotation = 0
+    shared.magnification = 0
+    shared.rotation = 0
   }
 }
 
