@@ -17,15 +17,15 @@ class WindowState: ObservableObject {
   init(name: String) {
     self.name = name
   }
-  
+
   func setPosition(_ value: CGPoint) {
     self.position = value
   }
-  
+
   func setOffset(_ value: CGSize) {
     self.offset = value
   }
-  
+
   func setOpen(_ value: Bool) {
     self.open = value
   }
@@ -40,8 +40,8 @@ public class Global: ObservableObject {
   func setWindowState(_ name: String, _ value: WindowState) {
     self.windowsMap[name] = value
   }
-  
+
   func getWindowState(_ name: String) -> WindowState? {
-    return self.windowsMap[name]
+    self.windowsMap[name]
   }
 }

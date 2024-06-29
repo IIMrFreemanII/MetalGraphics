@@ -44,7 +44,7 @@ class Grid2D {
         self.shapeBufferCount = self.shapes.count + 10
         self.shapeBuffer = Graphics.shared.device.makeBuffer(length: MemoryLayout<Shape>.stride * self.shapeBufferCount)
         self.shapeBuffer.label = "Shape buffer"
-        
+
         grid.resources[index] = self.shapeBuffer
       }
 
@@ -70,10 +70,10 @@ class Grid2D {
     self.cellBufferCount = size.x * size.y
 
     self.cells.reserveCapacity(self.cellBufferCount)
-    for _ in 0 ..< self.cellBufferCount {
+    for _ in 0..<self.cellBufferCount {
       self.cells.append(Cell())
     }
-    self.resources = self.cells.map { $0.shapeBuffer }
+    self.resources = self.cells.map(\.shapeBuffer)
 
     self.cellBuffer = Graphics.shared.device.makeBuffer(length: MemoryLayout<GridCellArgBuffer>.stride * self.cellBufferCount)
     self.cellBuffer.label = "Cell buffer"
@@ -82,7 +82,7 @@ class Grid2D {
   }
 
   public func reset() {
-    for i in 0 ..< self.cells.count {
+    for i in self.cells.indices {
       self.cells[i].shapes.removeAll(keepingCapacity: true)
     }
   }
@@ -92,7 +92,7 @@ class Grid2D {
   }
 
   private func sortShapesByDepth() {
-    for i in 0 ..< self.cells.count {
+    for i in 0..<self.cells.count {
       // decending order
       self.cells[i].shapes.sort(by: { self.getDepth(of: $0) > self.getDepth(of: $1) })
     }
@@ -101,13 +101,13 @@ class Grid2D {
   public func updateBuffers() {
     self.sortShapesByDepth()
 
-    for i in 0 ..< self.cells.count {
+    for i in 0..<self.cells.count {
       self.cells[i].updateBuffer(self, i)
     }
 
     let gridCellBuffer = self.cellBuffer.contents().bindMemory(to: GridCellArgBuffer.self, capacity: self.cellBufferCount)
 
-    for i in 0 ..< self.cellBufferCount {
+    for i in 0..<self.cellBufferCount {
       let pointer = gridCellBuffer.advanced(by: i)
       pointer.pointee.shapes = self.cells[i].shapeBuffer.gpuAddress
       pointer.pointee.count = Int32(self.cells[i].shapes.count)
@@ -128,19 +128,19 @@ class Grid2D {
 
     var prevY = Int(-1)
     for y in StepSequence(from: boxBottomRight.y, to: boxTopLeft.y, step: self.cellSize) {
-      if y.isBetween(gridBottomRight.y ... gridTopLeft.y) {
+      if y.isBetween(gridBottomRight.y...gridTopLeft.y) {
         let yIndex = Int(floor(remap(y, float2(bounds.bottom, self.bounds.top), float2(0, Float(self.size.y)))))
-        
+
         if prevY == yIndex {
           continue
         }
         prevY = yIndex
-        
+
         var prevX = Int(-1)
         for x in StepSequence(from: boxTopLeft.x, to: boxBottomRight.x, step: self.cellSize) {
-          if x.isBetween(gridTopLeft.x ... gridBottomRight.x) {
+          if x.isBetween(gridTopLeft.x...gridBottomRight.x) {
             let xIndex = Int(floor(remap(x, float2(bounds.left, self.bounds.right), float2(0, Float(self.size.x)))))
-            
+
             if prevX == xIndex {
               continue
             }

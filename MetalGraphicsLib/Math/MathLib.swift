@@ -75,7 +75,7 @@ public func dragDirection(point: float2, rect: inout Rect) -> float2 {
 }
 
 public func smoothstep(edge0: Float, edge1: Float, x: Float) -> Float {
-  let t = ((x - edge0) / (edge1 - edge0)).clamped(to: 0 ... 1)
+  let t = ((x - edge0) / (edge1 - edge0)).clamped(to: 0...1)
   return t * t * (3.0 - 2.0 * t)
 }
 

@@ -75,9 +75,9 @@ public class MyMTKView: MTKView {
   func updateInput(with event: NSEvent) {
     let position = convert(event.locationInWindow, from: nil)
 
-    let newX = Float(position.x.clamped(to: 0.0 ... CGFloat.greatestFiniteMagnitude))
+    let newX = Float(position.x.clamped(to: 0.0...CGFloat.greatestFiniteMagnitude))
     // flip because origin in bottom-left corner
-    let newY = -Float(position.y.clamped(to: 0.0 ... CGFloat.greatestFiniteMagnitude)) + Input.windowSize.y
+    let newY = -Float(position.y.clamped(to: 0.0...CGFloat.greatestFiniteMagnitude)) + Input.windowSize.y
 
     let newMousePos = float2(newX, newY)
     Input.mousePosition = newMousePos

@@ -19,7 +19,7 @@ extension float4x4 {
 }
 
 public extension float4x4 {
-  static func * (m: Self, v: float3) -> float3 {
+  static func *(m: Self, v: float3) -> float3 {
     (m * float4(v, 1)).xyz
   }
 

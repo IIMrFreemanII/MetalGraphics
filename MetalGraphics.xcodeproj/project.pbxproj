@@ -54,7 +54,6 @@
 		15C91D3E2C1F43E100A2857F /* Math.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15941A152C15DC2F00C56203 /* Math.metal */; };
 		15C91D3F2C1F43E300A2857F /* SDF.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D322C1EF88B00A2857F /* SDF.metal */; };
 		15DF1C222C2B167D00E8E7E6 /* Benchmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15DF1C212C2B167D00E8E7E6 /* Benchmark.swift */; };
-		15DF1C292C2E862300E8E7E6 /* Sorting.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15DF1C282C2E862300E8E7E6 /* Sorting.metal */; };
 		15DF1C312C2F1E4F00E8E7E6 /* Math.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15941A152C15DC2F00C56203 /* Math.metal */; };
 /* End PBXBuildFile section */
 
@@ -134,8 +133,6 @@
 		15C91D402C1F46A000A2857F /* SDF.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SDF.h; sourceTree = "<group>"; };
 		15C91D422C1F46B600A2857F /* Math.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Math.h; sourceTree = "<group>"; };
 		15DF1C212C2B167D00E8E7E6 /* Benchmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Benchmark.swift; sourceTree = "<group>"; };
-		15DF1C282C2E862300E8E7E6 /* Sorting.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Sorting.metal; sourceTree = "<group>"; };
-		15DF1C2A2C2E863000E8E7E6 /* Sorting.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Sorting.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -297,8 +294,6 @@
 				15C91D422C1F46B600A2857F /* Math.h */,
 				15A049DD2C24B21800D28009 /* Utils.metal */,
 				15A049DF2C24B22500D28009 /* Utils.h */,
-				15DF1C282C2E862300E8E7E6 /* Sorting.metal */,
-				15DF1C2A2C2E863000E8E7E6 /* Sorting.h */,
 				15C91D3C2C1F350200A2857F /* Shaders.metal */,
 			);
 			path = Shaders;
@@ -464,7 +459,6 @@
 				159419EB2C1490B700C56203 /* Rect.swift in Sources */,
 				15A049DA2C236C8500D28009 /* Utils.swift in Sources */,
 				159419F72C14917600C56203 /* Float.swift in Sources */,
-				15DF1C292C2E862300E8E7E6 /* Sorting.metal in Sources */,
 				15941A012C149A1400C56203 /* int2.swift in Sources */,
 				15C91D3F2C1F43E300A2857F /* SDF.metal in Sources */,
 			);

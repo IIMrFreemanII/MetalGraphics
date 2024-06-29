@@ -1,12 +1,12 @@
-import MetalKit
 import MetalGraphicsLib
+import MetalKit
 
 class TestViewRenderer: ViewRenderer {
   override func start() {}
-  
+
   override func draw(in view: MTKView) {
     super.draw(in: view)
-    
+
     //    benchmark(title: "Test") {
     Graphics.context(in: view) { _ in
       forEachGridCell(SIMD2<Int>(100, 100), 100, 0) { coord in

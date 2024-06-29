@@ -26,7 +26,7 @@ public class Graphics {
   private static var depth = Float()
   static var grid: Grid2D = .init(position: float2(), size: int2(10, 10), cellSize: Float(50))
   static var resizeCb: (() -> Void)?
-  
+
   public static var shared: Graphics = {
     var result = Graphics()
     guard let device = MTLCreateSystemDefaultDevice()
@@ -65,12 +65,15 @@ public class Graphics {
     } catch {
       fatalError()
     }
-  
+
     return result
   }()
 
-  let debouncer = Debouncer()
-  var device: MTLDevice!
+  public var device: MTLDevice!
+  public static var device: MTLDevice! {
+    shared.device
+  }
+
   var commandQueue: MTLCommandQueue!
   var library: MTLLibrary!
   var pipelineState: MTLComputePipelineState!
@@ -171,10 +174,10 @@ public class Graphics {
     else {
       return
     }
-    
+
     commandEncoder.useResources(Self.grid.resources, usage: .read)
-    commandEncoder.useResources([grid.cellBuffer, shared.circleBuffer, shared.squareBuffer, shared.lineBuffer], usage: .read)
-    
+    commandEncoder.useResources([self.grid.cellBuffer, shared.circleBuffer, shared.squareBuffer, shared.lineBuffer], usage: .read)
+
     commandEncoder.setComputePipelineState(shared.pipelineState)
     let texture = drawable.texture
     commandEncoder.setTexture(texture, index: 0)
@@ -205,7 +208,7 @@ public class Graphics {
 
     commandEncoder.endEncoding()
     commandBuffer.present(drawable)
-    
+
 //    benchmark(title: "GPU time") {
     commandBuffer.commit()
     commandBuffer.waitUntilCompleted()

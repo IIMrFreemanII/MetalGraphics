@@ -23,7 +23,9 @@
 --trailingclosures
 
 # Ensure spacing around operators
---operatorfunc spaced
+--operatorfunc no-space
+
+--ranges no-space
 
 # Remove redundant semicolons
 --semicolons never

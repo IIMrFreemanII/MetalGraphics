@@ -37,6 +37,6 @@ public extension float4 {
 
 public extension float4 {
   func toUChar() -> uchar4 {
-    uchar4(UInt8(x.clamped(to: 0 ... 1) * 255), UInt8(y.clamped(to: 0 ... 1) * 255), UInt8(z.clamped(to: 0 ... 1) * 255), UInt8(w.clamped(to: 0 ... 1) * 255))
+    uchar4(UInt8(x.clamped(to: 0...1) * 255), UInt8(y.clamped(to: 0...1) * 255), UInt8(z.clamped(to: 0...1) * 255), UInt8(w.clamped(to: 0...1) * 255))
   }
 }

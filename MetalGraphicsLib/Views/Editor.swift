@@ -25,12 +25,12 @@ struct Window<Content: View>: View {
                   .foregroundColor(.secondary)
               }
               .buttonStyle(PlainButtonStyle())
-              
+
               Text(self.state.name)
                 .bold()
             }
             .padding(.bottom, 8)
-            
+
             VStack(alignment: .leading) {
               self.content()
             }
