@@ -18,7 +18,7 @@ public struct Line {
     return BoundingBox2D(center: center, size: size)
   }
 
-  public init(start: float2 = float2(), end: float2 = float2(), color: float4 = float4(0, 0, 0, 1), thickness: Float = Float()) {
+  public init(start: float2 = float2(), end: float2 = float2(), color: float4 = float4(0, 0, 0, 1), thickness: Float = Float(1)) {
     self.start = start
     self.end = end
     self.color = color

@@ -33,7 +33,7 @@ import simd
 //  return normal
 // }
 
-func sdfNormal(_ cb: (float2) -> Float) -> float2 {
+public func sdfNormal(_ cb: (float2) -> Float) -> float2 {
   let eps = Float(0.0001)
   let dx = cb(float2(eps, 0)) - cb(float2(-eps, 0))
   let dy = cb(float2(0, eps)) - cb(float2(0, -eps))
@@ -43,7 +43,7 @@ func sdfNormal(_ cb: (float2) -> Float) -> float2 {
   return normal
 }
 
-func sdfNormal(_ cb: (float3) -> Float) -> float3 {
+public func sdfNormal(_ cb: (float3) -> Float) -> float3 {
   let eps = Float(0.0001)
   let dx = cb(float3(eps, 0, 0)) - cb(float3(-eps, 0, 0))
   let dy = cb(float3(0, eps, 0)) - cb(float3(0, -eps, 0))
@@ -141,7 +141,7 @@ public func pointInAABBoxTopLeftOrigin(point: float2, position: float2, size: fl
   return min(max(d.x, d.y), 0) < 0
 }
 
-func sdSegment(_ p: float2, _ a: float2, _ b: float2) -> Float {
+public func sdSegment(_ p: float2, _ a: float2, _ b: float2) -> Float {
   let pa = p - a, ba = b - a
   let h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0)
   return length(pa - ba * h)

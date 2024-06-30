@@ -2,7 +2,7 @@ import MetalKit
 import SwiftUI
 
 public struct MetalView: View {
-  @State private var metalView: MTKView = MyMTKView()
+  @State private var metalView = MyMTKView()
   public let viewRenderer: ViewRenderer
 
   public init(viewRenderer: ViewRenderer) {
@@ -51,7 +51,7 @@ public struct MetalView: View {
 #endif
 
 public struct MetalViewRepresentable: ViewRepresentable {
-  @Binding var metalView: MTKView
+  @Binding var metalView: MyMTKView
 
   #if os(macOS)
     public func makeNSView(context _: Context) -> some NSView {

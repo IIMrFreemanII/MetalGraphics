@@ -12,7 +12,7 @@ class WindowState: ObservableObject {
   @Published var name: String
   @Published var position = CGPoint(x: 200, y: 100)
   @Published var offset = CGSize.zero
-  @Published var open = true
+  @Published var open = false
 
   init(name: String) {
     self.name = name

@@ -136,6 +136,10 @@ kernel void compute2D(
         case 0: {
           Circle item = buffer.circles[shape.index];
           float dist = sdCircle(uv - item.position.xy, item.radius);
+//          if (dist <= 0) {
+//            dist = opOnion(dist, 50);
+//          }
+//          dist = opOnion(dist, 1);
           int intersect = step(dist, 0);
           color = mix(color, item.color, intersect);
           stop = intersect;

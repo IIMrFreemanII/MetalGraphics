@@ -1,65 +1,67 @@
 import MetalKit
 
 public class MyMTKView: MTKView {
+  public var input = Input()
+  
   // to handle key events
   override public var acceptsFirstResponder: Bool {
     true
   }
 
   override public func keyDown(with event: NSEvent) {
-    Input.modifierFlags = event.modifierFlags
-    Input.charactersCode = event.characters?.unicodeScalars.first?.value
-    Input.characters = event.characters
+    self.input.modifierFlags = event.modifierFlags
+    self.input.charactersCode = event.characters?.unicodeScalars.first?.value
+    self.input.characters = event.characters
   }
 
   override public func magnify(with event: NSEvent) {
-    Input.magnification += Float(event.magnification)
+    self.input.magnification += Float(event.magnification)
   }
 
   override public func rotate(with event: NSEvent) {
-    Input.rotation += Float(event.rotation)
+    self.input.rotation += Float(event.rotation)
   }
 
   override public func scrollWheel(with event: NSEvent) {
     let scroll = float2(Float(event.deltaX), Float(event.deltaY))
-    Input.mouseScroll += scroll
+    self.input.mouseScroll += scroll
 
     let momentumPhase = event.momentumPhase
     let phase = event.phase
 
     if phase.contains(.changed) {
       if scroll.x != 0 {
-        Input.hScrolling = true
+        self.input.hScrolling = true
       }
 
       if scroll.y != 0 {
-        Input.vScrolling = true
+        self.input.vScrolling = true
       }
     } else if phase.contains(.ended) {
       if scroll.x == 0 {
-        Input.hideHScrollDebounced()
+        self.input.hideHScrollDebounced()
       }
 
       if scroll.y == 0 {
-        Input.hideVScrollDebounced()
+        self.input.hideVScrollDebounced()
       }
     }
 
     if momentumPhase.contains(.began) {
       if scroll.x != 0 {
-        Input.hScrolling = true
+        self.input.hScrolling = true
       }
 
       if scroll.y != 0 {
-        Input.vScrolling = true
+        self.input.vScrolling = true
       }
     } else if momentumPhase.contains(.ended) {
       if scroll.x == 0 {
-        Input.hideHScrollDebounced()
+        self.input.hideHScrollDebounced()
       }
 
       if scroll.y == 0 {
-        Input.hideVScrollDebounced()
+        self.input.hideVScrollDebounced()
       }
     }
   }
@@ -77,22 +79,22 @@ public class MyMTKView: MTKView {
 
     let newX = Float(position.x.clamped(to: 0.0...CGFloat.greatestFiniteMagnitude))
     // flip because origin in bottom-left corner
-    let newY = -Float(position.y.clamped(to: 0.0...CGFloat.greatestFiniteMagnitude)) + Input.windowSize.y
+    let newY = -Float(position.y.clamped(to: 0.0...CGFloat.greatestFiniteMagnitude)) + self.input.windowSize.y
 
     let newMousePos = float2(newX, newY)
-    Input.mousePosition = newMousePos
+    self.input.mousePosition = newMousePos
 
-    let mouseDelta = float2(newX, newY) - Input.prevMousePosition
-    Input.mouseDelta = float2(mouseDelta.x, -mouseDelta.y)
-    Input.prevMousePosition = newMousePos
+    let mouseDelta = float2(newX, newY) - self.input.prevMousePosition
+    self.input.mouseDelta = float2(mouseDelta.x, -mouseDelta.y)
+    self.input.prevMousePosition = newMousePos
   }
 
   override public func mouseDown(with event: NSEvent) {
     super.mouseDown(with: event)
-    Input.clickCount = event.clickCount
+    self.input.clickCount = event.clickCount
 
     if event.clickCount == 2 {
-      Input.doubleClick = true
+      self.input.doubleClick = true
     }
   }
 
@@ -104,7 +106,7 @@ public class MyMTKView: MTKView {
     addTrackingArea(
       NSTrackingArea(
         rect: frame,
-        options: [.activeInActiveApp, .mouseMoved],
+        options: [.activeInKeyWindow, .mouseMoved],
         owner: self
       )
     )

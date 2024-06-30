@@ -19,83 +19,6 @@ extension Drag: CustomStringConvertible {
 }
 
 public class Input {
-  public static let shared: Input = {
-    let result = Input()
-
-    let center = NotificationCenter.default
-
-    center.addObserver(
-      forName: .GCMouseDidConnect,
-      object: nil,
-      queue: nil
-    ) { notification in
-      let mouse = notification.object as? GCMouse
-      // 1
-      mouse?.mouseInput?.leftButton.pressedChangedHandler = { _, _, pressed in
-        result.leftMousePressed = pressed
-
-        if pressed {
-          result.leftMouseDown = true
-        } else {
-          result.leftMouseUp = true
-        }
-      }
-      mouse?.mouseInput?.rightButton?.pressedChangedHandler = { _, _, pressed in
-        result.rightMousePressed = pressed
-
-        if pressed {
-          result.rightMouseDown = true
-        } else {
-          result.rightMouseUp = true
-        }
-      }
-    }
-
-    center.addObserver(
-      forName: .GCKeyboardDidConnect,
-      object: nil,
-      queue: nil
-    ) { notification in
-      let keyboard = notification.object as? GCKeyboard
-      keyboard?.keyboardInput?.keyChangedHandler = { _, _, keyCode, pressed in
-        if pressed {
-          result.keysDown.insert(keyCode)
-          result.keysPressed.insert(keyCode)
-
-          switch keyCode {
-          case .leftGUI, .rightGUI:
-            result.commandPressed = true
-          case .leftShift, .rightShift:
-            result.shiftPressed = true
-          default:
-            break
-          }
-        } else {
-          result.keysPressed.remove(keyCode)
-          result.keysUp.insert(keyCode)
-
-          switch keyCode {
-          case .leftGUI, .rightGUI:
-            result.commandPressed = false
-          case .leftShift, .rightShift:
-            result.shiftPressed = false
-          default:
-            break
-          }
-        }
-      }
-    }
-
-    // #if os(macOS)
-    //    NSEvent.addLocalMonitorForEvents(
-    //      matching: [.keyDown]) { event in
-    //        return NSApp.keyWindow?.firstResponder is NSTextView ? event : nil
-    //      }
-    // #endif
-
-    return result
-  }()
-
   public let returnOrEnterKey = "\r".uint32[0]
   public let space = " ".uint32[0]
   public let deleteKey = "\u{7F}".uint32[0]
@@ -107,361 +30,288 @@ public class Input {
   public let rightArrow = UInt32(63235)
   public let escape = UInt32(27)
 
-  private var characters: String?
-  public static var characters: String? {
-    get { Input.shared.characters }
-    set { Input.shared.characters = newValue }
-  }
-
-  private var charactersCode: UInt32?
-  public static var charactersCode: UInt32? {
-    get { Input.shared.charactersCode }
-    set { Input.shared.charactersCode = newValue }
-  }
-
-  private var modifierFlags: NSEvent.ModifierFlags?
-  public static var modifierFlags: NSEvent.ModifierFlags? {
-    get { Input.shared.modifierFlags }
-    set { Input.shared.modifierFlags = newValue }
-  }
+  public var characters: String?
+  public var charactersCode: UInt32?
+  public var modifierFlags: NSEvent.ModifierFlags?
 
   public var keysPressed: Set<GCKeyCode> = []
   public var keysDown: Set<GCKeyCode> = []
   public var keysUp: Set<GCKeyCode> = []
 
-  private var dragGesture = Drag()
-  public static var dragGesture: Drag {
-    get { Input.shared.dragGesture }
-    set { Input.shared.dragGesture = newValue }
+  public var dragGesture = Drag()
+  public var drag = false
+  public var dragEnded = false
+
+  public var commandPressed = false
+  public var shiftPressed = false
+
+  public var doubleClick = false
+  public var clickCount = 0
+
+  public var leftMousePressed = false
+  public var rightMousePressed = false
+
+  public var leftMouseDown = false
+  public var rightMouseDown = false
+
+  public var leftMouseUp = false
+  public var rightMouseUp = false
+
+  public var prevMousePosition = float2()
+  public var mousePosition = float2()
+  public var mousePositionFromCenter: float2 {
+    self.mousePosition - self.windowSize * 0.5
   }
 
-  private var drag = false
-  public static var drag: Bool {
-    get { Input.shared.drag }
-    set { Input.shared.drag = newValue }
+  public var mouseDelta = float2()
+  public var mouseScroll = float2()
+
+  public var hScrollTimer: Timer?
+  public var vScrollTimer: Timer?
+
+  public let delay: Double = 1.5
+
+  public var hScrolling = false
+  public var vScrolling = false
+
+  public init() {
+    let center = NotificationCenter.default
+    
+    center.addObserver(
+      forName: .GCMouseDidConnect,
+      object: nil,
+      queue: nil
+    ) { notification in
+      let mouse = notification.object as? GCMouse
+      // 1
+      mouse?.mouseInput?.leftButton.pressedChangedHandler = { _, _, pressed in
+        self.leftMousePressed = pressed
+        
+        if pressed {
+          self.leftMouseDown = true
+        } else {
+          self.leftMouseUp = true
+        }
+      }
+      mouse?.mouseInput?.rightButton?.pressedChangedHandler = { _, _, pressed in
+        self.rightMousePressed = pressed
+        
+        if pressed {
+          self.rightMouseDown = true
+        } else {
+          self.rightMouseUp = true
+        }
+      }
+    }
+    
+    center.addObserver(
+      forName: .GCKeyboardDidConnect,
+      object: nil,
+      queue: nil
+    ) { notification in
+      let keyboard = notification.object as? GCKeyboard
+      keyboard?.keyboardInput?.keyChangedHandler = { _, _, keyCode, pressed in
+        if pressed {
+          self.keysDown.insert(keyCode)
+          self.keysPressed.insert(keyCode)
+          
+          switch keyCode {
+          case .leftGUI, .rightGUI:
+            self.commandPressed = true
+          case .leftShift, .rightShift:
+            self.shiftPressed = true
+          default:
+            break
+          }
+        } else {
+          self.keysPressed.remove(keyCode)
+          self.keysUp.insert(keyCode)
+          
+          switch keyCode {
+          case .leftGUI, .rightGUI:
+            self.commandPressed = false
+          case .leftShift, .rightShift:
+            self.shiftPressed = false
+          default:
+            break
+          }
+        }
+      }
+    }
+    
+    // #if os(macOS)
+    //    NSEvent.addLocalMonitorForEvents(
+    //      matching: [.keyDown]) { event in
+    //        return NSApp.keyWindow?.firstResponder is NSTextView ? event : nil
+    //      }
+    // #endif
   }
 
-  private var dragEnded = false
-  public static var dragEnded: Bool {
-    get { Input.shared.dragEnded }
-    set { Input.shared.dragEnded = newValue }
-  }
-
-  private var commandPressed = false
-  public static var commandPressed: Bool {
-    get { Input.shared.commandPressed }
-    set { Input.shared.commandPressed = newValue }
-  }
-
-  private var shiftPressed = false
-  public static var shiftPressed: Bool {
-    get { Input.shared.shiftPressed }
-    set { Input.shared.shiftPressed = newValue }
-  }
-
-  private var doubleClick = false
-  public static var doubleClick: Bool {
-    get { Input.shared.doubleClick }
-    set { Input.shared.doubleClick = newValue }
-  }
-
-  private var clickCount = 0
-  public static var clickCount: Int {
-    get { Input.shared.clickCount }
-    set { Input.shared.clickCount = newValue }
-  }
-
-  private var leftMousePressed = false
-  public static var leftMousePressed: Bool {
-    get { Input.shared.leftMousePressed }
-    set { Input.shared.leftMousePressed = newValue }
-  }
-
-  private var rightMousePressed = false
-  public static var rightMousePressed: Bool {
-    get { Input.shared.rightMousePressed }
-    set { Input.shared.rightMousePressed = newValue }
-  }
-
-  private var leftMouseDown = false
-  public static var leftMouseDown: Bool {
-    get { Input.shared.leftMouseDown }
-    set { Input.shared.leftMouseDown = newValue }
-  }
-
-  private var rightMouseDown = false
-  public static var rightMouseDown: Bool {
-    get { Input.shared.rightMouseDown }
-    set { Input.shared.rightMouseDown = newValue }
-  }
-
-  private var leftMouseUp = false
-  public static var leftMouseUp: Bool {
-    get { Input.shared.leftMouseUp }
-    set { Input.shared.leftMouseUp = newValue }
-  }
-
-  private var rightMouseUp = false
-  public static var rightMouseUp: Bool {
-    get { Input.shared.rightMouseUp }
-    set { Input.shared.rightMouseUp = newValue }
-  }
-
-  private var prevMousePosition = float2()
-  public static var prevMousePosition: float2 {
-    get { Input.shared.prevMousePosition }
-    set { Input.shared.prevMousePosition = newValue }
-  }
-
-  private var mousePosition = float2()
-  public static var mousePosition: float2 {
-    get { Input.shared.mousePosition }
-    set { Input.shared.mousePosition = newValue }
-  }
-
-  public static var mousePositionFromCenter: float2 {
-    Input.mousePosition - Input.windowSize * 0.5
-  }
-
-  private var mouseDelta = float2()
-  public static var mouseDelta: float2 {
-    get { Input.shared.mouseDelta }
-    set { Input.shared.mouseDelta = newValue }
-  }
-
-  private var mouseScroll = float2()
-  public static var mouseScroll: float2 {
-    get { Input.shared.mouseScroll }
-    set { Input.shared.mouseScroll = newValue }
-  }
-
-  private var hScrollTimer: Timer?
-  public static var hScrollTimer: Timer? {
-    get { Input.shared.hScrollTimer }
-    set { Input.shared.hScrollTimer = newValue }
-  }
-
-  private var vScrollTimer: Timer?
-  public static var vScrollTimer: Timer? {
-    get { Input.shared.vScrollTimer }
-    set { Input.shared.vScrollTimer = newValue }
-  }
-
-  private let delay: Double = 1.5
-  public static var delay: Double {
-    Input.shared.delay
-  }
-
-  private var hScrolling = false
-  public static var hScrolling: Bool {
-    get { Input.shared.hScrolling }
-    set { Input.shared.hScrolling = newValue }
-  }
-
-  var vScrolling = false
-  public static var vScrolling: Bool {
-    get { Input.shared.vScrolling }
-    set { Input.shared.vScrolling = newValue }
-  }
-
-  public init() {}
-
-  public static func hideHScrollDebounced() {
-    let shared = Input.shared
-
-    shared.hScrollTimer?.invalidate()
-    shared.hScrollTimer = Timer.scheduledTimer(withTimeInterval: shared.delay, repeats: false) { _ in
-      shared.hScrolling = false
+  public func hideHScrollDebounced() {
+    self.hScrollTimer?.invalidate()
+    self.hScrollTimer = Timer.scheduledTimer(withTimeInterval: self.delay, repeats: false) { _ in
+      self.hScrolling = false
     }
   }
 
-  public static func hideVScrollDebounced() {
-    let shared = Input.shared
-
-    shared.vScrollTimer?.invalidate()
-    shared.vScrollTimer = Timer.scheduledTimer(withTimeInterval: shared.delay, repeats: false) { _ in
-      shared.vScrolling = false
+  public func hideVScrollDebounced() {
+    self.vScrollTimer?.invalidate()
+    self.vScrollTimer = Timer.scheduledTimer(withTimeInterval: self.delay, repeats: false) { _ in
+      self.vScrolling = false
     }
   }
 
-  private var magnification = Float()
-  public static var magnification: Float {
-    get { Input.shared.magnification }
-    set { Input.shared.magnification = newValue }
-  }
+  public var magnification = Float()
+  public var rotation = Float()
 
-  private var rotation = Float()
-  public static var rotation: Float {
-    get { Input.shared.rotation }
-    set { Input.shared.rotation = newValue }
-  }
+  public var windowSize = float2()
 
-  private var windowSize = float2()
-  public static var windowSize: float2 {
-    get { Input.shared.windowSize }
-    set { Input.shared.windowSize = newValue }
-  }
+  public func endFrame() {
+    self.charactersCode = nil
+    self.characters = nil
+    self.modifierFlags = nil
 
-  private var framebufferSize = float2()
-  public static var framebufferSize: float2 {
-    get { Input.shared.framebufferSize }
-    set { Input.shared.framebufferSize = newValue }
-  }
+    self.dragEnded = false
 
-  private var windowPosition = float2()
-  public static var windowPosition: float2 {
-    get { Input.shared.windowPosition }
-    set { Input.shared.windowPosition = newValue }
-  }
+    self.mouseDelta = float2()
+    self.mouseScroll = float2()
 
-  public static func endFrame() {
-    let shared = Input.shared
+    self.keysDown.removeAll(keepingCapacity: true)
+    self.keysUp.removeAll(keepingCapacity: true)
 
-    shared.charactersCode = nil
-    shared.characters = nil
-    shared.modifierFlags = nil
+    self.clickCount = 0
+    self.doubleClick = false
+    self.leftMouseDown = false
+    self.leftMouseUp = false
 
-    shared.dragEnded = false
+    self.rightMouseDown = false
+    self.rightMouseUp = false
 
-    shared.mouseDelta = float2()
-    shared.mouseScroll = float2()
-
-    shared.keysDown.removeAll(keepingCapacity: true)
-    shared.keysUp.removeAll(keepingCapacity: true)
-
-    shared.clickCount = 0
-    shared.doubleClick = false
-    shared.leftMouseDown = false
-    shared.leftMouseUp = false
-
-    shared.rightMouseDown = false
-    shared.rightMouseUp = false
-
-    shared.magnification = 0
-    shared.rotation = 0
+    self.magnification = 0
+    self.rotation = 0
   }
 }
 
 public typealias VoidFunc = () -> Void
 
 public extension Input {
-  static func scrollCounter(_ cb: (float2) -> Void) {
-    let mouseScroll = floor(Input.mouseScroll)
+  func scrollCounter(_ cb: (float2) -> Void) {
+    let mouseScroll = floor(self.mouseScroll)
     if mouseScroll.x != 0 || mouseScroll.y != 0 {
       cb(mouseScroll)
     }
   }
 
-  static func commandPressed(_ cb: VoidFunc) {
-    if Input.commandPressed {
+  func commandPressed(_ cb: VoidFunc) {
+    if self.commandPressed {
       cb()
     }
   }
 
-  static func shiftPressed(_ cb: VoidFunc) {
-    if Input.shiftPressed {
+  func shiftPressed(_ cb: VoidFunc) {
+    if self.shiftPressed {
       cb()
     }
   }
 
-  static func charactersCode(_ cb: (UInt32) -> Void) {
-    if let charsCode = Input.charactersCode {
+  func charactersCode(_ cb: (UInt32) -> Void) {
+    if let charsCode = self.charactersCode {
       cb(charsCode)
     }
   }
 
-  static func characters(_ cb: (String) -> Void) {
-    if let chars = Input.characters {
+  func characters(_ cb: (String) -> Void) {
+    if let chars = self.characters {
       cb(chars)
     }
   }
 
-  static func dragChange(_ cb: (Drag) -> Void) {
-    if Input.drag {
-      cb(Input.dragGesture)
+  func dragChange(_ cb: (Drag) -> Void) {
+    if self.drag {
+      cb(self.dragGesture)
     }
   }
 
-  static func dragEnd(_ cb: (Drag) -> Void) {
-    if Input.dragEnded {
-      cb(Input.dragGesture)
+  func dragEnd(_ cb: (Drag) -> Void) {
+    if self.dragEnded {
+      cb(self.dragGesture)
     }
   }
 
-  static var mouseDown: Bool {
-    Input.leftMouseDown || Input.rightMouseDown
+  var mouseDown: Bool {
+    self.leftMouseDown || self.rightMouseDown
   }
 
-  static var mousePressed: Bool {
-    Input.leftMousePressed || Input.rightMousePressed
+  var mousePressed: Bool {
+    self.leftMousePressed || self.rightMousePressed
   }
 
-  static var mouseUp: Bool {
-    Input.leftMouseUp || Input.rightMouseUp
+  var mouseUp: Bool {
+    self.leftMouseUp || self.rightMouseUp
   }
 
-  static func magnify(cb: (Float) -> Void) {
-    if Input.magnification != 0 {
-      cb(Input.magnification)
+  func magnify(cb: (Float) -> Void) {
+    if self.magnification != 0 {
+      cb(self.magnification)
     }
   }
 
-  static func rotate(cb: (Float) -> Void) {
-    if Input.rotation != 0 {
-      cb(Input.rotation)
+  func rotate(cb: (Float) -> Void) {
+    if self.rotation != 0 {
+      cb(self.rotation)
     }
   }
 
-  static func leftMouseDown(cb: VoidFunc) {
-    if Input.leftMouseDown {
+  func leftMouseDown(cb: VoidFunc) {
+    if self.leftMouseDown {
       cb()
     }
   }
 
-  static func leftMousePressed(cb: VoidFunc) {
-    if Input.leftMousePressed {
+  func leftMousePressed(cb: VoidFunc) {
+    if self.leftMousePressed {
       cb()
     }
   }
 
-  static func leftMouseUp(cb: VoidFunc) {
-    if Input.leftMouseUp {
+  func leftMouseUp(cb: VoidFunc) {
+    if self.leftMouseUp {
       cb()
     }
   }
 
-  static func rightMouseDown(cb: VoidFunc) {
-    if Input.rightMouseDown {
+  func rightMouseDown(cb: VoidFunc) {
+    if self.rightMouseDown {
       cb()
     }
   }
 
-  static func rightMousePressed(cb: VoidFunc) {
-    if Input.rightMousePressed {
+  func rightMousePressed(cb: VoidFunc) {
+    if self.rightMousePressed {
       cb()
     }
   }
 
-  static func rightMouseUp(cb: VoidFunc) {
-    if Input.rightMouseUp {
+  func rightMouseUp(cb: VoidFunc) {
+    if self.rightMouseUp {
       cb()
     }
   }
 
-  static func keyPress(_ key: GCKeyCode, cb: VoidFunc) {
-    if Input.shared.keysPressed.contains(key) {
+  func keyPress(_ key: GCKeyCode, cb: VoidFunc) {
+    if self.keysPressed.contains(key) {
       cb()
     }
   }
 
-  static func keyDown(_ key: GCKeyCode, cb: VoidFunc) {
-    if Input.shared.keysDown.contains(key) {
+  func keyDown(_ key: GCKeyCode, cb: VoidFunc) {
+    if self.keysDown.contains(key) {
       cb()
     }
   }
 
-  static func keyUp(_ key: GCKeyCode, cb: VoidFunc) {
-    if Input.shared.keysUp.contains(key) {
+  func keyUp(_ key: GCKeyCode, cb: VoidFunc) {
+    if self.keysUp.contains(key) {
       cb()
     }
   }

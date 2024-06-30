@@ -35,14 +35,14 @@ class Grid2D {
     var shapeBufferCount: Int = 0
 
     init() {
-      self.shapeBuffer = Graphics.shared.device.makeBuffer(length: MemoryLayout<Shape>.stride * 1)
+      self.shapeBuffer = GPUDevice.shared.makeBuffer(length: MemoryLayout<Shape>.stride * 1)
       self.shapeBuffer.label = "Shape buffer"
     }
 
     public func updateBuffer(_ grid: Grid2D, _ index: Int) {
       if self.shapeBufferCount < self.shapes.count {
         self.shapeBufferCount = self.shapes.count + 10
-        self.shapeBuffer = Graphics.shared.device.makeBuffer(length: MemoryLayout<Shape>.stride * self.shapeBufferCount)
+        self.shapeBuffer = GPUDevice.shared.makeBuffer(length: MemoryLayout<Shape>.stride * self.shapeBufferCount)
         self.shapeBuffer.label = "Shape buffer"
 
         grid.resources[index] = self.shapeBuffer
@@ -61,8 +61,10 @@ class Grid2D {
   public var cellBufferCount: Int = 0
   public var gridArgBuffer: MTLBuffer!
   public var resources: [MTLResource] = []
+  public var graphics: Graphics2D
 
-  public init(position: float2, size: int2, cellSize: Float) {
+  public init(position: float2, size: int2, cellSize: Float, graphics: Graphics2D) {
+    self.graphics = graphics
     self.size = size
     self.cellSize = cellSize
     self.position = position
@@ -75,9 +77,9 @@ class Grid2D {
     }
     self.resources = self.cells.map(\.shapeBuffer)
 
-    self.cellBuffer = Graphics.shared.device.makeBuffer(length: MemoryLayout<GridCellArgBuffer>.stride * self.cellBufferCount)
+    self.cellBuffer = GPUDevice.shared.makeBuffer(length: MemoryLayout<GridCellArgBuffer>.stride * self.cellBufferCount)
     self.cellBuffer.label = "Cell buffer"
-    self.gridArgBuffer = Graphics.shared.device.makeBuffer(length: MemoryLayout<GridArgBuffer>.stride * 1)
+    self.gridArgBuffer = GPUDevice.shared.makeBuffer(length: MemoryLayout<GridArgBuffer>.stride * 1)
     self.gridArgBuffer.label = "Grid arg buffer"
   }
 
@@ -88,7 +90,7 @@ class Grid2D {
   }
 
   private func getDepth(of shape: Shape) -> Float {
-    Graphics.getDepth(of: shape)
+    self.graphics.getDepth(of: shape)
   }
 
   private func sortShapesByDepth() {

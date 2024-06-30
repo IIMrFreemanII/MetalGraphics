@@ -70,17 +70,17 @@ struct DebugWindow: View {
 
   var body: some View {
     Window(name: name(of: DebugWindow.self)) {
-      Toggle("Debug grid", isOn: Binding(get: { Graphics.shared.sceneData.debug.drawGrid }, set: { newValue, _ in
-        Graphics.shared.sceneData.debug.drawGrid = newValue
-        self.reload.toggle()
-      }))
-      if Graphics.shared.sceneData.debug.drawGrid {
-        Toggle("Show filled cells", isOn: Binding(get: { Graphics.shared.sceneData.debug.showFilledCells }, set: { newValue, _ in
-          Graphics.shared.sceneData.debug.showFilledCells = newValue
-          self.reload.toggle()
-        }))
-        .padding(.leading)
-      }
+//      Toggle("Debug grid", isOn: Binding(get: { Graphics2D.shared.sceneData.debug.drawGrid }, set: { newValue, _ in
+//        Graphics2D.shared.sceneData.debug.drawGrid = newValue
+//        self.reload.toggle()
+//      }))
+//      if Graphics2D.sceneData.debug.drawGrid {
+//        Toggle("Show filled cells", isOn: Binding(get: { Graphics2D.shared.sceneData.debug.showFilledCells }, set: { newValue, _ in
+//          Graphics2D.sceneData.debug.showFilledCells = newValue
+//          self.reload.toggle()
+//        }))
+//        .padding(.leading)
+//      }
     }
   }
 }
