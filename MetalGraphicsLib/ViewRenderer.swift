@@ -37,19 +37,19 @@ open class ViewRenderer: NSObject {
   public func initialize(metalView: MyMTKView) {
     self.metalView = metalView
     self.input = metalView.input
-    self.metalView.device = MTLCreateSystemDefaultDevice()
+    self.metalView.device = GPUDevice.main
     self.metalView.delegate = self
     self.metalView.clearColor = self.clearColor
 //    self.metalView.depthStencilPixelFormat = .depth32Float
     self.metalView.framebufferOnly = false
 
-    self.metalView.addTrackingArea(
-      NSTrackingArea(
-        rect: metalView.frame,
-        options: [.activeInActiveApp, .mouseMoved],
-        owner: self.metalView
-      )
-    )
+//    self.metalView.addTrackingArea(
+//      NSTrackingArea(
+//        rect: metalView.frame,
+//        options: [.activeInActiveApp, .mouseMoved],
+//        owner: self.metalView
+//      )
+//    )
 
     mtkView(
       metalView,

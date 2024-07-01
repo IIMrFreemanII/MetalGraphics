@@ -30,7 +30,7 @@ public class Graphics2D {
 
   public init(renderer: ViewRenderer) {
     self.renderer = renderer
-    self.device = GPUDevice.shared
+    self.device = GPUDevice.main
     self.commandQueue = device.makeCommandQueue()
     
     do {

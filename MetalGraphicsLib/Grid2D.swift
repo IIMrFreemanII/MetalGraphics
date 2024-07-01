@@ -35,14 +35,14 @@ class Grid2D {
     var shapeBufferCount: Int = 0
 
     init() {
-      self.shapeBuffer = GPUDevice.shared.makeBuffer(length: MemoryLayout<Shape>.stride * 1)
+      self.shapeBuffer = GPUDevice.main.makeBuffer(length: MemoryLayout<Shape>.stride * 1)
       self.shapeBuffer.label = "Shape buffer"
     }
 
     public func updateBuffer(_ grid: Grid2D, _ index: Int) {
       if self.shapeBufferCount < self.shapes.count {
         self.shapeBufferCount = self.shapes.count + 10
-        self.shapeBuffer = GPUDevice.shared.makeBuffer(length: MemoryLayout<Shape>.stride * self.shapeBufferCount)
+        self.shapeBuffer = GPUDevice.main.makeBuffer(length: MemoryLayout<Shape>.stride * self.shapeBufferCount)
         self.shapeBuffer.label = "Shape buffer"
 
         grid.resources[index] = self.shapeBuffer
@@ -77,9 +77,9 @@ class Grid2D {
     }
     self.resources = self.cells.map(\.shapeBuffer)
 
-    self.cellBuffer = GPUDevice.shared.makeBuffer(length: MemoryLayout<GridCellArgBuffer>.stride * self.cellBufferCount)
+    self.cellBuffer = GPUDevice.main.makeBuffer(length: MemoryLayout<GridCellArgBuffer>.stride * self.cellBufferCount)
     self.cellBuffer.label = "Cell buffer"
-    self.gridArgBuffer = GPUDevice.shared.makeBuffer(length: MemoryLayout<GridArgBuffer>.stride * 1)
+    self.gridArgBuffer = GPUDevice.main.makeBuffer(length: MemoryLayout<GridArgBuffer>.stride * 1)
     self.gridArgBuffer.label = "Grid arg buffer"
   }
 
