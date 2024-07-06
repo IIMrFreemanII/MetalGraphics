@@ -1,4 +1,4 @@
-//public enum Time {
+// public enum Time {
 //  public static var time: Float = 0
 //  public static var deltaTime: Float = 0
 //
@@ -7,4 +7,4 @@
 //  public static func resetCursorBlinking() {
 //    self.cursorTime = 0
 //  }
-//}
+// }

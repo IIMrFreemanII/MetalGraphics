@@ -16,51 +16,34 @@ struct Shape {
   }
 }
 
-struct GridCellArgBuffer {
-  var shapes: UInt64 = 0
+struct GridCell {
+  // maps into shapes buffer
+  var startIndex: Int32 = 0
   var count: Int32 = 0
 }
 
 struct GridArgBuffer {
   var gridCells: UInt64 = 0
+  var shapes: UInt64 = 0
   var gridSize = SIMD2<Int32>()
   var cellSize = Float()
   var gridPosition = float2()
 }
 
 class Grid2D {
-  class Cell {
-    var shapes: [Shape] = []
-    var shapeBuffer: MTLBuffer!
-    var shapeBufferCount: Int = 0
-
-    init() {
-      self.shapeBuffer = GPUDevice.main.makeBuffer(length: MemoryLayout<Shape>.stride * 1)
-      self.shapeBuffer.label = "Shape buffer"
-    }
-
-    public func updateBuffer(_ grid: Grid2D, _ index: Int) {
-      if self.shapeBufferCount < self.shapes.count {
-        self.shapeBufferCount = self.shapes.count + 10
-        self.shapeBuffer = GPUDevice.main.makeBuffer(length: MemoryLayout<Shape>.stride * self.shapeBufferCount)
-        self.shapeBuffer.label = "Shape buffer"
-
-        grid.resources[index] = self.shapeBuffer
-      }
-
-      self.shapeBuffer.contents().copyMemory(from: &self.shapes, byteCount: self.shapes.byteCount)
-    }
-  }
-
   public var size: int2
   public var cellSize: Float
   public var position: float2
   public var bounds: BoundingBox2D
-  public var cells: [Cell] = []
+  public var cells: [GridCell] = []
+  public var shapesPerCell: [[Shape]] = []
+  public var shapesPerCellCount: Int = 0
   public var cellBuffer: MTLBuffer!
   public var cellBufferCount: Int = 0
   public var gridArgBuffer: MTLBuffer!
-  public var resources: [MTLResource] = []
+  public var shapeBuffer: MTLBuffer!
+  public var shapeBufferCount: Int = 0
+
   public var graphics: Graphics2D
 
   public init(position: float2, size: int2, cellSize: Float, graphics: Graphics2D) {
@@ -71,21 +54,22 @@ class Grid2D {
     self.bounds = BoundingBox2D(center: position, size: float2(Float(size.x) * cellSize, Float(size.y) * cellSize))
     self.cellBufferCount = size.x * size.y
 
-    self.cells.reserveCapacity(self.cellBufferCount)
-    for _ in 0..<self.cellBufferCount {
-      self.cells.append(Cell())
-    }
-    self.resources = self.cells.map(\.shapeBuffer)
+    self.shapesPerCell.reserveCapacity(self.cellBufferCount)
+    self.cells = Array(repeating: GridCell(), count: self.cellBufferCount)
+    self.shapesPerCell = Array(repeating: [], count: self.cellBufferCount)
 
-    self.cellBuffer = GPUDevice.main.makeBuffer(length: MemoryLayout<GridCellArgBuffer>.stride * self.cellBufferCount)
+    self.cellBuffer = GPUDevice.main.makeBuffer(length: MemoryLayout<GridCell>.stride * self.cellBufferCount)
     self.cellBuffer.label = "Cell buffer"
+    self.shapeBuffer = GPUDevice.main.makeBuffer(length: MemoryLayout<Shape>.stride * 1)
+    self.shapeBuffer.label = "Shape buffer"
     self.gridArgBuffer = GPUDevice.main.makeBuffer(length: MemoryLayout<GridArgBuffer>.stride * 1)
     self.gridArgBuffer.label = "Grid arg buffer"
   }
 
   public func reset() {
-    for i in self.cells.indices {
-      self.cells[i].shapes.removeAll(keepingCapacity: true)
+    self.shapesPerCellCount = 0
+    for i in self.shapesPerCell.indices {
+      self.shapesPerCell[i].removeAll(keepingCapacity: true)
     }
   }
 
@@ -94,29 +78,52 @@ class Grid2D {
   }
 
   private func sortShapesByDepth() {
-    for i in 0..<self.cells.count {
+    for i in self.shapesPerCell.indices {
+      guard self.shapesPerCell[i].count > 1 else { continue }
+
       // decending order
-      self.cells[i].shapes.sort(by: { self.getDepth(of: $0) > self.getDepth(of: $1) })
+      self.shapesPerCell[i].sort(by: { self.getDepth(of: $0) > self.getDepth(of: $1) })
     }
   }
 
   public func updateBuffers() {
     self.sortShapesByDepth()
-
-    for i in 0..<self.cells.count {
-      self.cells[i].updateBuffer(self, i)
+    if self.shapesPerCellCount > self.shapeBufferCount {
+      self.shapeBufferCount = self.shapesPerCellCount + 10
+      self.shapeBuffer = GPUDevice.main.makeBuffer(length: MemoryLayout<Shape>.stride * self.shapeBufferCount)
+      self.shapeBuffer.label = "Shape buffer"
     }
 
-    let gridCellBuffer = self.cellBuffer.contents().bindMemory(to: GridCellArgBuffer.self, capacity: self.cellBufferCount)
+    var startIndex = Int()
+    let pointer = self.shapeBuffer.contents().assumingMemoryBound(to: Shape.self)
+    for i in self.shapesPerCell.indices {
+      let count = self.shapesPerCell[i].count
+      guard count > 0 else { continue }
 
-    for i in 0..<self.cellBufferCount {
-      let pointer = gridCellBuffer.advanced(by: i)
-      pointer.pointee.shapes = self.cells[i].shapeBuffer.gpuAddress
-      pointer.pointee.count = Int32(self.cells[i].shapes.count)
+      self.cells[i] = GridCell(startIndex: Int32(startIndex), count: Int32(count))
+
+      for shape in self.shapesPerCell[i] {
+        pointer.advanced(by: startIndex).pointee = shape
+        startIndex += 1
+      }
+      // another approach with memory coping
+//        pointer.advanced(by: startIndex * MemoryLayout<Shape>.stride).copyMemory(from: self.shapesPerCell[i], byteCount: self.shapesPerCell[i].byteCount)
+//        startIndex += count
     }
+
+    // to debug
+//    var tempShapes = Array(repeating: Shape(index: Int32(), shapeType: Int32()), count: self.shapesPerCellCount)
+//    let tempPointer = pointer.assumingMemoryBound(to: Shape.self)
+//    for i in tempShapes.indices {
+//      tempShapes[i] = tempPointer.advanced(by: i).pointee
+//    }
+//    print(tempShapes)
+
+    self.cellBuffer.contents().copyMemory(from: &self.cells, byteCount: self.cells.byteCount)
 
     let gridBuffer = self.gridArgBuffer.contents().bindMemory(to: GridArgBuffer.self, capacity: 1)
     gridBuffer.pointee.gridCells = self.cellBuffer.gpuAddress
+    gridBuffer.pointee.shapes = self.shapeBuffer.gpuAddress
     gridBuffer.pointee.gridSize = SIMD2<Int32>(Int32(self.size.x), Int32(self.size.y))
     gridBuffer.pointee.cellSize = self.cellSize
     gridBuffer.pointee.gridPosition = self.position
@@ -152,7 +159,8 @@ class Grid2D {
             let index = from2DTo1DArray(coord, size)
 
             if index < self.cells.count {
-              self.cells[index].shapes.append(shape)
+              self.shapesPerCell[index].append(shape)
+              self.shapesPerCellCount += 1
             }
           }
         }

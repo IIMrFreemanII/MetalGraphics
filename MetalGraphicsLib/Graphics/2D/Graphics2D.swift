@@ -31,10 +31,10 @@ public class Graphics2D {
   public init(renderer: ViewRenderer) {
     self.renderer = renderer
     self.device = GPUDevice.main
-    self.commandQueue = device.makeCommandQueue()
-    
+    self.commandQueue = self.device.makeCommandQueue()
+
     do {
-      self.library = try device.makeDefaultLibrary(bundle: Bundle(for: Graphics2D.self))
+      self.library = try self.device.makeDefaultLibrary(bundle: Bundle(for: Graphics2D.self))
       //      if let path = Bundle(for: Graphics.self).path(forResource: "default", ofType: "metallib") {
       //        library = try device.makeLibrary(URL: URL(fileURLWithPath: path))
       //      } else {
@@ -43,12 +43,12 @@ public class Graphics2D {
     } catch {
       fatalError("Could not create Metal library: \(error)")
     }
-    
+
     self.shapeArgBuffer = self.device.makeBuffer(length: MemoryLayout<ShapeArgBuffer>.stride * 1)
     self.circleBuffer = self.device.makeBuffer(length: MemoryLayout<Circle>.stride * 1)
     self.squareBuffer = self.device.makeBuffer(length: MemoryLayout<Square>.stride * 1)
     self.lineBuffer = self.device.makeBuffer(length: MemoryLayout<Line>.stride * 1)
-    
+
     do {
       guard let kernel = self.library.makeFunction(name: "compute2D")
       else {
@@ -158,8 +158,7 @@ public class Graphics2D {
       return
     }
 
-    commandEncoder.useResources(self.grid.resources, usage: .read)
-    commandEncoder.useResources([self.grid.cellBuffer, self.circleBuffer, self.squareBuffer, self.lineBuffer], usage: .read)
+    commandEncoder.useResources([self.grid.cellBuffer, self.grid.shapeBuffer, self.circleBuffer, self.squareBuffer, self.lineBuffer], usage: .read)
 
     commandEncoder.setComputePipelineState(self.pipelineState)
     let texture = drawable.texture

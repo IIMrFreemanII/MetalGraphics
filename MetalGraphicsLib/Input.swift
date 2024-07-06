@@ -76,7 +76,7 @@ public class Input {
 
   public init() {
     let center = NotificationCenter.default
-    
+
     center.addObserver(
       forName: .GCMouseDidConnect,
       object: nil,
@@ -86,7 +86,7 @@ public class Input {
       // 1
       mouse?.mouseInput?.leftButton.pressedChangedHandler = { _, _, pressed in
         self.leftMousePressed = pressed
-        
+
         if pressed {
           self.leftMouseDown = true
         } else {
@@ -95,7 +95,7 @@ public class Input {
       }
       mouse?.mouseInput?.rightButton?.pressedChangedHandler = { _, _, pressed in
         self.rightMousePressed = pressed
-        
+
         if pressed {
           self.rightMouseDown = true
         } else {
@@ -103,7 +103,7 @@ public class Input {
         }
       }
     }
-    
+
     center.addObserver(
       forName: .GCKeyboardDidConnect,
       object: nil,
@@ -114,7 +114,7 @@ public class Input {
         if pressed {
           self.keysDown.insert(keyCode)
           self.keysPressed.insert(keyCode)
-          
+
           switch keyCode {
           case .leftGUI, .rightGUI:
             self.commandPressed = true
@@ -126,7 +126,7 @@ public class Input {
         } else {
           self.keysPressed.remove(keyCode)
           self.keysUp.insert(keyCode)
-          
+
           switch keyCode {
           case .leftGUI, .rightGUI:
             self.commandPressed = false
@@ -138,7 +138,7 @@ public class Input {
         }
       }
     }
-    
+
     // #if os(macOS)
     //    NSEvent.addLocalMonitorForEvents(
     //      matching: [.keyDown]) { event in

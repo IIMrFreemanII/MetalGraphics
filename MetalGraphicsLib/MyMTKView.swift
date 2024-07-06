@@ -2,7 +2,7 @@ import MetalKit
 
 public class MyMTKView: MTKView {
   public var input = Input()
-  
+
   // to handle key events
   override public var acceptsFirstResponder: Bool {
     true
