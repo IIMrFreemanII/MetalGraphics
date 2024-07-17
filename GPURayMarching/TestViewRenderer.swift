@@ -16,7 +16,7 @@ class TestViewRenderer: ViewRenderer {
     }
     
     graphics.context(in: view) { _ in
-      gameView.run()
+      gameView.run(graphics.size)
       gameView.draw(in: graphics)
     }
   }

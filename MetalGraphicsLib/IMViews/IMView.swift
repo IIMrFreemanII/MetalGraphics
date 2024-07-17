@@ -34,23 +34,24 @@ public class IMView {
     paddings.append(Padding(.init(all: 10)))
   }
   
-  private func endFrame() {
+  private func endFrame(_ size: float2) {
     var root = self.paddings.first!
     
     self.childIndex = 0
-    _ = root.calcSize(self, SIMD2<Float>(500, 500), &root)
+    _ = root.calcSize(self, size, &root)
     
     self.childIndex = 0
     _ = root.calcPosition(self, SIMD2<Float>(0, 0))
     
 //    self.childIndex = 0
+//    print("-------------------------------------")
 //    root.debugTree(self)
   }
   
-  public func run() -> Void {
+  public func run(_ size: float2) -> Void {
     beginFrame()
     update()
-    endFrame()
+    endFrame(size)
   }
   
   internal func update() -> Void {
@@ -58,8 +59,6 @@ public class IMView {
   }
   
   public func draw(in context: Graphics2D) -> Void {
-//    print(context.size)
-    
     let offset = context.size * 0.5
     
     for rect in rects {
@@ -343,7 +342,7 @@ extension IMView {
     }
     
     func calcSize(_ context: IMView, _ availableSize: SIMD2<Float>, _ _self: inout Self) -> SIMD2<Float> {
-      let temp = inset.inflate(size: context.calcSize(context, availableSize))
+      let temp = inset.inflate(size: context.calcSize(context, inset.deflate(size: availableSize)))
       _self.size = temp
       
       return temp

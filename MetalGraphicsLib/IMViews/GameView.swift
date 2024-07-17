@@ -31,10 +31,11 @@ public class GameView : IMView {
     vStack {
       spacer()
       rect(.init(100, 100), .red)
-//      rect(.init(100, 100), .green)
-//      rect(.init(100, 100), .blue)
-      //      rect(.init(100, 100))
-      //      spacer()
+      spacer()
+      rect(.init(100, 100), .green)
+      spacer()
+      rect(.init(100, 100), .blue)
+      spacer()
     }
   }
 }
