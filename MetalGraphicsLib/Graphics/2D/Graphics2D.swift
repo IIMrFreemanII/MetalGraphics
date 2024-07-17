@@ -27,6 +27,10 @@ public class Graphics2D {
   private var depth = Float()
   lazy var grid: Grid2D = .init(position: float2(), size: int2(10, 10), cellSize: Float(50), graphics: self)
   var resizeCb: (() -> Void)?
+  
+  public var size: float2 {
+    self.renderer.windowSize
+  }
 
   public init(renderer: ViewRenderer) {
     self.renderer = renderer
