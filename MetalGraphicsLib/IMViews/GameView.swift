@@ -28,14 +28,27 @@ public class GameView : IMView {
     //        rect(.init(100, 100))
     //      }
     //    }
-    vStack {
-      spacer()
-      rect(.init(100, 100), .red)
-      spacer()
-      rect(.init(100, 100), .green)
-      spacer()
-      rect(.init(100, 100), .blue)
-      spacer()
+    background(.blue) {
+      expandedFrame(.both) {
+        background(.red) {
+          frame(.init(100, 100))
+        }
+      }
     }
+//    vStack {
+//      spacer()
+//      background(.red) {
+//        frame(.init(100, 100))
+//      }
+//      spacer()
+//      background(.green) {
+//        frame(.init(200, 100))
+//      }
+//      spacer()
+//      background(.blue) {
+//        frame(.init(100, 100))
+//      }
+//      spacer()
+//    }
   }
 }

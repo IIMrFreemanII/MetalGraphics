@@ -13,32 +13,37 @@ public class IMView {
   private var viewItems: [ViewItem] = []
   private var viewItemsStack: [Int] = []
   
-  private var paddings: [Padding] = []
-  private var texts: [Text] = []
-  private var vStacks: [VStack] = []
-  private var rects: [Rect] = []
+  private var backgrounds: [Background] = []
   private var spacers: [Spacer] = []
+  private var vStacks: [VStack] = []
+  private var paddings: [Padding] = []
+  private var frames: [Frame] = []
+  private var expandedFrames: [ExpandedFrame] = []
+//  private var texts: [Text] = []
   
-  private func beginFrame() {
+  private func beginFrame(_ viewSize: float2) {
     viewDepth = 0
     viewItemsStack.removeAll(keepingCapacity: true)
     viewItems.removeAll(keepingCapacity: true)
-    paddings.removeAll(keepingCapacity: true)
-    rects.removeAll(keepingCapacity: true)
+    
+    backgrounds.removeAll(keepingCapacity: true)
     spacers.removeAll(keepingCapacity: true)
     vStacks.removeAll(keepingCapacity: true)
+    paddings.removeAll(keepingCapacity: true)
+    frames.removeAll(keepingCapacity: true)
+    expandedFrames.removeAll(keepingCapacity: true)
     
-    let view: View = .Padding(paddings.count)
+    let view: View = .Frame(frames.count)
     viewItemsStack.append(viewItems.count)
     viewItems.append(ViewItem(type: view))
-    paddings.append(Padding(.init(all: 10)))
+    frames.append(Frame(viewSize, .center))
   }
   
-  private func endFrame(_ size: float2) {
-    var root = self.paddings.first!
+  private func endFrame(_ viewSize: float2) {
+    let root = self.frames.first!
     
     self.childIndex = 0
-    _ = root.calcSize(self, size, &root)
+    _ = root.calcSize(self, viewSize)
     
     self.childIndex = 0
     _ = root.calcPosition(self, SIMD2<Float>(0, 0))
@@ -48,10 +53,10 @@ public class IMView {
 //    root.debugTree(self)
   }
   
-  public func run(_ size: float2) -> Void {
-    beginFrame()
+  public func run(_ viewSize: float2) -> Void {
+    beginFrame(viewSize)
     update()
-    endFrame(size)
+    endFrame(viewSize)
   }
   
   internal func update() -> Void {
@@ -61,8 +66,8 @@ public class IMView {
   public func draw(in context: Graphics2D) -> Void {
     let offset = context.size * 0.5
     
-    for rect in rects {
-      context.draw(square: Square(position: rect.position - offset + rect.size * 0.5, size: rect.size, color: rect.color))
+    for item in backgrounds {
+      context.draw(square: Square(position: item.position - offset + item.size * 0.5, size: item.size, color: item.color))
     }
   }
   
@@ -71,39 +76,53 @@ public class IMView {
     
     context.forEachChild { child in
       switch child {
-      case .Padding(let index):
-        context.paddings[index].debugTree(context, offset + "  ")
-      case .Rect(let index):
-        context.rects[index].debugTree(context, offset + "  ")
-      case .VStack(let index):
-        context.vStacks[index].debugTree(context, offset + "  ")
+      case .Background(let index):
+        context.backgrounds[index].debugTree(context, offset + "  ")
       case .Spacer(let index):
         context.spacers[index].debugTree(context, offset + "  ")
+      case .VStack(let index):
+        context.vStacks[index].debugTree(context, offset + "  ")
+      case .Padding(let index):
+        context.paddings[index].debugTree(context, offset + "  ")
+      case .Frame(let index):
+        context.frames[index].debugTree(context, offset + "  ")
+      case .ExpandedFrame(let index):
+        context.expandedFrames[index].debugTree(context, offset + "  ")
       }
     }
   }
   
-  private func calcSize(_ context: IMView, _ availableSize: SIMD2<Float>, _ cb: (SIMD2<Float>, View) -> Void = {_,_ in }) -> SIMD2<Float> {
+  private func calcSize(_ context: IMView, _ availableSize: SIMD2<Float>, _ cb: (View, SIMD2<Float>) -> Void = {_,_ in }) -> SIMD2<Float> {
     var size = availableSize
     
     context.forEachChild { child in
       switch child {
-      case .Rect(let index):
-        size = context.rects[index].calcSize(context, availableSize)
-        cb(size, child)
+      case .Background(let index):
+        var temp = context.backgrounds[index]
+        size = temp.calcSize(context, availableSize, &temp)
+        context.backgrounds[index] = temp
+        cb(child, size)
+      case .Spacer(let index):
+        size = context.spacers[index].calcSize(context, availableSize)
+        cb(child, size)
       case .VStack(let index):
         var temp = context.vStacks[index]
         size = temp.calcSize(context, availableSize, &temp)
-        cb(size, child)
         context.vStacks[index] = temp
+        cb(child, size)
       case .Padding(let index):
         var temp = context.paddings[index]
         size = temp.calcSize(context, availableSize, &temp)
         context.paddings[index] = temp
-        cb(size, child)
-      case .Spacer(let index):
-        size = context.spacers[index].calcSize(context, availableSize)
-        cb(size, child)
+        cb(child, size)
+      case .Frame(let index):
+        size = context.frames[index].calcSize(context, availableSize)
+        cb(child, size)
+      case .ExpandedFrame(let index):
+        var temp = context.expandedFrames[index]
+        size = temp.calcSize(context, availableSize, &temp)
+        context.expandedFrames[index] = temp
+        cb(child, size)
       }
     }
     
@@ -115,20 +134,28 @@ public class IMView {
     
     context.forEachChild { child in
       switch child {
-      case .Rect(let index):
-        var temp = context.rects[index]
+      case .Background(let index):
+        var temp = context.backgrounds[index]
         result = temp.calcPosition(context, cb(child, temp.size), &temp)
-        context.rects[index] = temp
+        context.backgrounds[index] = temp
+      case .Spacer(let index):
+        result = context.spacers[index].calcPosition(context, cb(child, .init()))
       case .VStack(let index):
         let temp = context.vStacks[index]
         result = temp.calcPosition(context, cb(child, temp.size))
         context.vStacks[index] = temp
       case .Padding(let index):
         let temp = context.paddings[index]
-        result = context.paddings[index].calcPosition(context, cb(child, temp.size))
+        result = temp.calcPosition(context, cb(child, temp.size))
         context.paddings[index] = temp
-      case .Spacer(let index):
-        result = context.spacers[index].calcPosition(context, cb(child, .init()))
+      case .Frame(let index):
+        let temp = context.frames[index]
+        result = temp.calcPosition(context, cb(child, temp.size))
+        context.frames[index] = temp
+      case .ExpandedFrame(let index):
+        let temp = context.expandedFrames[index]
+        result = temp.calcPosition(context, cb(child, temp.size))
+        context.expandedFrames[index] = temp
       }
     }
     
@@ -182,13 +209,39 @@ extension IMView {
     _ = viewItemsStack.popLast()
   }
   
-  internal func rect(_ size: SIMD2<Float>, _ color: float4 = .black, _ cb: () -> Void = { }) -> Void {
-    let view: View = .Rect(rects.count)
+  internal func background(_ color: float4 = .black, _ cb: () -> Void = { }) -> Void {
+    let view: View = .Background(backgrounds.count)
     let parentIndex = viewItemsStack[viewItemsStack.count - 1]
     viewItemsStack.append(viewItems.count)
     viewItems.append(ViewItem(type: view))
     viewItems[parentIndex].childrenCount += 1
-    rects.append(Rect(size, color, getViewDepth()))
+    backgrounds.append(Background(color, getViewDepth()))
+    
+    cb()
+    
+    _ = viewItemsStack.popLast()
+  }
+  
+  internal func frame(_ size: SIMD2<Float>, _ alignment: Alignment = .center, _ cb: () -> Void = { }) -> Void {
+    let view: View = .Frame(frames.count)
+    let parentIndex = viewItemsStack[viewItemsStack.count - 1]
+    viewItemsStack.append(viewItems.count)
+    viewItems.append(ViewItem(type: view))
+    viewItems[parentIndex].childrenCount += 1
+    frames.append(Frame(size, alignment))
+    
+    cb()
+    
+    _ = viewItemsStack.popLast()
+  }
+  
+  internal func expandedFrame(_ axis: Axis, _ alignment: Alignment = .center, _ cb: () -> Void = { }) -> Void {
+    let view: View = .ExpandedFrame(expandedFrames.count)
+    let parentIndex = viewItemsStack[viewItemsStack.count - 1]
+    viewItemsStack.append(viewItems.count)
+    viewItems.append(ViewItem(type: view))
+    viewItems[parentIndex].childrenCount += 1
+    expandedFrames.append(ExpandedFrame(axis, alignment))
     
     cb()
     
@@ -218,6 +271,77 @@ extension IMView {
     
     func calcPosition(_ context: IMView, _ position: SIMD2<Float>) -> SIMD2<Float> {
       return .init()
+    }
+  }
+  
+  internal struct Frame {
+    let size: float2
+    let alignment: Alignment
+    
+    init(_ size: float2, _ alignment: Alignment = .center) {
+      self.size = size
+      self.alignment = alignment
+    }
+    
+    func debugTree(_ context: IMView, _ offset: String = "") -> Void {
+      context.debugTree(self, context, offset)
+    }
+    
+    func calcSize(_ context: IMView, _ availableSize: SIMD2<Float>) -> SIMD2<Float> {
+      return context.calcSize(context, self.size)
+    }
+    
+    func calcPosition(_ context: IMView, _ position: SIMD2<Float>) -> SIMD2<Float> {
+      return context.calcPosition(context, { _, size in
+        let availableSize = max(self.size - size, float2())
+        let offset = lerp(min: float2(), max: availableSize, t: self.alignment.offset)
+        
+        return position + offset
+      })
+    }
+  }
+  
+  internal struct FlexFrame {
+    
+  }
+  
+  internal struct ExpandedFrame {
+    let axis: Axis
+    let alignment: Alignment
+    var size: float2 = .init()
+    
+    init(_ axis: Axis, _ alignment: Alignment = .center) {
+      self.axis = axis
+      self.alignment = alignment
+    }
+    
+    func debugTree(_ context: IMView, _ offset: String = "") -> Void {
+      context.debugTree(self, context, offset)
+    }
+    
+    func calcSize(_ context: IMView, _ availableSize: SIMD2<Float>, _ _self: inout Self) -> SIMD2<Float> {
+      let contentSize = context.calcSize(context, availableSize)
+      var size = float2()
+      
+      if axis.horizontal == 1, axis.vertical == 1 {
+        size = availableSize
+      } else {
+        size += availableSize * axis.size
+        size += contentSize * axis.inverted
+      }
+      
+      _self.size = size
+      
+      return size
+    }
+    
+    func calcPosition(_ context: IMView, _ position: SIMD2<Float>) -> SIMD2<Float> {
+      return context.calcPosition(context, { _, size in
+        let availableSize = max(self.size - size, float2())
+        let offset = lerp(min: float2(), max: availableSize, t: self.alignment.offset)
+        
+        return position + offset
+      })
     }
   }
   
@@ -252,7 +376,7 @@ extension IMView {
         _self.maxWidth = maxWidth
       }
       
-      _ = context.calcSize(context, availableSize) { size, child in
+      _ = context.calcSize(context, availableSize) { child, size  in
         contentHeight += size.y + spacing
         maxWidth = max(maxWidth, size.x)
         
@@ -264,8 +388,9 @@ extension IMView {
       if spacersCount > 0 {
         let freeSpace = max(availableSize.y - contentHeight, 0)
         _self.spacerSize = freeSpace / Float(spacersCount)
+        contentHeight = availableSize.y
         
-        return .init(maxWidth, availableSize.y)
+        return .init(maxWidth, contentHeight)
       }
       
       return .init(maxWidth, contentHeight)
@@ -280,21 +405,9 @@ extension IMView {
           return .init()
         }
         
-        var xOffset = position.x
-        switch self.alignment {
-        case .leading:
-          xOffset = position.x
-        case .center:
-          let halfOfMaxWidth = self.maxWidth * 0.5
-          let halfOfChildWidth = size.x * 0.5
-          xOffset += halfOfMaxWidth - halfOfChildWidth
-        case .trailing:
-          let difference = self.maxWidth - size.x
-          xOffset += difference
-        }
-        
+        let availableSpace = self.maxWidth - size.x
+        let xOffset = position.x + lerp(min: 0, max: availableSpace, t: self.alignment.offset)
         let result = SIMD2<Float>(xOffset, yOffset)
-        
         yOffset += size.y
         
         return result
@@ -302,14 +415,13 @@ extension IMView {
     }
   }
   
-  internal struct Rect {
+  internal struct Background {
     var position: SIMD2<Float> = .init()
-    var size: SIMD2<Float> = .init(100, 100)
+    var size: SIMD2<Float> = .init()
     var color: SIMD4<Float> = .black
     var depth: Float
     
-    init(_ size: SIMD2<Float>, _ color: float4, _ depth: Float) {
-      self.size = size
+    init(_ color: float4, _ depth: Float) {
       self.depth = depth
       self.color = color
     }
@@ -318,11 +430,14 @@ extension IMView {
       context.debugTree(self, context, offset)
     }
     
-    func calcSize(_ context: IMView, _ availableSize: SIMD2<Float>) -> SIMD2<Float> {
-      return context.calcSize(context, self.size)
+    func calcSize(_ context: IMView, _ availableSize: SIMD2<Float>, _ _self: inout Background) -> SIMD2<Float> {
+      let contentSize = context.calcSize(context, availableSize)
+      _self.size = contentSize
+      
+      return contentSize
     }
     
-    func calcPosition(_ context: IMView, _ position: SIMD2<Float>, _ _self: inout Rect) -> SIMD2<Float> {
+    func calcPosition(_ context: IMView, _ position: SIMD2<Float>, _ _self: inout Background) -> SIMD2<Float> {
       _self.position = position
       
       return context.calcPosition(context, { _, _ in position })
@@ -359,20 +474,26 @@ extension IMView {
   }
   
   internal enum View {
-    case Rect(Int)
+    case Background(Int)
     case Spacer(Int)
     case VStack(Int)
     case Padding(Int)
+    case Frame(Int)
+    case ExpandedFrame(Int)
     
     var isSpacer: Bool {
       switch self {
-      case .Rect(_):
+      case .Background(_):
         break
       case .Spacer(_):
         return true
       case .VStack(_):
         break
       case .Padding(_):
+        break
+      case .Frame(_):
+        break
+      case .ExpandedFrame(_):
         break
       }
       
@@ -381,13 +502,17 @@ extension IMView {
     
     func onSpacer(_ cb: () -> Void) -> Void {
       switch self {
-      case .Rect(_):
+      case .Background(_):
         break
       case .Spacer(_):
         cb()
       case .VStack(_):
         break
       case .Padding(_):
+        break
+      case .Frame(_):
+        break
+      case .ExpandedFrame(_):
         break
       }
     }
@@ -444,16 +569,73 @@ extension IMView {
     }
   }
   
-  enum HorizontalAlignment {
-    case leading
-    case center
-    case trailing
+  struct Axis {
+    let horizontal: Float
+    let vertical: Float
+    
+    var size: float2 {
+      float2(horizontal, vertical)
+    }
+    var inverted: float2 {
+      float2(vertical, horizontal)
+    }
+    
+    private init(_ horizontal: Float, _ vertical: Float) {
+      self.horizontal = horizontal
+      self.vertical = vertical
+    }
+    
+    static let horizontal: Self = .init(1.0, 0.0)
+    static let vertical: Self = .init(0.0, 1.0)
+    static let both: Self = .init(1.0, 1.0)
   }
   
-  enum VerticalAlignment {
-    case top
-    case center
-    case bottom
+  struct Alignment {
+    let xOffset: Float
+    let yOffset: Float
+    
+    var offset: float2 {
+      float2(xOffset, yOffset)
+    }
+    
+    init(_ xOffset: Float, _ yOffset: Float) {
+      self.xOffset = xOffset
+      self.yOffset = yOffset
+    }
+    
+    static let topLeading: Self = .init(0.0, 0.0)
+    static let top: Self = .init(0.5, 0.0)
+    static let topTrailing: Self = .init(1.0, 0.0)
+    static let leading: Self = .init(0.0, 0.5)
+    static let center: Self = .init(0.5, 0.5)
+    static let trailing: Self = .init(1.0, 0.5)
+    static let bottomLeading: Self = .init(0.0, 1.0)
+    static let bottom: Self = .init(0.5, 1.0)
+    static let bottomTrailing: Self = .init(1.0, 1.0)
+  }
+  
+  struct HorizontalAlignment {
+    let offset: Float
+    
+    init(_ offset: Float) {
+      self.offset = offset
+    }
+    
+    static let leading: Self = .init(0.0)
+    static let center: Self = .init(0.5)
+    static let trailing: Self = .init(1.0)
+  }
+  
+  struct VerticalAlignment {
+    let offset: Float
+    
+    init(_ offset: Float) {
+      self.offset = offset
+    }
+    
+    static let top: Self = .init(0)
+    static let center: Self = .init(0.5)
+    static let bottom: Self = .init(1)
   }
 }
 

@@ -59,6 +59,10 @@ public func lerp(min: Float, max: Float, t: Float) -> Float {
   min + (max - min) * t
 }
 
+public func lerp(min: float2, max: float2, t: float2) -> float2 {
+  min + (max - min) * t
+}
+
 public func normalize(value: Float, min: Float, max: Float) -> Float {
   (value - min) / (max - min)
 }
