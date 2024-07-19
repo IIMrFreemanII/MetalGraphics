@@ -28,13 +28,13 @@ public class GameView : IMView {
     //        rect(.init(100, 100))
     //      }
     //    }
-    background(.blue) {
-      expandedFrame(.both) {
-        background(.red) {
-          frame(.init(100, 100))
-        }
-      }
-    }
+//    background(.blue) {
+//      expandedFrame(.horizontal) {
+//        background(.red) {
+//          frame(.init(100, 100))
+//        }
+//      }
+//    }
 //    vStack {
 //      spacer()
 //      background(.red) {
@@ -50,5 +50,12 @@ public class GameView : IMView {
 //      }
 //      spacer()
 //    }
+    background(.green) {
+      frame(minWidth: 150, maxWidth: 200) {
+        background(.red) {
+          frame(width: 100, height: 100)
+        }
+      }
+    }
   }
 }

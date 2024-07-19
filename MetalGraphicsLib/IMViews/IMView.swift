@@ -19,6 +19,7 @@ public class IMView {
   private var paddings: [Padding] = []
   private var frames: [Frame] = []
   private var expandedFrames: [ExpandedFrame] = []
+  private var flexFrames: [FlexFrame] = []
 //  private var texts: [Text] = []
   
   private func beginFrame(_ viewSize: float2) {
@@ -32,6 +33,7 @@ public class IMView {
     paddings.removeAll(keepingCapacity: true)
     frames.removeAll(keepingCapacity: true)
     expandedFrames.removeAll(keepingCapacity: true)
+    flexFrames.removeAll(keepingCapacity: true)
     
     let view: View = .Frame(frames.count)
     viewItemsStack.append(viewItems.count)
@@ -88,6 +90,8 @@ public class IMView {
         context.frames[index].debugTree(context, offset + "  ")
       case .ExpandedFrame(let index):
         context.expandedFrames[index].debugTree(context, offset + "  ")
+      case .FlexFrame(let index):
+        context.flexFrames[index].debugTree(context, offset + "  ")
       }
     }
   }
@@ -123,6 +127,11 @@ public class IMView {
         size = temp.calcSize(context, availableSize, &temp)
         context.expandedFrames[index] = temp
         cb(child, size)
+      case .FlexFrame(let index):
+        var temp = context.flexFrames[index]
+        size = temp.calcSize(context, availableSize, &temp)
+        context.flexFrames[index] = temp
+        cb(child, size)
       }
     }
     
@@ -156,6 +165,10 @@ public class IMView {
         let temp = context.expandedFrames[index]
         result = temp.calcPosition(context, cb(child, temp.size))
         context.expandedFrames[index] = temp
+      case .FlexFrame(let index):
+        let temp = context.flexFrames[index]
+        result = temp.calcPosition(context, cb(child, temp.size))
+        context.flexFrames[index] = temp
       }
     }
     
@@ -222,13 +235,13 @@ extension IMView {
     _ = viewItemsStack.popLast()
   }
   
-  internal func frame(_ size: SIMD2<Float>, _ alignment: Alignment = .center, _ cb: () -> Void = { }) -> Void {
+  internal func frame(width: Float, height: Float, _ alignment: Alignment = .center, _ cb: () -> Void = { }) -> Void {
     let view: View = .Frame(frames.count)
     let parentIndex = viewItemsStack[viewItemsStack.count - 1]
     viewItemsStack.append(viewItems.count)
     viewItems.append(ViewItem(type: view))
     viewItems[parentIndex].childrenCount += 1
-    frames.append(Frame(size, alignment))
+    frames.append(Frame(.init(width, height), alignment))
     
     cb()
     
@@ -242,6 +255,19 @@ extension IMView {
     viewItems.append(ViewItem(type: view))
     viewItems[parentIndex].childrenCount += 1
     expandedFrames.append(ExpandedFrame(axis, alignment))
+    
+    cb()
+    
+    _ = viewItemsStack.popLast()
+  }
+  
+  internal func frame(minWidth: Float? = nil, maxWidth: Float? = nil, minHeight: Float? = nil, maxHeight: Float? = nil, _ alignment: Alignment = .center, _ cb: () -> Void = { }) -> Void {
+    let view: View = .FlexFrame(flexFrames.count)
+    let parentIndex = viewItemsStack[viewItemsStack.count - 1]
+    viewItemsStack.append(viewItems.count)
+    viewItems.append(ViewItem(type: view))
+    viewItems[parentIndex].childrenCount += 1
+    flexFrames.append(FlexFrame(minWidth: minWidth, maxWidth: maxWidth, minHeight: minHeight, maxHeight: maxHeight, alignment))
     
     cb()
     
@@ -302,7 +328,51 @@ extension IMView {
   }
   
   internal struct FlexFrame {
+    let minWidth: Float?
+    let maxWidth: Float?
+    let minHeight: Float?
+    let maxHeight: Float?
+    let alignment: Alignment
     
+    var size: float2 = .init()
+    
+    init(minWidth: Float?, maxWidth: Float?, minHeight: Float?, maxHeight: Float?, _ alignment: Alignment = .center) {
+      self.minWidth = minWidth
+      self.maxWidth = maxWidth
+      self.minHeight = minHeight
+      self.maxHeight = maxHeight
+      self.alignment = alignment
+    }
+    
+    func debugTree(_ context: IMView, _ offset: String = "") -> Void {
+      context.debugTree(self, context, offset)
+    }
+    
+    func calcSize(_ context: IMView, _ availableSize: SIMD2<Float>, _ _self: inout Self) -> SIMD2<Float> {
+      let contentSize = context.calcSize(context, availableSize)
+      
+      let minWidth = minWidth ?? contentSize.x
+      let maxWidth = maxWidth ?? contentSize.x
+      let minHeight = minHeight ?? contentSize.y
+      let maxHeight = maxHeight ?? contentSize.y
+      
+      let width = clamp(availableSize.x, minWidth, maxWidth)
+      let height = clamp(availableSize.y, minHeight, maxHeight)
+      
+      let constrainedSize = SIMD2<Float>(width, height)
+      _self.size = constrainedSize
+      
+      return constrainedSize
+    }
+    
+    func calcPosition(_ context: IMView, _ position: SIMD2<Float>) -> SIMD2<Float> {
+      return context.calcPosition(context, { _, size in
+        let availableSize = max(self.size - size, float2())
+        let offset = lerp(min: float2(), max: availableSize, t: self.alignment.offset)
+        
+        return position + offset
+      })
+    }
   }
   
   internal struct ExpandedFrame {
@@ -480,6 +550,7 @@ extension IMView {
     case Padding(Int)
     case Frame(Int)
     case ExpandedFrame(Int)
+    case FlexFrame(Int)
     
     var isSpacer: Bool {
       switch self {
@@ -494,6 +565,8 @@ extension IMView {
       case .Frame(_):
         break
       case .ExpandedFrame(_):
+        break
+      case .FlexFrame(_):
         break
       }
       
@@ -513,6 +586,8 @@ extension IMView {
       case .Frame(_):
         break
       case .ExpandedFrame(_):
+        break
+      case .FlexFrame(_):
         break
       }
     }
