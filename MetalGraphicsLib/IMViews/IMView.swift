@@ -16,6 +16,7 @@ public class IMView {
   private var backgrounds: [Background] = []
   private var spacers: [Spacer] = []
   private var vStacks: [VStack] = []
+  private var hStacks: [HStack] = []
   private var paddings: [Padding] = []
   private var frames: [Frame] = []
   private var expandedFrames: [ExpandedFrame] = []
@@ -30,6 +31,7 @@ public class IMView {
     backgrounds.removeAll(keepingCapacity: true)
     spacers.removeAll(keepingCapacity: true)
     vStacks.removeAll(keepingCapacity: true)
+    hStacks.removeAll(keepingCapacity: true)
     paddings.removeAll(keepingCapacity: true)
     frames.removeAll(keepingCapacity: true)
     expandedFrames.removeAll(keepingCapacity: true)
@@ -84,6 +86,8 @@ public class IMView {
         context.spacers[index].debugTree(context, offset + "  ")
       case .VStack(let index):
         context.vStacks[index].debugTree(context, offset + "  ")
+      case .HStack(let index):
+        context.hStacks[index].debugTree(context, offset + "  ")
       case .Padding(let index):
         context.paddings[index].debugTree(context, offset + "  ")
       case .Frame(let index):
@@ -113,6 +117,11 @@ public class IMView {
         var temp = context.vStacks[index]
         size = temp.calcSize(context, availableSize, &temp)
         context.vStacks[index] = temp
+        cb(child, size)
+      case .HStack(let index):
+        var temp = context.hStacks[index]
+        size = temp.calcSize(context, availableSize, &temp)
+        context.hStacks[index] = temp
         cb(child, size)
       case .Padding(let index):
         var temp = context.paddings[index]
@@ -153,6 +162,10 @@ public class IMView {
         let temp = context.vStacks[index]
         result = temp.calcPosition(context, cb(child, temp.size))
         context.vStacks[index] = temp
+      case .HStack(let index):
+        let temp = context.hStacks[index]
+        result = temp.calcPosition(context, cb(child, temp.size))
+        context.hStacks[index] = temp
       case .Padding(let index):
         let temp = context.paddings[index]
         result = temp.calcPosition(context, cb(child, temp.size))
@@ -209,13 +222,26 @@ extension IMView {
     spacers.append(Spacer())
   }
   
-  internal func vStack(_ alignment: HorizontalAlignment = .center, _ spacing: Float = 0, _ cb: () -> Void) -> Void {
+  internal func vStack(alignment: HorizontalAlignment = .center, spacing: Float = 0, _ cb: () -> Void) -> Void {
     let view: View = .VStack(vStacks.count)
     let parentIndex = viewItemsStack[viewItemsStack.count - 1]
     viewItemsStack.append(viewItems.count)
     viewItems.append(ViewItem(type: view))
     viewItems[parentIndex].childrenCount += 1
     vStacks.append(VStack(alignment, spacing))
+    
+    cb()
+    
+    _ = viewItemsStack.popLast()
+  }
+  
+  internal func hStack(alignment: VerticalAlignment = .center, spacing: Float = 0, _ cb: () -> Void) -> Void {
+    let view: View = .HStack(hStacks.count)
+    let parentIndex = viewItemsStack[viewItemsStack.count - 1]
+    viewItemsStack.append(viewItems.count)
+    viewItems.append(ViewItem(type: view))
+    viewItems[parentIndex].childrenCount += 1
+    hStacks.append(HStack(alignment, spacing))
     
     cb()
     
@@ -451,9 +477,12 @@ extension IMView {
         maxWidth = max(maxWidth, size.x)
         
         child.onSpacer {
+          contentHeight -= spacing
           spacersCount += 1
         }
       }
+      
+      contentHeight -= spacing
       
       if spacersCount > 0 {
         let freeSpace = max(availableSize.y - contentHeight, 0)
@@ -478,7 +507,80 @@ extension IMView {
         let availableSpace = self.maxWidth - size.x
         let xOffset = position.x + lerp(min: 0, max: availableSpace, t: self.alignment.offset)
         let result = SIMD2<Float>(xOffset, yOffset)
-        yOffset += size.y
+        yOffset += size.y + self.spacing
+        
+        return result
+      })
+    }
+  }
+  
+  internal struct HStack {
+    let alignment: VerticalAlignment
+    let spacing: Float
+    
+    private var contentWidth: Float = 0
+    private var maxHeight: Float = 0
+    private var spacerSize: Float = 0
+    
+    var size: SIMD2<Float> {
+      .init(contentWidth, maxHeight)
+    }
+    
+    init(_ alignment: VerticalAlignment = .center, _ spacing: Float = 0) {
+      self.alignment = alignment
+      self.spacing = spacing
+    }
+    
+    func debugTree(_ context: IMView, _ offset: String = "") -> Void {
+      context.debugTree(self, context, offset)
+    }
+    
+    func calcSize(_ context: IMView, _ availableSize: SIMD2<Float>, _ _self: inout Self) -> SIMD2<Float> {
+      var contentWidth = Float()
+      var maxHeight = Float()
+      var spacersCount = Int()
+      
+      defer {
+        _self.contentWidth = contentWidth
+        _self.maxHeight = maxHeight
+      }
+      
+      _ = context.calcSize(context, availableSize) { child, size  in
+        contentWidth += size.x + spacing
+        maxHeight = max(maxHeight, size.y)
+        
+        child.onSpacer {
+          contentWidth -= spacing
+          spacersCount += 1
+        }
+      }
+      
+      contentWidth -= spacing
+      
+      if spacersCount > 0 {
+        let freeSpace = max(availableSize.x - contentWidth, 0)
+        _self.spacerSize = freeSpace / Float(spacersCount)
+        contentWidth = availableSize.x
+        
+        return .init(contentWidth, maxHeight)
+      }
+      
+      return .init(contentWidth, maxHeight)
+    }
+    
+    func calcPosition(_ context: IMView, _ position: SIMD2<Float>) -> SIMD2<Float> {
+      var xOffset = position.x
+      
+      return context.calcPosition(context, { child, size in
+        if child.isSpacer {
+          xOffset += self.spacerSize
+          return .init()
+        }
+        
+        let availableSpace = self.maxHeight - size.y
+        let yOffset = position.y + lerp(min: 0, max: availableSpace, t: self.alignment.offset)
+        let result = SIMD2<Float>(xOffset, yOffset)
+        xOffset += size.x + self.spacing
         
         return result
       })
@@ -547,6 +649,7 @@ extension IMView {
     case Background(Int)
     case Spacer(Int)
     case VStack(Int)
+    case HStack(Int)
     case Padding(Int)
     case Frame(Int)
     case ExpandedFrame(Int)
@@ -559,6 +662,8 @@ extension IMView {
       case .Spacer(_):
         return true
       case .VStack(_):
+        break
+      case .HStack(_):
         break
       case .Padding(_):
         break
@@ -580,6 +685,8 @@ extension IMView {
       case .Spacer(_):
         cb()
       case .VStack(_):
+        break
+      case .HStack(_):
         break
       case .Padding(_):
         break

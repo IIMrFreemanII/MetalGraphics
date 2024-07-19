@@ -50,12 +50,30 @@ public class GameView : IMView {
 //      }
 //      spacer()
 //    }
-    background(.green) {
-      frame(minWidth: 150, maxWidth: 200) {
-        background(.red) {
-          frame(width: 100, height: 100)
-        }
-      }
+    hStack(spacing: 10) {
+//      background(.green) {
+//        frame(minWidth: 150, maxWidth: 200) {
+          background(.red) {
+            frame(width: 100, height: 100)
+          }
+//        }
+//      }
+//      background(.green) {
+//        frame(minWidth: 150, maxWidth: 200) {
+          background(.red) {
+            frame(width: 100, height: 100)
+          }
+//        }
+//      }
+//      background(.green) {
+//        frame(minWidth: 150, maxWidth: 200) {
+          background(.red) {
+            frame(width: 100, height: 100)
+          }
+      
+//        }
+//      }
+//      spacer()
     }
   }
 }
