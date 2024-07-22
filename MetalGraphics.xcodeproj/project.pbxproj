@@ -10,6 +10,14 @@
 		157C8D182C3BC064009CD7CE /* Runtime in Frameworks */ = {isa = PBXBuildFile; productRef = 157C8D172C3BC064009CD7CE /* Runtime */; };
 		157C8D622C484E33009CD7CE /* IMView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D612C484E33009CD7CE /* IMView.swift */; };
 		157C8D642C484E89009CD7CE /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D632C484E89009CD7CE /* GameView.swift */; };
+		157C8D662C4C54A8009CD7CE /* Alignment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D652C4C54A8009CD7CE /* Alignment.swift */; };
+		157C8D682C4C54DB009CD7CE /* Axis.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D672C4C54DA009CD7CE /* Axis.swift */; };
+		157C8D6C2C4C555D009CD7CE /* Padding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D6B2C4C555D009CD7CE /* Padding.swift */; };
+		157C8D6E2C4C56B5009CD7CE /* Spacer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D6D2C4C56B5009CD7CE /* Spacer.swift */; };
+		157C8D702C4C5718009CD7CE /* Frame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D6F2C4C5718009CD7CE /* Frame.swift */; };
+		157C8D722C4C57F4009CD7CE /* Stack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D712C4C57F3009CD7CE /* Stack.swift */; };
+		157C8D742C4C585D009CD7CE /* Background.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D732C4C585D009CD7CE /* Background.swift */; };
+		157C8D762C4D98FA009CD7CE /* MouseOver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D752C4D98FA009CD7CE /* MouseOver.swift */; };
 		159419A72C147B0E00C56203 /* GPURayMarchingApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419A62C147B0E00C56203 /* GPURayMarchingApp.swift */; };
 		159419A92C147B0E00C56203 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419A82C147B0E00C56203 /* ContentView.swift */; };
 		159419AB2C147B0F00C56203 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 159419AA2C147B0F00C56203 /* Assets.xcassets */; };
@@ -91,6 +99,14 @@
 /* Begin PBXFileReference section */
 		157C8D612C484E33009CD7CE /* IMView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMView.swift; sourceTree = "<group>"; };
 		157C8D632C484E89009CD7CE /* GameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
+		157C8D652C4C54A8009CD7CE /* Alignment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alignment.swift; sourceTree = "<group>"; };
+		157C8D672C4C54DA009CD7CE /* Axis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Axis.swift; sourceTree = "<group>"; };
+		157C8D6B2C4C555D009CD7CE /* Padding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Padding.swift; sourceTree = "<group>"; };
+		157C8D6D2C4C56B5009CD7CE /* Spacer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Spacer.swift; sourceTree = "<group>"; };
+		157C8D6F2C4C5718009CD7CE /* Frame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Frame.swift; sourceTree = "<group>"; };
+		157C8D712C4C57F3009CD7CE /* Stack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stack.swift; sourceTree = "<group>"; };
+		157C8D732C4C585D009CD7CE /* Background.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Background.swift; sourceTree = "<group>"; };
+		157C8D752C4D98FA009CD7CE /* MouseOver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseOver.swift; sourceTree = "<group>"; };
 		159419A42C147B0E00C56203 /* GPURayMarching.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GPURayMarching.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		159419A62C147B0E00C56203 /* GPURayMarchingApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPURayMarchingApp.swift; sourceTree = "<group>"; };
 		159419A82C147B0E00C56203 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -173,6 +189,14 @@
 			children = (
 				157C8D612C484E33009CD7CE /* IMView.swift */,
 				157C8D632C484E89009CD7CE /* GameView.swift */,
+				157C8D652C4C54A8009CD7CE /* Alignment.swift */,
+				157C8D672C4C54DA009CD7CE /* Axis.swift */,
+				157C8D6B2C4C555D009CD7CE /* Padding.swift */,
+				157C8D6D2C4C56B5009CD7CE /* Spacer.swift */,
+				157C8D6F2C4C5718009CD7CE /* Frame.swift */,
+				157C8D712C4C57F3009CD7CE /* Stack.swift */,
+				157C8D732C4C585D009CD7CE /* Background.swift */,
+				157C8D752C4D98FA009CD7CE /* MouseOver.swift */,
 			);
 			path = IMViews;
 			sourceTree = "<group>";
@@ -491,13 +515,16 @@
 				15DF1C222C2B167D00E8E7E6 /* Benchmark.swift in Sources */,
 				15A049D62C23218100D28009 /* BoundingBox.swift in Sources */,
 				15941A132C15BCC000C56203 /* MyMTKView.swift in Sources */,
+				157C8D662C4C54A8009CD7CE /* Alignment.swift in Sources */,
 				15C91D362C1F1A1500A2857F /* Circle.swift in Sources */,
 				15DF1C392C316AD300E8E7E6 /* GPUDevice.swift in Sources */,
 				15941A072C149A7500C56203 /* float4x4.swift in Sources */,
 				15A049D22C221AA600D28009 /* Line.swift in Sources */,
 				159419F62C14917400C56203 /* Comparable.swift in Sources */,
+				157C8D722C4C57F4009CD7CE /* Stack.swift in Sources */,
 				15A049D82C23220800D28009 /* Grid2D.swift in Sources */,
 				15941A032C149A2A00C56203 /* int3.swift in Sources */,
+				157C8D702C4C5718009CD7CE /* Frame.swift in Sources */,
 				159419F42C14916C00C56203 /* MathLib.swift in Sources */,
 				159419F52C14917200C56203 /* Array.swift in Sources */,
 				15C91D3B2C1F1B9F00A2857F /* Graphics2D.swift in Sources */,
@@ -516,15 +543,20 @@
 				159419F82C14917800C56203 /* Int.swift in Sources */,
 				15A049DC2C243DB200D28009 /* StepSequence.swift in Sources */,
 				15941A092C149AE000C56203 /* float2x2.swift in Sources */,
+				157C8D742C4C585D009CD7CE /* Background.swift in Sources */,
 				159419FD2C14997900C56203 /* float3.swift in Sources */,
+				157C8D6E2C4C56B5009CD7CE /* Spacer.swift in Sources */,
 				159419EB2C1490B700C56203 /* Rect.swift in Sources */,
 				15DF1C3D2C317DDB00E8E7E6 /* Graphics3D.swift in Sources */,
+				157C8D762C4D98FA009CD7CE /* MouseOver.swift in Sources */,
 				157C8D642C484E89009CD7CE /* GameView.swift in Sources */,
 				15DF1C402C317DFA00E8E7E6 /* Sphere.swift in Sources */,
 				15A049DA2C236C8500D28009 /* Utils.swift in Sources */,
 				159419F72C14917600C56203 /* Float.swift in Sources */,
 				15941A012C149A1400C56203 /* int2.swift in Sources */,
+				157C8D682C4C54DB009CD7CE /* Axis.swift in Sources */,
 				15C91D3F2C1F43E300A2857F /* SDF.metal in Sources */,
+				157C8D6C2C4C555D009CD7CE /* Padding.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

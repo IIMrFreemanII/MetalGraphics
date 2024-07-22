@@ -7,6 +7,7 @@ class TestViewRenderer: ViewRenderer {
   
   override func start() {
     self.graphics2D = Graphics2D(renderer: self)
+    self.gameView.renderer = self
   }
 
   override func draw(in view: MTKView) {
