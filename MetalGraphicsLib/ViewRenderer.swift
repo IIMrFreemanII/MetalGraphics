@@ -1,10 +1,13 @@
 import MetalKit
+import Combine
+import SwiftUI
 
-open class ViewRenderer: NSObject {
+open class ViewRenderer: NSObject, ObservableObject {
   public var metalView: MTKView!
   public var input: Input!
   public var graphics2D: Graphics2D?
-  public var windowSize = float2()
+  @Published public var windowSize = float2()
+  @Published public var temp = float2(1, 2)
 
   public var clearColor = MTLClearColor(
     red: 0.93,
@@ -16,6 +19,29 @@ open class ViewRenderer: NSObject {
   private var lastTime: Double = CFAbsoluteTimeGetCurrent()
   public var deltaTime: Float = 0
   public var time: Float = 0
+  
+  public var navigationView: some View {
+    List {
+      Text("Navigation")
+        .font(.title)
+    }
+  }
+  
+  public var inspectorView: some View {
+    HStack(spacing: 0) {
+      VStack(alignment: .leading) {
+        Text("Inspector")
+          .font(.title)
+        Divider()
+        Text("Window size: \(String(describing: windowSize).split(separator: ">").last!)")
+        Divider()
+        Number2Field(label: "Position:", value: Binding(get: {self.temp}, set: { self.temp = $0 }))
+        Spacer()
+      }
+      Spacer()
+    }
+    .frame(minWidth: 200)
+  }
 
   public func updateTime() {
     let currentTime = CFAbsoluteTimeGetCurrent()
@@ -74,7 +100,9 @@ extension ViewRenderer: MTKViewDelegate {
 
 //    let resolution = float2(Float(size.width), Float(size.height))
     let windowSize = float2(width, height)
-    self.windowSize = windowSize
+    DispatchQueue.main.async {
+      self.windowSize = windowSize
+    }
     self.input.windowSize = windowSize
 
     if let graphics2D = self.graphics2D {

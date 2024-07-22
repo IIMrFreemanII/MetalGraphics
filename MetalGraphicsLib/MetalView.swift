@@ -55,7 +55,7 @@ public struct MetalViewRepresentable: ViewRepresentable {
 
   #if os(macOS)
     public func makeNSView(context _: Context) -> some NSView {
-      print("makeMetalView")
+//      print("makeMetalView")
       return self.metalView
     }
 
@@ -65,7 +65,7 @@ public struct MetalViewRepresentable: ViewRepresentable {
 
   #elseif os(iOS)
     func makeUIView(context _: Context) -> MTKView {
-      print("makeMetalView")
+//      print("makeMetalView")
       return self.metalView
     }
 
@@ -75,6 +75,6 @@ public struct MetalViewRepresentable: ViewRepresentable {
   #endif
 
   func updateMetalView() {
-    print("updateMetalView")
+//    print("updateMetalView")
   }
 }

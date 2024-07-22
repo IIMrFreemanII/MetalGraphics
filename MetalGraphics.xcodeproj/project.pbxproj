@@ -18,6 +18,10 @@
 		157C8D722C4C57F4009CD7CE /* Stack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D712C4C57F3009CD7CE /* Stack.swift */; };
 		157C8D742C4C585D009CD7CE /* Background.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D732C4C585D009CD7CE /* Background.swift */; };
 		157C8D762C4D98FA009CD7CE /* MouseOver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D752C4D98FA009CD7CE /* MouseOver.swift */; };
+		157C8D782C4E9501009CD7CE /* NumberField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D772C4E9501009CD7CE /* NumberField.swift */; };
+		157C8D7A2C4EEE81009CD7CE /* Number2Field.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D792C4EEE81009CD7CE /* Number2Field.swift */; };
+		157C8D7C2C4EF1DA009CD7CE /* Number3Field.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D7B2C4EF1DA009CD7CE /* Number3Field.swift */; };
+		157C8D7E2C4EF26B009CD7CE /* Number4Field.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D7D2C4EF26B009CD7CE /* Number4Field.swift */; };
 		159419A72C147B0E00C56203 /* GPURayMarchingApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419A62C147B0E00C56203 /* GPURayMarchingApp.swift */; };
 		159419A92C147B0E00C56203 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419A82C147B0E00C56203 /* ContentView.swift */; };
 		159419AB2C147B0F00C56203 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 159419AA2C147B0F00C56203 /* Assets.xcassets */; };
@@ -107,6 +111,10 @@
 		157C8D712C4C57F3009CD7CE /* Stack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stack.swift; sourceTree = "<group>"; };
 		157C8D732C4C585D009CD7CE /* Background.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Background.swift; sourceTree = "<group>"; };
 		157C8D752C4D98FA009CD7CE /* MouseOver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseOver.swift; sourceTree = "<group>"; };
+		157C8D772C4E9501009CD7CE /* NumberField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumberField.swift; sourceTree = "<group>"; };
+		157C8D792C4EEE81009CD7CE /* Number2Field.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Number2Field.swift; sourceTree = "<group>"; };
+		157C8D7B2C4EF1DA009CD7CE /* Number3Field.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Number3Field.swift; sourceTree = "<group>"; };
+		157C8D7D2C4EF26B009CD7CE /* Number4Field.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Number4Field.swift; sourceTree = "<group>"; };
 		159419A42C147B0E00C56203 /* GPURayMarching.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GPURayMarching.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		159419A62C147B0E00C56203 /* GPURayMarchingApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPURayMarchingApp.swift; sourceTree = "<group>"; };
 		159419A82C147B0E00C56203 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -311,6 +319,10 @@
 			isa = PBXGroup;
 			children = (
 				15A049E52C27149600D28009 /* Editor.swift */,
+				157C8D772C4E9501009CD7CE /* NumberField.swift */,
+				157C8D792C4EEE81009CD7CE /* Number2Field.swift */,
+				157C8D7B2C4EF1DA009CD7CE /* Number3Field.swift */,
+				157C8D7D2C4EF26B009CD7CE /* Number4Field.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -507,6 +519,7 @@
 			files = (
 				15C91D392C1F1B1B00A2857F /* Square.swift in Sources */,
 				159419EE2C1490B700C56203 /* ViewRenderer.swift in Sources */,
+				157C8D782C4E9501009CD7CE /* NumberField.swift in Sources */,
 				15C91D3D2C1F350200A2857F /* Shaders.metal in Sources */,
 				159419F92C14917A00C56203 /* String.swift in Sources */,
 				15A049E82C27163400D28009 /* Global.swift in Sources */,
@@ -524,6 +537,7 @@
 				157C8D722C4C57F4009CD7CE /* Stack.swift in Sources */,
 				15A049D82C23220800D28009 /* Grid2D.swift in Sources */,
 				15941A032C149A2A00C56203 /* int3.swift in Sources */,
+				157C8D7C2C4EF1DA009CD7CE /* Number3Field.swift in Sources */,
 				157C8D702C4C5718009CD7CE /* Frame.swift in Sources */,
 				159419F42C14916C00C56203 /* MathLib.swift in Sources */,
 				159419F52C14917200C56203 /* Array.swift in Sources */,
@@ -541,6 +555,7 @@
 				15941A0B2C149B6700C56203 /* float3x3.swift in Sources */,
 				157C8D622C484E33009CD7CE /* IMView.swift in Sources */,
 				159419F82C14917800C56203 /* Int.swift in Sources */,
+				157C8D7E2C4EF26B009CD7CE /* Number4Field.swift in Sources */,
 				15A049DC2C243DB200D28009 /* StepSequence.swift in Sources */,
 				15941A092C149AE000C56203 /* float2x2.swift in Sources */,
 				157C8D742C4C585D009CD7CE /* Background.swift in Sources */,
@@ -548,6 +563,7 @@
 				157C8D6E2C4C56B5009CD7CE /* Spacer.swift in Sources */,
 				159419EB2C1490B700C56203 /* Rect.swift in Sources */,
 				15DF1C3D2C317DDB00E8E7E6 /* Graphics3D.swift in Sources */,
+				157C8D7A2C4EEE81009CD7CE /* Number2Field.swift in Sources */,
 				157C8D762C4D98FA009CD7CE /* MouseOver.swift in Sources */,
 				157C8D642C484E89009CD7CE /* GameView.swift in Sources */,
 				15DF1C402C317DFA00E8E7E6 /* Sphere.swift in Sources */,

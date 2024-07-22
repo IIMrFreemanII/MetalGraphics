@@ -31,17 +31,44 @@ class WindowState: ObservableObject {
   }
 }
 
+enum Event: Int, CaseIterable {
+  case Navigation
+  case Inspector
+}
+
+public class Application: ObservableObject {
+  public static var shared: Application = .init()
+  
+  init() {
+    print(Event.allCases)
+    for event in Event.allCases {
+      print(event)
+      events.append(Reload())
+    }
+  }
+  
+  private var events: [Reload] = []
+  
+  static func register(_ event: Event) -> Reload {
+    return shared.events[event.rawValue]
+  }
+  
+  static func trigger(_ event: Event) -> Void {
+    shared.events[event.rawValue].toggle()
+  }
+}
+
 public class Global: ObservableObject {
   public static var shared: Global = .init()
 
   let reload = Reload()
   @Published var windowsMap: [String: WindowState] = [:]
 
-  func setWindowState(_ name: String, _ value: WindowState) {
-    self.windowsMap[name] = value
-  }
-
-  func getWindowState(_ name: String) -> WindowState? {
-    self.windowsMap[name]
-  }
+//  func setWindowState(_ name: String, _ value: WindowState) {
+//    self.windowsMap[name] = value
+//  }
+//
+//  func getWindowState(_ name: String) -> WindowState? {
+//    self.windowsMap[name]
+//  }
 }
