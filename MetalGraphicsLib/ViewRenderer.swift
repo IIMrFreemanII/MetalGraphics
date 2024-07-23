@@ -28,17 +28,17 @@ open class ViewRenderer: NSObject, ObservableObject {
   }
   
   public var inspectorView: some View {
-    HStack(spacing: 0) {
-      VStack(alignment: .leading) {
+    SwiftUI.HStack(spacing: 0) {
+      SwiftUI.VStack(alignment: .leading) {
         Text("Inspector")
           .font(.title)
         Divider()
         Text("Window size: \(String(describing: windowSize).split(separator: ">").last!)")
         Divider()
         Number2Field(label: "Position:", value: Binding(get: {self.temp}, set: { self.temp = $0 }))
-        Spacer()
+        SwiftUI.Spacer()
       }
-      Spacer()
+      SwiftUI.Spacer()
     }
     .frame(minWidth: 200)
   }

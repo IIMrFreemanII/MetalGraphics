@@ -9,19 +9,30 @@
 /* Begin PBXBuildFile section */
 		157C8D182C3BC064009CD7CE /* Runtime in Frameworks */ = {isa = PBXBuildFile; productRef = 157C8D172C3BC064009CD7CE /* Runtime */; };
 		157C8D622C484E33009CD7CE /* IMView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D612C484E33009CD7CE /* IMView.swift */; };
-		157C8D642C484E89009CD7CE /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D632C484E89009CD7CE /* GameView.swift */; };
-		157C8D662C4C54A8009CD7CE /* Alignment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D652C4C54A8009CD7CE /* Alignment.swift */; };
-		157C8D682C4C54DB009CD7CE /* Axis.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D672C4C54DA009CD7CE /* Axis.swift */; };
-		157C8D6C2C4C555D009CD7CE /* Padding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D6B2C4C555D009CD7CE /* Padding.swift */; };
-		157C8D6E2C4C56B5009CD7CE /* Spacer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D6D2C4C56B5009CD7CE /* Spacer.swift */; };
-		157C8D702C4C5718009CD7CE /* Frame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D6F2C4C5718009CD7CE /* Frame.swift */; };
-		157C8D722C4C57F4009CD7CE /* Stack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D712C4C57F3009CD7CE /* Stack.swift */; };
-		157C8D742C4C585D009CD7CE /* Background.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D732C4C585D009CD7CE /* Background.swift */; };
-		157C8D762C4D98FA009CD7CE /* MouseOver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D752C4D98FA009CD7CE /* MouseOver.swift */; };
+		157C8D642C484E89009CD7CE /* IMGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D632C484E89009CD7CE /* IMGameView.swift */; };
+		157C8D662C4C54A8009CD7CE /* IMAlignment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D652C4C54A8009CD7CE /* IMAlignment.swift */; };
+		157C8D682C4C54DB009CD7CE /* IMAxis.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D672C4C54DA009CD7CE /* IMAxis.swift */; };
+		157C8D6C2C4C555D009CD7CE /* IMPadding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D6B2C4C555D009CD7CE /* IMPadding.swift */; };
+		157C8D6E2C4C56B5009CD7CE /* IMSpacer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D6D2C4C56B5009CD7CE /* IMSpacer.swift */; };
+		157C8D702C4C5718009CD7CE /* IMFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D6F2C4C5718009CD7CE /* IMFrame.swift */; };
+		157C8D722C4C57F4009CD7CE /* IMStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D712C4C57F3009CD7CE /* IMStack.swift */; };
+		157C8D742C4C585D009CD7CE /* IMBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D732C4C585D009CD7CE /* IMBackground.swift */; };
+		157C8D762C4D98FA009CD7CE /* IMMouseOver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D752C4D98FA009CD7CE /* IMMouseOver.swift */; };
 		157C8D782C4E9501009CD7CE /* NumberField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D772C4E9501009CD7CE /* NumberField.swift */; };
 		157C8D7A2C4EEE81009CD7CE /* Number2Field.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D792C4EEE81009CD7CE /* Number2Field.swift */; };
 		157C8D7C2C4EF1DA009CD7CE /* Number3Field.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D7B2C4EF1DA009CD7CE /* Number3Field.swift */; };
 		157C8D7E2C4EF26B009CD7CE /* Number4Field.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D7D2C4EF26B009CD7CE /* Number4Field.swift */; };
+		157C8D832C4FEEA9009CD7CE /* UIElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D822C4FEEA9009CD7CE /* UIElement.swift */; };
+		157C8D862C4FF6B3009CD7CE /* Alignment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D852C4FF6B3009CD7CE /* Alignment.swift */; };
+		157C8D882C504C94009CD7CE /* VStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D872C504C94009CD7CE /* VStack.swift */; };
+		157C8D8A2C504CB9009CD7CE /* Spacer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D892C504CB9009CD7CE /* Spacer.swift */; };
+		157C8D8C2C504CDB009CD7CE /* Padding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D8B2C504CDB009CD7CE /* Padding.swift */; };
+		157C8D8E2C504CF7009CD7CE /* Background.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D8D2C504CF7009CD7CE /* Background.swift */; };
+		157C8D902C504D29009CD7CE /* Frame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D8F2C504D29009CD7CE /* Frame.swift */; };
+		157C8D922C504D5C009CD7CE /* HStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D912C504D5C009CD7CE /* HStack.swift */; };
+		157C8D942C5052A8009CD7CE /* FlexFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D932C5052A8009CD7CE /* FlexFrame.swift */; };
+		157C8D962C5054C1009CD7CE /* ExpandedFrame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D952C5054C1009CD7CE /* ExpandedFrame.swift */; };
+		157C8D982C505507009CD7CE /* Axis.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D972C505507009CD7CE /* Axis.swift */; };
 		159419A72C147B0E00C56203 /* GPURayMarchingApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419A62C147B0E00C56203 /* GPURayMarchingApp.swift */; };
 		159419A92C147B0E00C56203 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419A82C147B0E00C56203 /* ContentView.swift */; };
 		159419AB2C147B0F00C56203 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 159419AA2C147B0F00C56203 /* Assets.xcassets */; };
@@ -102,19 +113,30 @@
 
 /* Begin PBXFileReference section */
 		157C8D612C484E33009CD7CE /* IMView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMView.swift; sourceTree = "<group>"; };
-		157C8D632C484E89009CD7CE /* GameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
-		157C8D652C4C54A8009CD7CE /* Alignment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alignment.swift; sourceTree = "<group>"; };
-		157C8D672C4C54DA009CD7CE /* Axis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Axis.swift; sourceTree = "<group>"; };
-		157C8D6B2C4C555D009CD7CE /* Padding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Padding.swift; sourceTree = "<group>"; };
-		157C8D6D2C4C56B5009CD7CE /* Spacer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Spacer.swift; sourceTree = "<group>"; };
-		157C8D6F2C4C5718009CD7CE /* Frame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Frame.swift; sourceTree = "<group>"; };
-		157C8D712C4C57F3009CD7CE /* Stack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stack.swift; sourceTree = "<group>"; };
-		157C8D732C4C585D009CD7CE /* Background.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Background.swift; sourceTree = "<group>"; };
-		157C8D752C4D98FA009CD7CE /* MouseOver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseOver.swift; sourceTree = "<group>"; };
+		157C8D632C484E89009CD7CE /* IMGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMGameView.swift; sourceTree = "<group>"; };
+		157C8D652C4C54A8009CD7CE /* IMAlignment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMAlignment.swift; sourceTree = "<group>"; };
+		157C8D672C4C54DA009CD7CE /* IMAxis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMAxis.swift; sourceTree = "<group>"; };
+		157C8D6B2C4C555D009CD7CE /* IMPadding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMPadding.swift; sourceTree = "<group>"; };
+		157C8D6D2C4C56B5009CD7CE /* IMSpacer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMSpacer.swift; sourceTree = "<group>"; };
+		157C8D6F2C4C5718009CD7CE /* IMFrame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMFrame.swift; sourceTree = "<group>"; };
+		157C8D712C4C57F3009CD7CE /* IMStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMStack.swift; sourceTree = "<group>"; };
+		157C8D732C4C585D009CD7CE /* IMBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMBackground.swift; sourceTree = "<group>"; };
+		157C8D752C4D98FA009CD7CE /* IMMouseOver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMMouseOver.swift; sourceTree = "<group>"; };
 		157C8D772C4E9501009CD7CE /* NumberField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumberField.swift; sourceTree = "<group>"; };
 		157C8D792C4EEE81009CD7CE /* Number2Field.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Number2Field.swift; sourceTree = "<group>"; };
 		157C8D7B2C4EF1DA009CD7CE /* Number3Field.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Number3Field.swift; sourceTree = "<group>"; };
 		157C8D7D2C4EF26B009CD7CE /* Number4Field.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Number4Field.swift; sourceTree = "<group>"; };
+		157C8D822C4FEEA9009CD7CE /* UIElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIElement.swift; sourceTree = "<group>"; };
+		157C8D852C4FF6B3009CD7CE /* Alignment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Alignment.swift; sourceTree = "<group>"; };
+		157C8D872C504C94009CD7CE /* VStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VStack.swift; sourceTree = "<group>"; };
+		157C8D892C504CB9009CD7CE /* Spacer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Spacer.swift; sourceTree = "<group>"; };
+		157C8D8B2C504CDB009CD7CE /* Padding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Padding.swift; sourceTree = "<group>"; };
+		157C8D8D2C504CF7009CD7CE /* Background.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Background.swift; sourceTree = "<group>"; };
+		157C8D8F2C504D29009CD7CE /* Frame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Frame.swift; sourceTree = "<group>"; };
+		157C8D912C504D5C009CD7CE /* HStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HStack.swift; sourceTree = "<group>"; };
+		157C8D932C5052A8009CD7CE /* FlexFrame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlexFrame.swift; sourceTree = "<group>"; };
+		157C8D952C5054C1009CD7CE /* ExpandedFrame.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpandedFrame.swift; sourceTree = "<group>"; };
+		157C8D972C505507009CD7CE /* Axis.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Axis.swift; sourceTree = "<group>"; };
 		159419A42C147B0E00C56203 /* GPURayMarching.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GPURayMarching.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		159419A62C147B0E00C56203 /* GPURayMarchingApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPURayMarchingApp.swift; sourceTree = "<group>"; };
 		159419A82C147B0E00C56203 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -196,17 +218,43 @@
 			isa = PBXGroup;
 			children = (
 				157C8D612C484E33009CD7CE /* IMView.swift */,
-				157C8D632C484E89009CD7CE /* GameView.swift */,
-				157C8D652C4C54A8009CD7CE /* Alignment.swift */,
-				157C8D672C4C54DA009CD7CE /* Axis.swift */,
-				157C8D6B2C4C555D009CD7CE /* Padding.swift */,
-				157C8D6D2C4C56B5009CD7CE /* Spacer.swift */,
-				157C8D6F2C4C5718009CD7CE /* Frame.swift */,
-				157C8D712C4C57F3009CD7CE /* Stack.swift */,
-				157C8D732C4C585D009CD7CE /* Background.swift */,
-				157C8D752C4D98FA009CD7CE /* MouseOver.swift */,
+				157C8D632C484E89009CD7CE /* IMGameView.swift */,
+				157C8D652C4C54A8009CD7CE /* IMAlignment.swift */,
+				157C8D672C4C54DA009CD7CE /* IMAxis.swift */,
+				157C8D6B2C4C555D009CD7CE /* IMPadding.swift */,
+				157C8D6D2C4C56B5009CD7CE /* IMSpacer.swift */,
+				157C8D6F2C4C5718009CD7CE /* IMFrame.swift */,
+				157C8D712C4C57F3009CD7CE /* IMStack.swift */,
+				157C8D732C4C585D009CD7CE /* IMBackground.swift */,
+				157C8D752C4D98FA009CD7CE /* IMMouseOver.swift */,
 			);
 			path = IMViews;
+			sourceTree = "<group>";
+		};
+		157C8D812C4FEE7D009CD7CE /* RetainedModeUI */ = {
+			isa = PBXGroup;
+			children = (
+				157C8D822C4FEEA9009CD7CE /* UIElement.swift */,
+				157C8D872C504C94009CD7CE /* VStack.swift */,
+				157C8D892C504CB9009CD7CE /* Spacer.swift */,
+				157C8D8B2C504CDB009CD7CE /* Padding.swift */,
+				157C8D8D2C504CF7009CD7CE /* Background.swift */,
+				157C8D8F2C504D29009CD7CE /* Frame.swift */,
+				157C8D912C504D5C009CD7CE /* HStack.swift */,
+				157C8D932C5052A8009CD7CE /* FlexFrame.swift */,
+				157C8D952C5054C1009CD7CE /* ExpandedFrame.swift */,
+			);
+			path = RetainedModeUI;
+			sourceTree = "<group>";
+		};
+		157C8D842C4FF69B009CD7CE /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				159419D82C1485B000C56203 /* Inset.swift */,
+				157C8D852C4FF6B3009CD7CE /* Alignment.swift */,
+				157C8D972C505507009CD7CE /* Axis.swift */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		159419852C147A6900C56203 = {
@@ -290,6 +338,8 @@
 		159419E42C1490A200C56203 /* MetalGraphicsLib */ = {
 			isa = PBXGroup;
 			children = (
+				157C8D842C4FF69B009CD7CE /* Shared */,
+				157C8D812C4FEE7D009CD7CE /* RetainedModeUI */,
 				157C8D602C484E21009CD7CE /* IMViews */,
 				15A049E42C27148200D28009 /* Views */,
 				15C91D4F2C1F5DE500A2857F /* Shaders */,
@@ -300,7 +350,6 @@
 				159419B42C147BAA00C56203 /* MetalView.swift */,
 				159419B62C147BD300C56203 /* Input.swift */,
 				159419D62C14858300C56203 /* Rect.swift */,
-				159419D82C1485B000C56203 /* Inset.swift */,
 				159419E52C1490A200C56203 /* MetalGraphicsLib.h */,
 				15941A102C14A64100C56203 /* Time.swift */,
 				15941A122C15BCC000C56203 /* MyMTKView.swift */,
@@ -518,6 +567,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				15C91D392C1F1B1B00A2857F /* Square.swift in Sources */,
+				157C8D8A2C504CB9009CD7CE /* Spacer.swift in Sources */,
 				159419EE2C1490B700C56203 /* ViewRenderer.swift in Sources */,
 				157C8D782C4E9501009CD7CE /* NumberField.swift in Sources */,
 				15C91D3D2C1F350200A2857F /* Shaders.metal in Sources */,
@@ -527,28 +577,35 @@
 				15941A052C149A4600C56203 /* uchar4.swift in Sources */,
 				15DF1C222C2B167D00E8E7E6 /* Benchmark.swift in Sources */,
 				15A049D62C23218100D28009 /* BoundingBox.swift in Sources */,
+				157C8D982C505507009CD7CE /* Axis.swift in Sources */,
 				15941A132C15BCC000C56203 /* MyMTKView.swift in Sources */,
-				157C8D662C4C54A8009CD7CE /* Alignment.swift in Sources */,
+				157C8D662C4C54A8009CD7CE /* IMAlignment.swift in Sources */,
 				15C91D362C1F1A1500A2857F /* Circle.swift in Sources */,
 				15DF1C392C316AD300E8E7E6 /* GPUDevice.swift in Sources */,
 				15941A072C149A7500C56203 /* float4x4.swift in Sources */,
 				15A049D22C221AA600D28009 /* Line.swift in Sources */,
 				159419F62C14917400C56203 /* Comparable.swift in Sources */,
-				157C8D722C4C57F4009CD7CE /* Stack.swift in Sources */,
+				157C8D902C504D29009CD7CE /* Frame.swift in Sources */,
+				157C8D722C4C57F4009CD7CE /* IMStack.swift in Sources */,
 				15A049D82C23220800D28009 /* Grid2D.swift in Sources */,
+				157C8D882C504C94009CD7CE /* VStack.swift in Sources */,
 				15941A032C149A2A00C56203 /* int3.swift in Sources */,
 				157C8D7C2C4EF1DA009CD7CE /* Number3Field.swift in Sources */,
-				157C8D702C4C5718009CD7CE /* Frame.swift in Sources */,
+				157C8D942C5052A8009CD7CE /* FlexFrame.swift in Sources */,
+				157C8D702C4C5718009CD7CE /* IMFrame.swift in Sources */,
+				157C8D832C4FEEA9009CD7CE /* UIElement.swift in Sources */,
 				159419F42C14916C00C56203 /* MathLib.swift in Sources */,
 				159419F52C14917200C56203 /* Array.swift in Sources */,
 				15C91D3B2C1F1B9F00A2857F /* Graphics2D.swift in Sources */,
 				159419FF2C1499CC00C56203 /* float4.swift in Sources */,
+				157C8D8E2C504CF7009CD7CE /* Background.swift in Sources */,
 				15941A112C14A64100C56203 /* Time.swift in Sources */,
 				159419EC2C1490B700C56203 /* Input.swift in Sources */,
 				159419ED2C1490B700C56203 /* Inset.swift in Sources */,
 				159419FB2C1498C800C56203 /* float2.swift in Sources */,
 				15A049E62C27149600D28009 /* Editor.swift in Sources */,
 				15DF1C422C317E0300E8E7E6 /* Cube.swift in Sources */,
+				157C8D922C504D5C009CD7CE /* HStack.swift in Sources */,
 				15C91D3E2C1F43E100A2857F /* Math.metal in Sources */,
 				159419EA2C1490B700C56203 /* MetalView.swift in Sources */,
 				15A049D42C22D58000D28009 /* SDF.swift in Sources */,
@@ -558,21 +615,24 @@
 				157C8D7E2C4EF26B009CD7CE /* Number4Field.swift in Sources */,
 				15A049DC2C243DB200D28009 /* StepSequence.swift in Sources */,
 				15941A092C149AE000C56203 /* float2x2.swift in Sources */,
-				157C8D742C4C585D009CD7CE /* Background.swift in Sources */,
+				157C8D742C4C585D009CD7CE /* IMBackground.swift in Sources */,
 				159419FD2C14997900C56203 /* float3.swift in Sources */,
-				157C8D6E2C4C56B5009CD7CE /* Spacer.swift in Sources */,
+				157C8D6E2C4C56B5009CD7CE /* IMSpacer.swift in Sources */,
 				159419EB2C1490B700C56203 /* Rect.swift in Sources */,
 				15DF1C3D2C317DDB00E8E7E6 /* Graphics3D.swift in Sources */,
 				157C8D7A2C4EEE81009CD7CE /* Number2Field.swift in Sources */,
-				157C8D762C4D98FA009CD7CE /* MouseOver.swift in Sources */,
-				157C8D642C484E89009CD7CE /* GameView.swift in Sources */,
+				157C8D762C4D98FA009CD7CE /* IMMouseOver.swift in Sources */,
+				157C8D642C484E89009CD7CE /* IMGameView.swift in Sources */,
+				157C8D962C5054C1009CD7CE /* ExpandedFrame.swift in Sources */,
 				15DF1C402C317DFA00E8E7E6 /* Sphere.swift in Sources */,
 				15A049DA2C236C8500D28009 /* Utils.swift in Sources */,
+				157C8D8C2C504CDB009CD7CE /* Padding.swift in Sources */,
 				159419F72C14917600C56203 /* Float.swift in Sources */,
+				157C8D862C4FF6B3009CD7CE /* Alignment.swift in Sources */,
 				15941A012C149A1400C56203 /* int2.swift in Sources */,
-				157C8D682C4C54DB009CD7CE /* Axis.swift in Sources */,
+				157C8D682C4C54DB009CD7CE /* IMAxis.swift in Sources */,
 				15C91D3F2C1F43E300A2857F /* SDF.metal in Sources */,
-				157C8D6C2C4C555D009CD7CE /* Padding.swift in Sources */,
+				157C8D6C2C4C555D009CD7CE /* IMPadding.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

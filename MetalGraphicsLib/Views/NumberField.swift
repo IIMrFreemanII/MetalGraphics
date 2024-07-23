@@ -33,8 +33,8 @@ public struct NumberField<T : SIMDScalar> : View {
   }
   
   public var body: some View {
-    VStack(spacing: 0) {
-      HStack(spacing: 0) {
+    SwiftUI.VStack(spacing: 0) {
+      SwiftUI.HStack(spacing: 0) {
         Text(self.label)
         Text(" ")
         TextField("", text: $text, onEditingChanged: { _ in validateNumber() })

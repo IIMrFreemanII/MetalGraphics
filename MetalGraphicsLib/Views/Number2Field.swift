@@ -7,12 +7,12 @@ public struct Number2Field<T: SIMDScalar> : View {
   
   
   public var body: some View {
-    VStack(alignment: .leading, spacing: 4) {
+    SwiftUI.VStack(alignment: .leading, spacing: 4) {
       Text(label)
         .font(.title3)
-      HStack {
-        NumberField(label: "X:", value: $value.x)
-        NumberField(label: "Y:", value: $value.y)
+      SwiftUI.HStack {
+        NumberField(label: "X", value: $value.x)
+        NumberField(label: "Y", value: $value.y)
       }
     }
   }

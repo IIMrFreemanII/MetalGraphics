@@ -1,36 +1,36 @@
-struct Inset {
-  var left: Float
-  var top: Float
-  var right: Float
-  var bottom: Float
+public struct Inset {
+  public var left: Float
+  public var top: Float
+  public var right: Float
+  public var bottom: Float
 
-  var horizontal: Float {
+  public var horizontal: Float {
     self.left + self.right
   }
 
-  var vertical: Float {
+  public var vertical: Float {
     self.top + self.bottom
   }
 
-  var topLeft: float2 {
+  public var topLeft: float2 {
     float2(self.left, self.top)
   }
 
-  init(left: Float = 0, top: Float = 0, right: Float = 0, bottom: Float = 0) {
+  public init(left: Float = 0, top: Float = 0, right: Float = 0, bottom: Float = 0) {
     self.left = left
     self.top = top
     self.right = right
     self.bottom = bottom
   }
 
-  init(all: Float) {
+  public init(all: Float) {
     self.left = all
     self.top = all
     self.right = all
     self.bottom = all
   }
 
-  init(vertical: Float = 0, horizontal: Float = 0) {
+  public init(vertical: Float = 0, horizontal: Float = 0) {
     self.left = horizontal
     self.top = vertical
     self.right = horizontal
@@ -38,12 +38,12 @@ struct Inset {
   }
 
   /// Returns a new size that is bigger than the given size by the amount of inset in the horizontal and vertical directions.
-  func inflate(size: float2) -> float2 {
+  public func inflate(size: float2) -> float2 {
     size + float2(self.horizontal, self.vertical)
   }
 
   /// Returns a new size that is smaller than the given size by the amount of inset in the horizontal and vertical directions.
-  func deflate(size: float2) -> float2 {
+  public func deflate(size: float2) -> float2 {
     size - float2(self.horizontal, self.vertical)
   }
 }

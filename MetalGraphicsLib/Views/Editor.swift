@@ -125,7 +125,7 @@ public struct Editor: View {
       ZStack {
         MetalView(viewRenderer: renderer)
       }
-      .frame(minWidth: 300)
+//      .frame(minWidth: 300)
       .inspector(isPresented: $showDetails) {
         Inspector(renderer: renderer)
           .padding()

@@ -5,16 +5,15 @@ public struct Number4Field<T: SIMDScalar> : View {
   public var label: String
   @Binding public var value: SIMD4<T>
   
-  
   public var body: some View {
-    VStack(alignment: .leading, spacing: 4) {
+    SwiftUI.VStack(alignment: .leading, spacing: 4) {
       Text(label)
         .font(.title3)
-      HStack {
-        NumberField(label: "X:", value: $value.x)
-        NumberField(label: "Y:", value: $value.y)
-        NumberField(label: "Z:", value: $value.z)
-        NumberField(label: "W:", value: $value.w)
+      SwiftUI.HStack {
+        NumberField(label: "X", value: $value.x)
+        NumberField(label: "Y", value: $value.y)
+        NumberField(label: "Z", value: $value.z)
+        NumberField(label: "W", value: $value.w)
       }
     }
   }

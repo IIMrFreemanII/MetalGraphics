@@ -1,4 +1,4 @@
-public class GameView : IMView {
+public class IMGameView : IMView {
   var color: float4 = .red
   
   public override init() {
