@@ -88,6 +88,7 @@ class Grid2D {
 
   public func updateBuffers() {
     self.sortShapesByDepth()
+    
     if self.shapesPerCellCount > self.shapeBufferCount {
       self.shapeBufferCount = self.shapesPerCellCount + 10
       self.shapeBuffer = GPUDevice.main.makeBuffer(length: MemoryLayout<Shape>.stride * self.shapeBufferCount)
@@ -98,7 +99,6 @@ class Grid2D {
     let pointer = self.shapeBuffer.contents().assumingMemoryBound(to: Shape.self)
     for i in self.shapesPerCell.indices {
       let count = self.shapesPerCell[i].count
-      guard count > 0 else { continue }
 
       self.cells[i] = GridCell(startIndex: Int32(startIndex), count: Int32(count))
 

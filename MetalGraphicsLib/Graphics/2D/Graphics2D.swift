@@ -99,7 +99,7 @@ public class Graphics2D {
     } else {
       self.grid.reset()
     }
-
+    
     for (i, item) in self.circles.enumerated() {
       self.grid.mapShapeBoundingBoxToGrid(item.bounds, Shape(index: Int32(i), shapeType: ShapeType2D.Circle.rawValue))
     }
