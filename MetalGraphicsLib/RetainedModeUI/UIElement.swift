@@ -1,18 +1,28 @@
 import simd
 
+@resultBuilder
+public struct UIElementBuilder {
+  public static func buildBlock<T: UIElement>(_ element: T) -> T {
+    return element
+  }
+  
+  public static func buildBlock(_ elements: UIElement...) -> [UIElement] {
+    return elements
+  }
+}
+
 open class UIElement {
   public var mounted = false
   
   public init() {}
   
-  
   open func mount() -> Void {
-    print("mount: \(self)")
+//    print("mount: \(self)")
   }
   internal func handleMount() -> Void {}
   
   open func unmount() -> Void {
-    print("unmount: \(self)")
+//    print("unmount: \(self)")
   }
   internal func handleUnmount() -> Void {}
   
@@ -30,6 +40,29 @@ open class UIElement {
   
   open func calcPosition(_ position: float2) -> Void {}
   open func render(_ renderer: Graphics2D) -> Void {}
+  
+  public func padding(_ inset: Inset) -> Padding {
+    Padding(inset) {
+      self
+    }
+  }
+  
+  public func frame(width: Float, height: Float) -> Frame {
+    Frame(.init(width, height)) {
+      self
+    }
+  }
+  
+  public func background(_ color: float4) -> Background {
+    Background(color) {
+      self
+    }
+  }
+  
+  public func ref<T: UIElement>(_ storage: inout T?) -> T {
+    storage = self as? T
+    return self as! T
+  }
 }
 
 open class SingleChildElement : UIElement {
@@ -140,6 +173,16 @@ public class MultiChildElement : UIElement {
     }
   }
   
+  public func setChildren(_ elements: [UIElement]) -> Void {
+    self.children = elements
+    
+    if self.mounted {
+      for child in children {
+        child.handleMount()
+      }
+    }
+  }
+  
   public func remove(at index: Int) -> UIElement {
     let elem = self.children.remove(at: index)
     
@@ -149,10 +192,32 @@ public class MultiChildElement : UIElement {
     
     return elem
   }
+  
+  public func removeAll() -> Void {
+    if self.mounted {
+      for child in children {
+        child.handleUnmount()
+      }
+    }
+    
+    self.children.removeAll(keepingCapacity: true)
+  }
 }
 
 public class LeafElement : UIElement {
+  override func handleMount() {
+    if !self.mounted {
+      self.mounted = true
+      self.mount()
+    }
+  }
   
+  override func handleUnmount() {
+    if self.mounted {
+      self.mounted = false
+      self.unmount()
+    }
+  }
 }
 
 

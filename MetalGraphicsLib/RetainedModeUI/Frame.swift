@@ -4,9 +4,12 @@ public class Frame : SingleChildElement {
   public var size: float2 = .init()
   public var alignment: Alignment = .center
   
-  public init(_ size: float2, _ alignment: Alignment) {
+  public init(_ size: float2, _ alignment: Alignment = .center, @UIElementBuilder content: () -> UIElement = { EmptyElement() }) {
+    super.init()
+    
     self.size = size
     self.alignment = alignment
+    self.child = content()
   }
   
   public override func debugHierarchy(_ offset: String) {

@@ -1,4 +1,4 @@
-public class Background : SingleChildElement {
+public class Rectangle : SingleChildElement {
   public var position: SIMD2<Float> = .init()
   public var size: SIMD2<Float> = .init()
   public var color: SIMD4<Float> = .black
@@ -21,10 +21,10 @@ public class Background : SingleChildElement {
   }
   
   public override func calcSize(_ availableSize: float2) -> float2 {
-    let contentSize = child?.calcSize(availableSize) ?? availableSize
-    self.size = contentSize
+    _ = child?.calcSize(availableSize)
+    self.size = availableSize
     
-    return contentSize
+    return availableSize
   }
   
   public override func calcPosition(_ position: float2) {

@@ -2,8 +2,11 @@ public class Padding : SingleChildElement {
   public var inset: Inset = .init()
   public var size: SIMD2<Float> = .init()
   
-  public init(_ inset: Inset) {
+  public init(_ inset: Inset, @UIElementBuilder content: () -> UIElement = { EmptyElement() }) {
+    super.init()
+    
     self.inset = inset
+    self.child = content()
   }
   
   public override func debugHierarchy(_ offset: String) {
