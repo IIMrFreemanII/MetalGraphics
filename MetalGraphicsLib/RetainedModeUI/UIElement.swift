@@ -63,6 +63,11 @@ open class UIElement {
     storage = self as? T
     return self as! T
   }
+  
+  public func ref<T: UIElement>(_ cb: (T) -> Void) -> T {
+    cb(self as! T)
+    return self as! T
+  }
 }
 
 open class SingleChildElement : UIElement {

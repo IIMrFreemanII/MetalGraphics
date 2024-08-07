@@ -24,100 +24,84 @@ class Counter : SingleChildElement {
           .frame(width: 100, height: 100)
           .padding(Inset(all: 25))
           .background(.green)
-      }.ref(&vStack)
-    )
-    
-    self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-      if let vStack = self.vStack {
-        vStack.alignment = self.alignments[self.count]
-        self.count = (self.count + 1) % 3
+      }.ref { (elem: VStack) in
+        Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
+          elem.alignment = self.alignments[self.count]
+          self.count = (self.count + 1) % 3
+        }
+        
+        self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+          if self.child != nil {
+            self.removeChild()
+          } else {
+            self.setChild(elem)
+          }
+        }
       }
-    }
+    )
   }
   
   override func unmount() {
     timer.invalidate()
   }
-  
-  
-//  func createRect(_ size: float2) -> UIElement {
-//    let background = Background(color: .red)
-//    let frame = Frame(size, .center)
-//    background.setChild(frame)
-//    
-//    let background1 = Background(color: .green)
-//    let frame1 = Frame(size * 0.5, .center)
-//    background1.setChild(frame1)
-//    frame.setChild(background1)
-    
-//    Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-//      background.color = float4(Float.random(in: 0...1), Float.random(in: 0...1), Float.random(in: 0...1), 1)
-//      background1.color = float4(Float.random(in: 0...1), Float.random(in: 0...1), Float.random(in: 0...1), 1)
-//    }
-    
-    //    let padding = Padding(.init(all: 10))
-    //    padding.setChild(background)
-    
-//    return background
-//  }
 }
 
 class TestViewRenderer: ViewRenderer {
-//  private let gameView = IMGameView()
-  let root = Frame(.init())
+  //  private let gameView = IMGameView()
+  let root = Frame(float2())
   
-//  func createRect(_ size: float2) -> UIElement {
-//    let background = Background(color: .red)
-//    let frame = Frame(size, .center)
-//    background.setChild(frame)
-//    
-//    let background1 = Background(color: .green)
-//    let frame1 = Frame(size * 0.5, .center)
-//    background1.setChild(frame1)
-//    frame.setChild(background1)
-//    
-////    let padding = Padding(.init(all: 10))
-////    padding.setChild(background)
-//    
-//    return background
-//  }
+  //  func createRect(_ size: float2) -> UIElement {
+  //    let background = Background(color: .red)
+  //    let frame = Frame(size, .center)
+  //    background.setChild(frame)
+  //
+  //    let background1 = Background(color: .green)
+  //    let frame1 = Frame(size * 0.5, .center)
+  //    background1.setChild(frame1)
+  //    frame.setChild(background1)
+  //
+  ////    let padding = Padding(.init(all: 10))
+  ////    padding.setChild(background)
+  //
+  //    return background
+  //  }
   
   override func start() {
     self.graphics2D = Graphics2D(renderer: self)
-//    self.gameView.renderer = self
+    //    self.gameView.renderer = self
     
-    let size = SIMD2<Int>(100, 100)
-    let cellSize = Float(5)
-    let spacing = Float(2)
-    
-    let vStack = VStack(spacing: spacing)
-    
-    for _ in 0..<size.y {
-      let hStack = HStack(spacing: spacing)
-      for _ in 0..<size.x {
-        hStack.appendChild(
-          Rectangle(.red)
-          .frame(width: cellSize, height: cellSize)
-        )
-      }
-      vStack.appendChild(hStack)
-    }
+//    let size = SIMD2<Int>(100, 100)
+//    let cellSize = Float(5)
+//    let spacing = Float(2)
+//    
+//    let vStack = VStack(spacing: spacing)
+//    
+//    for _ in 0..<size.y {
+//      let hStack = HStack(spacing: spacing)
+//      for _ in 0..<size.x {
+//        hStack.appendChild(
+//          Rectangle(.red)
+//            .frame(width: cellSize, height: cellSize)
+//        )
+//      }
+//      vStack.appendChild(hStack)
+//    }
     
     self.root.mounted = true
-    benchmark(title: "Mount") {
-      self.root.setChild(vStack)
-    }
+    //    benchmark(title: "Mount") {
+    self.root.setChild(Counter())
+    //    }
   }
   
-//  override func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-//    super.mtkView(view, drawableSizeWillChange: size)
-//    
-//    self.root.size = self.windowSize
-//    print(self.root.size)
-//  }
+  //  override func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+  //    super.mtkView(view, drawableSizeWillChange: size)
+  //
+  //    self.root.size = self.windowSize
+  //    print(self.root.size)
+  //  }
   
   var frame = Int(0)
-
+  
   override func draw(in view: MTKView) {
     super.draw(in: view)
     guard let graphics = self.graphics2D else {
@@ -125,29 +109,29 @@ class TestViewRenderer: ViewRenderer {
     }
     
     self.root.size = self.windowSize
-    benchmark(title: "Calc size") {
-      _ = self.root.calcSize(self.windowSize)
-    }
-    benchmark(title: "Calc Position") {
-      self.root.calcPosition(.init())
-    }
+    //    benchmark(title: "Calc size") {
+    _ = self.root.calcSize(self.windowSize)
+    //    }
+    //    benchmark(title: "Calc Position") {
+    self.root.calcPosition(.init())
+    //    }
     
-//    if frame < 1 {
-//      self.root.debugHierarchy("")
-//      self.frame += 1
+    //    if frame < 1 {
+    //      self.root.debugHierarchy("")
+    //      self.frame += 1
+    //    }
+    
+//    self.input.keyDown(.escape) {
+//      self.root.removeChild()
 //    }
     
-    self.input.keyDown(.escape) {
-      self.root.removeChild()
-    }
-    
     graphics.context(in: view) { _ in
-      benchmark(title: "Submit to render") {
-        self.root.render(graphics)
-      }
-//      gameView.run(graphics.size)
-//      gameView.draw(in: graphics)
+      //      benchmark(title: "Submit to render") {
+      self.root.render(graphics)
+      //      }
+      //      gameView.run(graphics.size)
+      //      gameView.draw(in: graphics)
     }
-    print("------------------------------------------")
+//    print("------------------------------------------")
   }
 }
