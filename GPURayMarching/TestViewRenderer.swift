@@ -1,14 +1,21 @@
 import MetalGraphicsLib
 import MetalKit
+import Combine
 
 class Counter : SingleChildElement {
   var count: Int = 0
   var timer: Timer!
   var vStack: VStack?
   var alignments: [HorizontalAlignment] = [.leading, .center, .trailing]
+  var test: CurrentValueSubject<Bool, Never> = .init(true)
   
   override func mount() {
     super.mount()
+    
+    self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+      self.test.value.toggle()
+      self.test.send(self.test.value)
+    }
     
     self.setChild(
       VStack {
@@ -25,18 +32,27 @@ class Counter : SingleChildElement {
           .padding(Inset(all: 25))
           .background(.green)
       }.ref { (elem: VStack) in
+        
         Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
           elem.alignment = self.alignments[self.count]
           self.count = (self.count + 1) % 3
         }
         
-        self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-          if self.child != nil {
+        _ = self.test.sink { value in
+          if value {
             self.removeChild()
           } else {
             self.setChild(elem)
           }
         }
+        
+//        self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+//          if self.child != nil {
+//            self.removeChild()
+//          } else {
+//            self.setChild(elem)
+//          }
+//        }
       }
     )
   }
