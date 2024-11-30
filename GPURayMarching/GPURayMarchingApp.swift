@@ -1,5 +1,6 @@
 import SwiftUI
 import MetalGraphicsLib
+import Combine
 
 @main
 struct GPURayMarchingApp: App {

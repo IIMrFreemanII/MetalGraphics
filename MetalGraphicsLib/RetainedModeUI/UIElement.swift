@@ -178,6 +178,14 @@ public class MultiChildElement : UIElement {
     }
   }
   
+  public func insertChild(_ element: UIElement, at index: Int) -> Void {
+    self.children.insert(element, at: index)
+    
+    if self.mounted {
+      element.handleMount()
+    }
+  }
+  
   public func setChildren(_ elements: [UIElement]) -> Void {
     self.children = elements
     
@@ -188,6 +196,7 @@ public class MultiChildElement : UIElement {
     }
   }
   
+  @discardableResult
   public func remove(at index: Int) -> UIElement {
     let elem = self.children.remove(at: index)
     

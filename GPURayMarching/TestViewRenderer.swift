@@ -7,53 +7,52 @@ class Counter : SingleChildElement {
   var timer: Timer!
   var vStack: VStack?
   var alignments: [HorizontalAlignment] = [.leading, .center, .trailing]
-  var test: CurrentValueSubject<Bool, Never> = .init(true)
+  var test: CurrentValueSubject<Bool, Never> = .init(false)
+  var temp: AnyCancellable?
+  
+  let colors: [float4] = [.red, .green, .blue]
+  var items: ObservableCollection<float4> = .init([.red, .green, .blue])
   
   override func mount() {
     super.mount()
     
     self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-      self.test.value.toggle()
-      self.test.send(self.test.value)
+//      self.test.value.toggle()
+//      self.test.send(self.test.value)
+      self.items.append(self.colors[.random(in: 0..<self.colors.count)])
     }
     
     self.setChild(
-      VStack {
-        Rectangle(.red)
-          .frame(width: 100, height: 100)
-          .padding(Inset(all: 25))
-          .background(.green)
-        Rectangle(.red)
-          .frame(width: 200, height: 200)
-          .padding(Inset(all: 50))
-          .background(.green)
-        Rectangle(.red)
-          .frame(width: 100, height: 100)
-          .padding(Inset(all: 25))
-          .background(.green)
-      }.ref { (elem: VStack) in
-        
-        Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
-          elem.alignment = self.alignments[self.count]
-          self.count = (self.count + 1) % 3
-        }
-        
-        _ = self.test.sink { value in
-          if value {
-            self.removeChild()
-          } else {
-            self.setChild(elem)
-          }
-        }
-        
-//        self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-//          if self.child != nil {
-//            self.removeChild()
-//          } else {
-//            self.setChild(elem)
-//          }
-//        }
+      VList(items: self.items) { color, i in
+        Rectangle(color)
+          .frame(width: .random(in: 100...300), height: 100)
       }
+//      VStack {
+//        ConditionalElseContent(test, {
+//          Rectangle(.red)
+//            .frame(width: 100, height: 100)
+//            .padding(Inset(all: 25))
+//            .background(.green)
+//        }, {
+//          Rectangle(.blue)
+//            .frame(width: 100, height: 100)
+//            .padding(Inset(all: 25))
+//            .background(.green)
+//        })
+//        Rectangle(.red)
+//          .frame(width: 200, height: 200)
+//          .padding(Inset(all: 50))
+//          .background(.green)
+//        Rectangle(.red)
+//          .frame(width: 100, height: 100)
+//          .padding(Inset(all: 25))
+//          .background(.green)
+//      }.ref { (elem: VStack) in
+//        Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
+//          elem.alignment = self.alignments[self.count]
+//          self.count = (self.count + 1) % 3
+//        }
+//      }
     )
   }
   
@@ -86,26 +85,18 @@ class TestViewRenderer: ViewRenderer {
     self.graphics2D = Graphics2D(renderer: self)
     //    self.gameView.renderer = self
     
-//    let size = SIMD2<Int>(100, 100)
-//    let cellSize = Float(5)
-//    let spacing = Float(2)
-//    
-//    let vStack = VStack(spacing: spacing)
-//    
-//    for _ in 0..<size.y {
-//      let hStack = HStack(spacing: spacing)
-//      for _ in 0..<size.x {
-//        hStack.appendChild(
-//          Rectangle(.red)
-//            .frame(width: cellSize, height: cellSize)
-//        )
-//      }
-//      vStack.appendChild(hStack)
-//    }
-    
     self.root.mounted = true
     //    benchmark(title: "Mount") {
-    self.root.setChild(Counter())
+//    self.root.setChild(HStack {
+//      Counter()
+//      Counter()
+//    })
+    self.root.setChild(
+      HStack {
+        Counter()
+        Spacer()
+      }
+    )
     //    }
   }
   
