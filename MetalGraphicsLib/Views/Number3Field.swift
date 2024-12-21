@@ -20,7 +20,7 @@ public struct Number3Field<T: SIMDScalar> : View {
 }
 
 #Preview {
-  @State var value: SIMD3<Int> = .init(0, 1, 2)
+  @Previewable @State var value: SIMD3<Int> = .init(0, 1, 2)
   
   return Number3Field(label: "Position:", value: $value)
     .frame(width: 300, height: 100)

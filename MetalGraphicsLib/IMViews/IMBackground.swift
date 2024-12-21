@@ -12,7 +12,7 @@ extension IMView {
     _ = viewItemsStack.popLast()
   }
   
-  internal struct Background {
+  @MainActor internal struct Background {
     var position: SIMD2<Float> = .init()
     var size: SIMD2<Float> = .init()
     var color: SIMD4<Float> = .black

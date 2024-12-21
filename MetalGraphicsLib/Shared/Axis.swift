@@ -1,4 +1,4 @@
-public struct Axis {
+public struct Axis : Sendable {
   public let horizontal: Float
   public let vertical: Float
   

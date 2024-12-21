@@ -30,7 +30,7 @@ struct GridArgBuffer {
   var gridPosition = float2()
 }
 
-class Grid2D {
+@MainActor class Grid2D {
   public var size: int2
   public var cellSize: Float
   public var position: float2

@@ -37,7 +37,7 @@ enum Event: Int, CaseIterable {
 }
 
 public class Application: ObservableObject {
-  public static var shared: Application = .init()
+  @MainActor public static var shared: Application = .init()
   
   init() {
     print(Event.allCases)
@@ -49,17 +49,17 @@ public class Application: ObservableObject {
   
   private var events: [Reload] = []
   
-  static func register(_ event: Event) -> Reload {
+  @MainActor static func register(_ event: Event) -> Reload {
     return shared.events[event.rawValue]
   }
   
-  static func trigger(_ event: Event) -> Void {
+  @MainActor static func trigger(_ event: Event) -> Void {
     shared.events[event.rawValue].toggle()
   }
 }
 
 public class Global: ObservableObject {
-  public static var shared: Global = .init()
+  @MainActor public static var shared: Global = .init()
 
   let reload = Reload()
   @Published var windowsMap: [String: WindowState] = [:]

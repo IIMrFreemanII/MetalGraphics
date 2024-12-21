@@ -12,7 +12,7 @@ extension IMView {
     _ = viewItemsStack.popLast()
   }
   
-  internal struct MouseOver {
+  @MainActor internal struct MouseOver {
     var position: SIMD2<Float> = .init()
     var size: SIMD2<Float> = .init()
     var callback: (Bool) -> Void

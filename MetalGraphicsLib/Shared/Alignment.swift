@@ -1,4 +1,4 @@
-public struct Alignment {
+public struct Alignment : Sendable {
   public let xOffset: Float
   public let yOffset: Float
   
@@ -22,7 +22,7 @@ public struct Alignment {
   public static let bottomTrailing: Self = .init(1.0, 1.0)
 }
 
-public struct HorizontalAlignment {
+public struct HorizontalAlignment : Sendable{
   public let offset: Float
   
   public init(_ offset: Float) {
@@ -34,7 +34,7 @@ public struct HorizontalAlignment {
   public static let trailing: Self = .init(1.0)
 }
 
-public struct VerticalAlignment {
+public struct VerticalAlignment : Sendable {
   public let offset: Float
   
   public init(_ offset: Float) {

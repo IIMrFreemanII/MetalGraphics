@@ -18,7 +18,7 @@ extension Drag: CustomStringConvertible {
   }
 }
 
-public class Input {
+@preconcurrency public class Input : @unchecked Sendable {
   public let returnOrEnterKey = "\r".uint32[0]
   public let space = " ".uint32[0]
   public let deleteKey = "\u{7F}".uint32[0]

@@ -1,6 +1,6 @@
 import MetalKit
 
-public class IMView {
+@MainActor public class IMView {
   internal var viewDepth = Float()
   internal func getViewDepth() -> Float {
     let value = viewDepth
@@ -78,7 +78,7 @@ public class IMView {
     
   }
   
-  public func draw(in context: Graphics2D) -> Void {
+  @MainActor public func draw(in context: Graphics2D) -> Void {
     let offset = context.size * 0.5
     
     for item in backgrounds {

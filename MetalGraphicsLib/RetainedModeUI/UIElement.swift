@@ -11,7 +11,7 @@ public struct UIElementBuilder {
   }
 }
 
-open class UIElement {
+@MainActor open class UIElement {
   public var mounted = false
   
   public init() {}
@@ -40,7 +40,12 @@ open class UIElement {
   
   open func calcPosition(_ position: float2) -> Void {}
   open func render(_ renderer: Graphics2D) -> Void {}
-  
+  open func handleHitTest(_ input: Input) -> Bool {
+    return false
+  }
+}
+
+extension UIElement {
   public func padding(_ inset: Inset) -> Padding {
     Padding(inset) {
       self
@@ -55,6 +60,18 @@ open class UIElement {
   
   public func background(_ color: float4) -> Background {
     Background(color) {
+      self
+    }
+  }
+  
+  public func onTap(_ callback: @escaping (Input) -> Void) -> HittableView {
+    HittableView(onTap: callback) {
+      self
+    }
+  }
+  
+  public func onHover(_ callback: @escaping (Bool, Input) -> Void) -> HittableView {
+    HittableView(onHover: callback) {
       self
     }
   }
@@ -92,6 +109,11 @@ open class SingleChildElement : UIElement {
   
   open override func render(_ renderer: Graphics2D) {
     self.child?.render(renderer)
+  }
+  
+  @discardableResult
+  open override func handleHitTest(_ input: Input) -> Bool {
+    return self.child?.handleHitTest(input) ?? false
   }
   
   override func handleMount() {
@@ -146,6 +168,18 @@ public class MultiChildElement : UIElement {
     for child in self.children {
       child.render(renderer)
     }
+  }
+  
+  open override func handleHitTest(_ input: Input) -> Bool {
+    var hit: Bool = false
+    
+    for child in self.children {
+      if child.handleHitTest(input) {
+        hit = true
+      }
+    }
+    
+    return hit
   }
   
   override func handleMount() {

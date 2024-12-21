@@ -25,7 +25,7 @@ extension IMView {
     _ = viewItemsStack.popLast()
   }
   
-  internal struct VStack {
+  @MainActor internal struct VStack {
     let alignment: HorizontalAlignment
     let spacing: Float
     
@@ -96,7 +96,7 @@ extension IMView {
     }
   }
   
-  internal struct HStack {
+  @MainActor internal struct HStack {
     let alignment: VerticalAlignment
     let spacing: Float
     

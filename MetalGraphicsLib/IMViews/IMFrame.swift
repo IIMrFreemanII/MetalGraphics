@@ -40,7 +40,7 @@ extension IMView {
     _ = viewItemsStack.popLast()
   }
   
-  internal struct Frame {
+  @MainActor internal struct Frame {
     let size: float2
     let alignment: Alignment
     
@@ -67,7 +67,7 @@ extension IMView {
     }
   }
   
-  internal struct FlexFrame {
+  @MainActor internal struct FlexFrame {
     let minWidth: Float?
     let maxWidth: Float?
     let minHeight: Float?
@@ -115,7 +115,7 @@ extension IMView {
     }
   }
   
-  internal struct ExpandedFrame {
+  @MainActor internal struct ExpandedFrame {
     let axis: Axis
     let alignment: Alignment
     var size: float2 = .init()

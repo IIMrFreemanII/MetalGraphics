@@ -12,7 +12,7 @@ extension IMView {
     _ = viewItemsStack.popLast()
   }
   
-  internal struct Padding {
+  @MainActor internal struct Padding {
     var inset: Inset = .init()
     var size: SIMD2<Float> = .init()
     

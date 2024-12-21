@@ -1,7 +1,7 @@
 public class Background : SingleChildElement {
-  public var position: SIMD2<Float> = .init()
-  public var size: SIMD2<Float> = .init()
-  public var color: SIMD4<Float> = .black
+  @MainActor public var position: SIMD2<Float> = .init()
+  @MainActor public var size: SIMD2<Float> = .init()
+  @MainActor public var color: SIMD4<Float> = .black
   
   public init(_ color: SIMD4<Float>, @UIElementBuilder content: () -> UIElement = { EmptyElement() }) {
     super.init()

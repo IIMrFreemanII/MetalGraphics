@@ -1,8 +1,8 @@
 import Foundation
 
-private var store = [String: (Int, Double)]()
+@MainActor private var store = [String: (Int, Double)]()
 
-public func benchmark(title: String, mean: Bool = false, operation: () -> Void) {
+@MainActor public func benchmark(title: String, mean: Bool = false, operation: () -> Void) {
   let startTime = CFAbsoluteTimeGetCurrent()
   operation()
   let timeElapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000 * 1000

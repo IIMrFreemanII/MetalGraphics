@@ -52,7 +52,7 @@ public struct NumberField<T : SIMDScalar> : View {
 }
 
 #Preview {
-  @State var value: Int = 3
+  @Previewable @State var value: Int = 3
   
   return NumberField(label: "X:", value: $value)
     .frame(width: 200, height: 100)

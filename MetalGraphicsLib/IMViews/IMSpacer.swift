@@ -7,7 +7,7 @@ extension IMView {
     spacers.append(Spacer())
   }
   
-  internal struct Spacer {
+  @MainActor internal struct Spacer {
     func debugTree(_ context: IMView, _ offset: String = "") -> Void {
       context.debugTree(self, context, offset)
     }

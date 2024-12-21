@@ -3,12 +3,7 @@ import MetalKit
 import Combine
 
 class Counter : SingleChildElement {
-  var count: Int = 0
   var timer: Timer!
-  var vStack: VStack?
-  var alignments: [HorizontalAlignment] = [.leading, .center, .trailing]
-  var test: CurrentValueSubject<Bool, Never> = .init(false)
-  var temp: AnyCancellable?
   
   let colors: [float4] = [.red, .green, .blue]
   var items: ObservableCollection<float4> = .init([.red, .green, .blue])
@@ -17,42 +12,21 @@ class Counter : SingleChildElement {
     super.mount()
     
     self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-//      self.test.value.toggle()
-//      self.test.send(self.test.value)
-      self.items.append(self.colors[.random(in: 0..<self.colors.count)])
+//      self.items.append(self.colors[.random(in: 0..<self.colors.count)])
     }
     
     self.setChild(
       VList(items: self.items) { color, i in
-        Rectangle(color)
-          .frame(width: .random(in: 100...300), height: 100)
+        var temp: Rectangle?
+        
+        return Rectangle(color)
+          .ref(&temp)
+          .frame(width: 100, height: 100)
+          .onHover { hover, _ in
+            temp?.color = hover ? .black : color
+            print(i, hover)
+          }
       }
-//      VStack {
-//        ConditionalElseContent(test, {
-//          Rectangle(.red)
-//            .frame(width: 100, height: 100)
-//            .padding(Inset(all: 25))
-//            .background(.green)
-//        }, {
-//          Rectangle(.blue)
-//            .frame(width: 100, height: 100)
-//            .padding(Inset(all: 25))
-//            .background(.green)
-//        })
-//        Rectangle(.red)
-//          .frame(width: 200, height: 200)
-//          .padding(Inset(all: 50))
-//          .background(.green)
-//        Rectangle(.red)
-//          .frame(width: 100, height: 100)
-//          .padding(Inset(all: 25))
-//          .background(.green)
-//      }.ref { (elem: VStack) in
-//        Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { _ in
-//          elem.alignment = self.alignments[self.count]
-//          self.count = (self.count + 1) % 3
-//        }
-//      }
     )
   }
   
@@ -121,6 +95,7 @@ class TestViewRenderer: ViewRenderer {
     //    }
     //    benchmark(title: "Calc Position") {
     self.root.calcPosition(.init())
+    self.root.handleHitTest(self.input)
     //    }
     
     //    if frame < 1 {

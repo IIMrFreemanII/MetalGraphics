@@ -2,7 +2,7 @@ import MetalKit
 import Combine
 import SwiftUI
 
-open class ViewRenderer: NSObject, ObservableObject {
+@MainActor open class ViewRenderer: NSObject, ObservableObject {
   public var metalView: MTKView!
   public var input: Input!
   public var graphics2D: Graphics2D?

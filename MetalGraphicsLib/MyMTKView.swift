@@ -88,7 +88,7 @@ public class MyMTKView: MTKView {
     self.input.mouseDelta = float2(mouseDelta.x, -mouseDelta.y)
     self.input.prevMousePosition = newMousePos
   }
-
+  
   override public func mouseDown(with event: NSEvent) {
     super.mouseDown(with: event)
     self.input.clickCount = event.clickCount
