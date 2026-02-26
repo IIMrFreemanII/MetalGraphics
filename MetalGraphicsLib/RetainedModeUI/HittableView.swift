@@ -15,19 +15,7 @@ public class HittableView: SingleChildElement {
     self.child = content()
   }
   
-  public override func handleHitTest(_ input: Input) -> Bool {
-//    if self.isHovered {
-//      self.isHovered = false
-//      self.onHover?(self.isHovered, input)
-//    }
-    if self.child?.handleHitTest(input) ?? false {
-      return true
-    }
-    
-    // test hit
-    // origin -> top left
-    let newPosition = self.position
-    let result = pointInAABBoxTopLeftOrigin(point: input.mousePosition, position: newPosition, size: self.size)
+  func handleEvents(_ result: Bool, _ input: Input) {
     if result && !self.isHovered {
       self.isHovered = true
       self.onHover?(self.isHovered, input)
@@ -38,6 +26,22 @@ public class HittableView: SingleChildElement {
     if result && input.mouseDown {
       self.onTap?(input)
     }
+  }
+  
+  public override func handleHitTest(_ input: Input) -> Bool {
+    let childResult = self.child?.handleHitTest(input) ?? false
+    
+    if childResult {
+      self.handleEvents(true, input)
+      return true
+    }
+    
+    // test hit
+    // origin -> top left
+    let newPosition = self.position
+    let result = pointInAABBoxTopLeftOrigin(point: input.mousePosition, position: newPosition, size: self.size)
+    self.handleEvents(result, input)
+
     return result
   }
   
