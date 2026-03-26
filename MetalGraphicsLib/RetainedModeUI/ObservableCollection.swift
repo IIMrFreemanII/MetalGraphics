@@ -1,8 +1,8 @@
 import Combine
-public class ObservableCollection<T> {
+public class ObservableCollection<T : Identifiable> {
   public var collection: [T] = []
   
-  private var appendHandlers: [UUID : (T, Int) -> Void] = [:]
+  private var appendHandlers: [UUID : (T) -> Void] = [:]
   private var removeHandlers: [UUID : (T, Int) -> Void] = [:]
   private var insertHandlers: [UUID : (T, Int) -> Void] = [:]
   
@@ -11,7 +11,7 @@ public class ObservableCollection<T> {
   }
   
   @discardableResult
-  public func onAppend(perform action: @escaping (T, Int) -> Void) -> AnyCancellable {
+  public func onAppend(perform action: @escaping (T) -> Void) -> AnyCancellable {
     let id = UUID()
     self.appendHandlers[id] = action
     return AnyCancellable {
@@ -43,13 +43,19 @@ public class ObservableCollection<T> {
   }
   
   public func append(_ element: T) {
-    let index = self.collection.count
     self.collection.append(element)
-    self.appendHandlers.values.forEach { $0(element, index) }
+    self.appendHandlers.values.forEach { $0(element) }
   }
   
   public func remove(at index: Int) {
     let removedElement = self.collection.remove(at: index)
     self.removeHandlers.values.forEach { $0(removedElement, index) }
+  }
+  
+  public func remove(with id: T.ID) {
+    if let index = self.collection.firstIndex(where: { $0.id == id }) {
+      let removedElement = self.collection.remove(at: index)
+      self.removeHandlers.values.forEach { $0(removedElement, index) }
+    }
   }
 }

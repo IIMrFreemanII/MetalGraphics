@@ -2,29 +2,43 @@ import MetalGraphicsLib
 import MetalKit
 import Combine
 
+struct Item: Identifiable {
+  var id: Int
+  var color: float4
+  
+  init(_ color: float4) {
+    self.id = Int.random(in: Int.min...Int.max)
+    self.color = color
+  }
+}
+
 class Counter : SingleChildElement {
   var timer: Timer!
   
   let colors: [float4] = [.red, .green, .blue]
-  var items: ObservableCollection<float4> = .init([.red, .green, .blue])
+  var items: ObservableCollection<Item> = .init([.init(.red), .init(.green), .init(.blue)])
   
   override func mount() {
     super.mount()
     
     self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-//      self.items.append(self.colors[.random(in: 0..<self.colors.count)])
+      //      self.items.append(self.colors[.random(in: 0..<self.colors.count)])
     }
     
     self.setChild(
-      VList(items: self.items) { color, i in
+      VList(items: self.items) { item in
         var temp: Rectangle?
         
-        return Rectangle(color)
+        return Rectangle(item.color)
           .ref(&temp)
           .frame(width: 100, height: 100)
+          .onTap { input in
+            print("Tapped at item \(item.id)")
+            self.items.remove(with: item.id)
+          }
           .onHover { hover, _ in
-            temp?.color = hover ? .black : color
-            print(i, hover)
+            temp?.color = hover ? .black : item.color
+            print(item.id, hover)
           }
       }
     )
@@ -61,10 +75,10 @@ class TestViewRenderer: ViewRenderer {
     
     self.root.mounted = true
     //    benchmark(title: "Mount") {
-//    self.root.setChild(HStack {
-//      Counter()
-//      Counter()
-//    })
+    //    self.root.setChild(HStack {
+    //      Counter()
+    //      Counter()
+    //    })
     self.root.setChild(
       HStack {
         Counter()
@@ -103,9 +117,9 @@ class TestViewRenderer: ViewRenderer {
     //      self.frame += 1
     //    }
     
-//    self.input.keyDown(.escape) {
-//      self.root.removeChild()
-//    }
+    //    self.input.keyDown(.escape) {
+    //      self.root.removeChild()
+    //    }
     
     graphics.context(in: view) { _ in
       //      benchmark(title: "Submit to render") {
@@ -114,6 +128,6 @@ class TestViewRenderer: ViewRenderer {
       //      gameView.run(graphics.size)
       //      gameView.draw(in: graphics)
     }
-//    print("------------------------------------------")
+    //    print("------------------------------------------")
   }
 }
