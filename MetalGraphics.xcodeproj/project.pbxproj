@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1541F3E42D00F91500FE4873 /* Context.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1541F3E32D00F91000FE4873 /* Context.swift */; };
+		1541F3E42D00F91500FE4873 /* UIContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1541F3E32D00F91000FE4873 /* UIContext.swift */; };
 		154AE8922CF624E900929DDC /* ConditionalContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 154AE8912CF624D600929DDC /* ConditionalContent.swift */; };
 		157C8D182C3BC064009CD7CE /* Runtime in Frameworks */ = {isa = PBXBuildFile; productRef = 157C8D172C3BC064009CD7CE /* Runtime */; };
 		157C8D622C484E33009CD7CE /* IMView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D612C484E33009CD7CE /* IMView.swift */; };
@@ -120,7 +120,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		1541F3E32D00F91000FE4873 /* Context.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Context.swift; sourceTree = "<group>"; };
+		1541F3E32D00F91000FE4873 /* UIContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIContext.swift; sourceTree = "<group>"; };
 		154AE8912CF624D600929DDC /* ConditionalContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConditionalContent.swift; sourceTree = "<group>"; };
 		157C8D612C484E33009CD7CE /* IMView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMView.swift; sourceTree = "<group>"; };
 		157C8D632C484E89009CD7CE /* IMGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMGameView.swift; sourceTree = "<group>"; };
@@ -250,7 +250,7 @@
 		157C8D812C4FEE7D009CD7CE /* RetainedModeUI */ = {
 			isa = PBXGroup;
 			children = (
-				1541F3E32D00F91000FE4873 /* Context.swift */,
+				1541F3E32D00F91000FE4873 /* UIContext.swift */,
 				159CB8D82CFCF4CC006E74C5 /* HittableView.swift */,
 				159CB8D62CFB7217006E74C5 /* HList.swift */,
 				159CB8D42CFB71E6006E74C5 /* ObservableCollection.swift */,
@@ -653,7 +653,7 @@
 				157C8D7A2C4EEE81009CD7CE /* Number2Field.swift in Sources */,
 				157C8D762C4D98FA009CD7CE /* IMMouseOver.swift in Sources */,
 				157C8D642C484E89009CD7CE /* IMGameView.swift in Sources */,
-				1541F3E42D00F91500FE4873 /* Context.swift in Sources */,
+				1541F3E42D00F91500FE4873 /* UIContext.swift in Sources */,
 				157C8D962C5054C1009CD7CE /* ExpandedFrame.swift in Sources */,
 				15DF1C402C317DFA00E8E7E6 /* Sphere.swift in Sources */,
 				15A049DA2C236C8500D28009 /* Utils.swift in Sources */,
