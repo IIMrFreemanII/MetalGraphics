@@ -16,15 +16,15 @@ public struct UIElementBuilder {
   
   public init() {}
   
-  open func mount() -> Void {
+  open func mount(_ context: UIContext) -> Void {
 //    print("mount: \(self)")
   }
-  internal func handleMount() -> Void {}
+  internal func handleMount(_ context: UIContext) -> Void {}
   
-  open func unmount() -> Void {
+  open func unmount(_ context: UIContext) -> Void {
 //    print("unmount: \(self)")
   }
-  internal func handleUnmount() -> Void {}
+  internal func handleUnmount(_ context: UIContext) -> Void {}
   
   open func debugHierarchy(_ offset: String) -> Void {
     print(offset + "\(self)".split(separator: ".").last!)
@@ -116,38 +116,38 @@ open class SingleChildElement : UIElement {
     return self.child?.handleHitTest(input) ?? false
   }
   
-  override func handleMount() {
+  override func handleMount(_ context: UIContext) {
     if !self.mounted {
       self.mounted = true
-      self.mount()
+      self.mount(context)
       
-      self.child?.handleMount()
+      self.child?.handleMount(context)
     }
   }
   
-  override func handleUnmount() {
+  override func handleUnmount(_ context: UIContext) {
     if self.mounted {
       self.mounted = false
-      self.unmount()
+      self.unmount(context)
       
-      self.child?.handleUnmount()
+      self.child?.handleUnmount(context)
     }
   }
   
-  open func setChild(_ element: UIElement) -> Void {
+  open func setChild(_ element: UIElement, _ context: UIContext) -> Void {
     self.child = element
     
     if self.mounted {
-      self.child!.handleMount()
+      self.child!.handleMount(context)
     }
   }
   
-  open func removeChild() -> Void {
+  open func removeChild(_ context: UIContext) -> Void {
     if let child = child {
       self.child = nil
       
       if self.mounted {
-        child.handleUnmount()
+        child.handleUnmount(context)
       }
     }
   }
@@ -182,69 +182,69 @@ public class MultiChildElement : UIElement {
     return hit
   }
   
-  override func handleMount() {
+  override func handleMount(_ context: UIContext) {
     if !self.mounted {
       self.mounted = true
-      self.mount()
+      self.mount(context)
       
       for child in children {
-        child.handleMount()
+        child.handleMount(context)
       }
     }
   }
   
-  override func handleUnmount() {
+  override func handleUnmount(_ context: UIContext) {
     if self.mounted {
       self.mounted = false
-      self.unmount()
+      self.unmount(context)
       
       for child in children {
-        child.handleUnmount()
+        child.handleUnmount(context)
       }
     }
   }
   
-  public func appendChild(_ element: UIElement) -> Void {
+  public func appendChild(_ element: UIElement, _ context: UIContext) -> Void {
     self.children.append(element)
     
     if self.mounted {
-      element.handleMount()
+      element.handleMount(context)
     }
   }
   
-  public func insertChild(_ element: UIElement, at index: Int) -> Void {
+  public func insertChild(_ element: UIElement, at index: Int, _ context: UIContext) -> Void {
     self.children.insert(element, at: index)
     
     if self.mounted {
-      element.handleMount()
+      element.handleMount(context)
     }
   }
   
-  public func setChildren(_ elements: [UIElement]) -> Void {
+  public func setChildren(_ elements: [UIElement], _ context: UIContext) -> Void {
     self.children = elements
     
     if self.mounted {
       for child in children {
-        child.handleMount()
+        child.handleMount(context)
       }
     }
   }
   
   @discardableResult
-  public func remove(at index: Int) -> UIElement {
+  public func remove(at index: Int, _ context: UIContext) -> UIElement {
     let elem = self.children.remove(at: index)
     
     if self.mounted {
-      elem.handleUnmount()
+      elem.handleUnmount(context)
     }
     
     return elem
   }
   
-  public func removeAll() -> Void {
+  public func removeAll(_ context: UIContext) -> Void {
     if self.mounted {
       for child in children {
-        child.handleUnmount()
+        child.handleUnmount(context)
       }
     }
     
@@ -253,17 +253,17 @@ public class MultiChildElement : UIElement {
 }
 
 public class LeafElement : UIElement {
-  override func handleMount() {
+  override func handleMount(_ context: UIContext) {
     if !self.mounted {
       self.mounted = true
-      self.mount()
+      self.mount(context)
     }
   }
   
-  override func handleUnmount() {
+  override func handleUnmount(_ context: UIContext) {
     if self.mounted {
       self.mounted = false
-      self.unmount()
+      self.unmount(context)
     }
   }
 }

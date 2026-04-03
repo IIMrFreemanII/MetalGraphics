@@ -7,7 +7,7 @@ public class Counter {
   
   public init() {}
 }
-
+@MainActor
 public class UIContext {
   private var counter = Counter()
   
@@ -23,6 +23,20 @@ public class UIContext {
   private var scrollWheelHandlers: [Int : () -> Void] = [:]
   
   private var keyHandlers: [Int : () -> Void] = [:]
+  
+  private var hittableViews: [UInt : HittableView] = [:]
+  // 2d grid to store hittable views and handle hit tests against them
+  
+  public func registerHittableView(_ view: HittableView) -> Void {
+    self.hittableViews[view.id] = view
+  }
+  public func unregisterHittableView(_ view: HittableView) -> Void {
+    self.hittableViews.removeValue(forKey: view.id)
+  }
+  
+  public func handleHitTest() -> Void {
+    self.hittableViews.values.forEach { print("handleHitTest for \($0.id)") }
+  }
   
   public init() {
     
