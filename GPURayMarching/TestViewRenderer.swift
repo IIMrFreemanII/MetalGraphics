@@ -22,7 +22,7 @@ class Counter : SingleChildElement {
     super.mount()
     
     self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-      //      self.items.append(self.colors[.random(in: 0..<self.colors.count)])
+      self.items.append(.init(self.colors[.random(in: 0..<self.colors.count)]))
     }
     
     self.setChild(
