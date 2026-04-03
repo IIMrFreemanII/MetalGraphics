@@ -18,8 +18,8 @@ class Counter : SingleChildElement {
   let colors: [float4] = [.red, .green, .blue]
   var items: ObservableCollection<Item> = .init([.init(.red), .init(.green), .init(.blue)])
   
-  override func mount() {
-    super.mount()
+  override func mount(_ context: UIContext) {
+    super.mount(context)
     
     self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
       self.items.append(.init(self.colors[.random(in: 0..<self.colors.count)]))
@@ -33,18 +33,19 @@ class Counter : SingleChildElement {
           .ref(&temp)
           .frame(width: 100, height: 100)
           .onTap { input in
-            print("Tapped at item \(item.id)")
+//            print("Tapped at item \(item.id)")
             self.items.remove(with: item.id)
           }
           .onHover { hover, _ in
             temp?.color = hover ? .black : item.color
-            print(item.id, hover)
+//            print(item.id, hover)
           }
-      }
+      },
+      context
     )
   }
   
-  override func unmount() {
+  override func unmount(_ context: UIContext) {
     timer.invalidate()
   }
 }
@@ -52,6 +53,7 @@ class Counter : SingleChildElement {
 class TestViewRenderer: ViewRenderer {
   //  private let gameView = IMGameView()
   let root = Frame(float2())
+  let uiContext: UIContext = .init()
   
   //  func createRect(_ size: float2) -> UIElement {
   //    let background = Background(color: .red)
@@ -83,7 +85,8 @@ class TestViewRenderer: ViewRenderer {
       HStack {
         Counter()
         Spacer()
-      }
+      },
+      self.uiContext
     )
     //    }
   }

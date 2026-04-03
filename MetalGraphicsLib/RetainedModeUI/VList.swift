@@ -15,22 +15,22 @@ public class VList<T: Identifiable> : SingleChildElement {
     self.onCreate = onCreate
   }
   
-  public override func mount() {
-    self.vStack.setChildren(self.items.collection.map { self.onCreate($0) })
+  public override func mount(_ context: UIContext) {
+    self.vStack.setChildren(self.items.collection.map { self.onCreate($0) }, context)
     
-    self.appendCancelable = self.items.onAppend { self.vStack.appendChild(self.onCreate($0)) }
-    self.insertCancelable = self.items.onInsert { self.vStack.insertChild(self.onCreate($0), at: $1) }
-    self.removeCancelable = self.items.onRemove { self.vStack.remove(at: $1) }
+    self.appendCancelable = self.items.onAppend { self.vStack.appendChild(self.onCreate($0), context) }
+    self.insertCancelable = self.items.onInsert { self.vStack.insertChild(self.onCreate($0), at: $1, context) }
+    self.removeCancelable = self.items.onRemove { self.vStack.remove(at: $1, context) }
     
-    self.setChild(self.vStack)
+    self.setChild(self.vStack, context)
   }
   
-  public override func unmount() {
+  public override func unmount(_ context: UIContext) {
     self.appendCancelable?.cancel()
     self.insertCancelable?.cancel()
     self.removeCancelable?.cancel()
     
-    self.vStack.removeAll()
-    self.removeChild()
+    self.vStack.removeAll(context)
+    self.removeChild(context)
   }
 }

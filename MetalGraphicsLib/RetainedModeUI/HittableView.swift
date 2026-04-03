@@ -1,4 +1,5 @@
-public class HittableView: SingleChildElement {
+public class HittableView: SingleChildElement, @MainActor Identifiable {
+  public var id: UInt
   public var position: SIMD2<Float> = .init()
   public var size: SIMD2<Float> = .init()
   public var isHovered: Bool = false
@@ -6,9 +7,18 @@ public class HittableView: SingleChildElement {
   let onTap: ((Input) -> Void)?
   let onHover: ((Bool, Input) -> Void)?
   
+  public override func mount(_ context: UIContext) {
+    context.registerHittableView(self)
+  }
+  
+  public override func unmount(_ context: UIContext) {
+    context.unregisterHittableView(self)
+  }
+  
   init(onTap: ((Input) -> Void)? = nil, onHover: ((Bool, Input) -> Void)? = nil, @UIElementBuilder content: () -> UIElement) {
     self.onTap = onTap
     self.onHover = onHover
+    self.id = .random(in: .min ... .max)
     
     super.init()
     

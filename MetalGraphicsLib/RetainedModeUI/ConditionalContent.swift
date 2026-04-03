@@ -10,19 +10,19 @@ public class ConditionalContent : SingleChildElement {
     self.content = content()
   }
   
-  public override func mount() {
+  public override func mount(_ context: UIContext) {
     self.cancellable = subject.sink { isEnabled in
       if isEnabled {
-        self.setChild(self.content)
+        self.setChild(self.content, context)
       } else {
-        self.removeChild()
+        self.removeChild(context)
       }
     }
   }
   
-  public override func unmount() {
+  public override func unmount(_ context: UIContext) {
     cancellable?.cancel()
-    removeChild()
+    removeChild(context)
   }
 }
 
@@ -38,14 +38,14 @@ public class ConditionalElseContent : SingleChildElement {
     self.falseContent = falseContent()
   }
   
-  public override func mount() {
+  public override func mount(_ context: UIContext) {
     self.cancellable = subject.sink { isEnabled in
-      isEnabled ? self.setChild(self.trueContent) : self.setChild(self.falseContent)
+      isEnabled ? self.setChild(self.trueContent, context) : self.setChild(self.falseContent, context)
     }
   }
   
-  public override func unmount() {
+  public override func unmount(_ context: UIContext) {
     cancellable?.cancel()
-    removeChild()
+    removeChild(context)
   }
 }
