@@ -75,7 +75,7 @@
 		15A049D22C221AA600D28009 /* Line.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049D12C221AA600D28009 /* Line.swift */; };
 		15A049D42C22D58000D28009 /* SDF.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049D32C22D58000D28009 /* SDF.swift */; };
 		15A049D62C23218100D28009 /* BoundingBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049D52C23218100D28009 /* BoundingBox.swift */; };
-		15A049D82C23220800D28009 /* Grid2D.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049D72C23220800D28009 /* Grid2D.swift */; };
+		15A049D82C23220800D28009 /* GraphicsGrid2D.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049D72C23220800D28009 /* GraphicsGrid2D.swift */; };
 		15A049DA2C236C8500D28009 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049D92C236C8500D28009 /* Utils.swift */; };
 		15A049DC2C243DB200D28009 /* StepSequence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049DB2C243DB200D28009 /* StepSequence.swift */; };
 		15A049DE2C24B21800D28009 /* Utils.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15A049DD2C24B21800D28009 /* Utils.metal */; };
@@ -93,6 +93,7 @@
 		15DF1C3D2C317DDB00E8E7E6 /* Graphics3D.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15DF1C3C2C317DDB00E8E7E6 /* Graphics3D.swift */; };
 		15DF1C402C317DFA00E8E7E6 /* Sphere.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15DF1C3F2C317DFA00E8E7E6 /* Sphere.swift */; };
 		15DF1C422C317E0300E8E7E6 /* Cube.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15DF1C412C317E0300E8E7E6 /* Cube.swift */; };
+		15E455E02FCE1FFC0026C83B /* HittableGrid2D.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15E455DF2FCE1FEC0026C83B /* HittableGrid2D.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -189,7 +190,7 @@
 		15A049D12C221AA600D28009 /* Line.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Line.swift; sourceTree = "<group>"; };
 		15A049D32C22D58000D28009 /* SDF.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDF.swift; sourceTree = "<group>"; };
 		15A049D52C23218100D28009 /* BoundingBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoundingBox.swift; sourceTree = "<group>"; };
-		15A049D72C23220800D28009 /* Grid2D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Grid2D.swift; sourceTree = "<group>"; };
+		15A049D72C23220800D28009 /* GraphicsGrid2D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GraphicsGrid2D.swift; sourceTree = "<group>"; };
 		15A049D92C236C8500D28009 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
 		15A049DB2C243DB200D28009 /* StepSequence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepSequence.swift; sourceTree = "<group>"; };
 		15A049DD2C24B21800D28009 /* Utils.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Utils.metal; sourceTree = "<group>"; };
@@ -208,6 +209,7 @@
 		15DF1C3C2C317DDB00E8E7E6 /* Graphics3D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Graphics3D.swift; sourceTree = "<group>"; };
 		15DF1C3F2C317DFA00E8E7E6 /* Sphere.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sphere.swift; sourceTree = "<group>"; };
 		15DF1C412C317E0300E8E7E6 /* Cube.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cube.swift; sourceTree = "<group>"; };
+		15E455DF2FCE1FEC0026C83B /* HittableGrid2D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HittableGrid2D.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -362,6 +364,7 @@
 		159419E42C1490A200C56203 /* MetalGraphicsLib */ = {
 			isa = PBXGroup;
 			children = (
+				15E455DF2FCE1FEC0026C83B /* HittableGrid2D.swift */,
 				157C8D842C4FF69B009CD7CE /* Shared */,
 				157C8D812C4FEE7D009CD7CE /* RetainedModeUI */,
 				157C8D602C484E21009CD7CE /* IMViews */,
@@ -378,7 +381,7 @@
 				15941A102C14A64100C56203 /* Time.swift */,
 				15941A122C15BCC000C56203 /* MyMTKView.swift */,
 				15A049D52C23218100D28009 /* BoundingBox.swift */,
-				15A049D72C23220800D28009 /* Grid2D.swift */,
+				15A049D72C23220800D28009 /* GraphicsGrid2D.swift */,
 				15A049D92C236C8500D28009 /* Utils.swift */,
 				15A049DB2C243DB200D28009 /* StepSequence.swift */,
 				15A049E72C27163400D28009 /* Global.swift */,
@@ -614,7 +617,8 @@
 				157C8D902C504D29009CD7CE /* Frame.swift in Sources */,
 				157C8D722C4C57F4009CD7CE /* IMStack.swift in Sources */,
 				159CB8D92CFCF4D3006E74C5 /* HittableView.swift in Sources */,
-				15A049D82C23220800D28009 /* Grid2D.swift in Sources */,
+				15E455E02FCE1FFC0026C83B /* HittableGrid2D.swift in Sources */,
+				15A049D82C23220800D28009 /* GraphicsGrid2D.swift in Sources */,
 				157C8D9A2C517F89009CD7CE /* EmptyElement.swift in Sources */,
 				157C8D882C504C94009CD7CE /* VStack.swift in Sources */,
 				15941A032C149A2A00C56203 /* int3.swift in Sources */,

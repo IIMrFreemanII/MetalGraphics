@@ -7,6 +7,7 @@ public class Counter {
   
   public init() {}
 }
+
 @MainActor
 public class UIContext {
   private var counter = Counter()
@@ -30,6 +31,7 @@ public class UIContext {
   public func registerHittableView(_ view: HittableView) -> Void {
     self.hittableViews[view.id] = view
   }
+  
   public func unregisterHittableView(_ view: HittableView) -> Void {
     self.hittableViews.removeValue(forKey: view.id)
   }

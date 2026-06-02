@@ -2,6 +2,7 @@ public class HittableView: SingleChildElement, @MainActor Identifiable {
   public var id: UInt
   public var position: SIMD2<Float> = .init()
   public var size: SIMD2<Float> = .init()
+  public var depth: Int = 0
   public var isHovered: Bool = false
   
   let onTap: ((Input) -> Void)?

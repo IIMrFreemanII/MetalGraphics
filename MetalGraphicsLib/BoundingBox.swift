@@ -1,3 +1,5 @@
+import simd
+
 public struct BoundingBox2D {
   public var center: float2 = .init()
   public var size = float2(1, 1)
@@ -46,6 +48,32 @@ public struct BoundingBox2D {
   public var bottomRight: float2 {
     self.center + float2(self.size.x, -self.size.y) * 0.5
   }
+}
+
+public func boundingBox2D(position: float2, size: float2, rotation: Float = 0) -> BoundingBox2D {
+  if rotation != 0 {
+    let rotMat = float2x2(rotation: rotation)
+    let rotTopleft = rotMat * float2(-size.x, size.y) * 0.5
+    let rotTopRight = rotMat * float2(size.x, size.y) * 0.5
+    
+    var minX = Float.greatestFiniteMagnitude
+    minX = min(minX, rotTopleft.x)
+    minX = min(minX, -rotTopleft.x)
+    minX = min(minX, rotTopRight.x)
+    minX = min(minX, -rotTopRight.x)
+    
+    var minY = Float.greatestFiniteMagnitude
+    minY = min(minY, rotTopleft.y)
+    minY = min(minY, -rotTopleft.y)
+    minY = min(minY, rotTopRight.y)
+    minY = min(minY, -rotTopRight.y)
+    
+    let newSize = abs(float2(minX, minY)) * 2
+    
+    return BoundingBox2D(center: position, size: newSize)
+  }
+  
+  return BoundingBox2D(center: position, size: size)
 }
 
 public struct BoundingBox3D {

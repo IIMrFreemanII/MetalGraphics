@@ -115,7 +115,7 @@ extension ViewRenderer: MTKViewDelegate {
         //      print("trigger newGridSize: \(newGridSize)")
         graphics2D.resizeCb = {
           //        print("newGridSize: \(newGridSize)")
-          graphics2D.grid = Grid2D(position: prevPosition, size: newGridSize, cellSize: prevCellSize, graphics: graphics2D)
+          graphics2D.grid = GraphicsGrid2D(position: prevPosition, size: newGridSize, cellSize: prevCellSize, graphics: graphics2D)
         }
       }
     }
