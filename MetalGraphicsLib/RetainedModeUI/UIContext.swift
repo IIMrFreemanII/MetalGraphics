@@ -39,6 +39,7 @@ public class UIContext {
   public func handleHitTest(_ grid: HittableGrid2D, _ input: Input, _ renderer: Graphics2D) -> Void {
     grid.reset()
     self.hittableViews.values.forEach { grid.mapViewToGrid($0, renderer) }
+    grid.sortByDepth()
     grid.handleEvents(input)
   }
   

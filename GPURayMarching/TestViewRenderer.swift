@@ -113,9 +113,6 @@ class TestViewRenderer: ViewRenderer {
     self.root.calcPosition(.init())
 //    self.root.handleHitTest(self.input)
     
-//    input.leftMouseDown {
-//      self.uiContext.handleHitTest(self.hittableGrid2D, self.input, graphics)
-//    }
     self.uiContext.handleHitTest(self.hittableGrid2D, self.input, graphics)
     
     graphics.context(in: view) { _ in

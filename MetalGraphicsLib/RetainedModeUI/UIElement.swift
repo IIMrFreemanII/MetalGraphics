@@ -13,6 +13,7 @@ public struct UIElementBuilder {
 
 @MainActor open class UIElement {
   public var mounted = false
+  public var depth: Int = 0
   
   public init() {}
   
@@ -38,6 +39,9 @@ public struct UIElementBuilder {
     return .init()
   }
   
+  open func calcDepth(_ parentDepth: Int) -> Void {
+    self.depth = parentDepth
+  }
   open func calcPosition(_ position: float2) -> Void {}
   open func render(_ renderer: Graphics2D) -> Void {}
   open func handleHitTest(_ input: Input) -> Bool {
@@ -121,7 +125,10 @@ open class SingleChildElement : UIElement {
       self.mounted = true
       self.mount(context)
       
-      self.child?.handleMount(context)
+      if let child = self.child {
+        child.calcDepth(self.depth)
+        child.handleMount(context)
+      }
     }
   }
   
@@ -188,6 +195,7 @@ public class MultiChildElement : UIElement {
       self.mount(context)
       
       for child in children {
+        child.calcDepth(self.depth)
         child.handleMount(context)
       }
     }
