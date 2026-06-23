@@ -6,7 +6,10 @@ import SwiftUI
   public var metalView: MTKView!
   public var input: Input!
   public var graphics2D: Graphics2D?
+  public var hittableGrid2D: HittableGrid2D = .init(position: float2(), size: int2(10, 10), cellSize: Float(50))
+  public let uiContext: UIContext = .init()
   @Published public var windowSize = float2()
+  @Published public var mousePosition = float2()
   @Published public var temp = float2(1, 2)
 
   public var clearColor = MTLClearColor(
@@ -33,9 +36,11 @@ import SwiftUI
         Text("Inspector")
           .font(.title)
         Divider()
-        Text("Window size: \(String(describing: windowSize).split(separator: ">").last!)")
+        Text("Window size: \(String(describing: self.windowSize).split(separator: ">").last!)")
         Divider()
         Number2Field(label: "Position:", value: Binding(get: {self.temp}, set: { self.temp = $0 }))
+        Divider()
+        Text("Mouse position: \(String(describing: self.mousePosition).split(separator: ">").last!)")
         SwiftUI.Spacer()
       }
       SwiftUI.Spacer()
@@ -104,6 +109,17 @@ extension ViewRenderer: MTKViewDelegate {
       self.windowSize = windowSize
     }
     self.input.windowSize = windowSize
+    
+    do {
+      let newGridSize = int2(floor(windowSize / hittableGrid2D.cellSize)) &+ 1
+      let prevCellSize = hittableGrid2D.cellSize
+      let prevPosition = hittableGrid2D.position
+      let notZero = newGridSize.x > 0 && newGridSize.y > 0
+      
+      if newGridSize != hittableGrid2D.cellCount, notZero {
+        self.hittableGrid2D = .init(position: prevPosition, size: newGridSize, cellSize: prevCellSize)
+      }
+    }
 
     if let graphics2D = self.graphics2D {
       let newGridSize = int2(floor(windowSize / graphics2D.grid.cellSize)) &+ 1
@@ -122,6 +138,7 @@ extension ViewRenderer: MTKViewDelegate {
   }
 
   open func draw(in _: MTKView) {
+//    self.mousePosition = input.mousePositionFromCenter
     self.updateTime()
   }
 }

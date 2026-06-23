@@ -59,9 +59,7 @@ extension Drag: CustomStringConvertible {
 
   public var prevMousePosition = float2()
   public var mousePosition = float2()
-  public var mousePositionFromCenter: float2 {
-    self.mousePosition - self.windowSize * 0.5
-  }
+  public var mousePositionFromCenter = float2()
 
   public var mouseDelta = float2()
   public var mouseScroll = float2()

@@ -36,8 +36,10 @@ public class UIContext {
     self.hittableViews.removeValue(forKey: view.id)
   }
   
-  public func handleHitTest() -> Void {
-    self.hittableViews.values.forEach { print("handleHitTest for \($0.id)") }
+  public func handleHitTest(_ grid: HittableGrid2D, _ input: Input, _ renderer: Graphics2D) -> Void {
+    grid.reset()
+    self.hittableViews.values.forEach { grid.mapViewToGrid($0, renderer) }
+    grid.handleEvents(input)
   }
   
   public init() {

@@ -82,7 +82,10 @@ public class MyMTKView: MTKView {
     let newY = -Float(position.y.clamped(to: 0.0...CGFloat.greatestFiniteMagnitude)) + self.input.windowSize.y
 
     let newMousePos = float2(newX, newY)
+    var newMousePosCenter = float2(newX, newY) - self.input.windowSize * 0.5
+    newMousePosCenter *= float2(1.0, -1.0)
     self.input.mousePosition = newMousePos
+    self.input.mousePositionFromCenter = newMousePosCenter
 
     let mouseDelta = float2(newX, newY) - self.input.prevMousePosition
     self.input.mouseDelta = float2(mouseDelta.x, -mouseDelta.y)

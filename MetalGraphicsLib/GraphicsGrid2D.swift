@@ -138,7 +138,7 @@ struct GridArgBuffer {
     var prevY = Int(-1)
     for y in StepSequence(from: boxBottomRight.y, to: boxTopLeft.y, step: self.cellSize) {
       if y.isBetween(gridBottomRight.y...gridTopLeft.y) {
-        let yIndex = Int(floor(remap(y, float2(bounds.bottom, self.bounds.top), float2(0, Float(self.size.y)))))
+        let yIndex = Int(floor(remap(y, float2(self.bounds.bottom, self.bounds.top), float2(0, Float(self.size.y)))))
 
         if prevY == yIndex {
           continue
@@ -148,7 +148,7 @@ struct GridArgBuffer {
         var prevX = Int(-1)
         for x in StepSequence(from: boxTopLeft.x, to: boxBottomRight.x, step: self.cellSize) {
           if x.isBetween(gridTopLeft.x...gridBottomRight.x) {
-            let xIndex = Int(floor(remap(x, float2(bounds.left, self.bounds.right), float2(0, Float(self.size.x)))))
+            let xIndex = Int(floor(remap(x, float2(self.bounds.left, self.bounds.right), float2(0, Float(self.size.x)))))
 
             if prevX == xIndex {
               continue

@@ -39,6 +39,7 @@ public class HittableView: SingleChildElement, @MainActor Identifiable {
     }
   }
   
+  @discardableResult
   public override func handleHitTest(_ input: Input) -> Bool {
     let childResult = self.child?.handleHitTest(input) ?? false
     

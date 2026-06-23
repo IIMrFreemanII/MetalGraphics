@@ -21,9 +21,9 @@ class Counter : SingleChildElement {
   override func mount(_ context: UIContext) {
     super.mount(context)
     
-    self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-      self.items.append(.init(self.colors[.random(in: 0..<self.colors.count)]))
-    }
+//    self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+//      self.items.append(.init(self.colors[.random(in: 0..<self.colors.count)]))
+//    }
     
     self.setChild(
       VList(items: self.items) { item in
@@ -33,7 +33,7 @@ class Counter : SingleChildElement {
           .ref(&temp)
           .frame(width: 100, height: 100)
           .onTap { input in
-//            print("Tapped at item \(item.id)")
+            print("Tapped at item \(item.id)")
             self.items.remove(with: item.id)
           }
           .onHover { hover, _ in
@@ -53,7 +53,6 @@ class Counter : SingleChildElement {
 class TestViewRenderer: ViewRenderer {
   //  private let gameView = IMGameView()
   let root = Frame(float2())
-  let uiContext: UIContext = .init()
   
   //  func createRect(_ size: float2) -> UIElement {
   //    let background = Background(color: .red)
@@ -82,8 +81,11 @@ class TestViewRenderer: ViewRenderer {
     //      Counter()
     //    })
     self.root.setChild(
-      HStack {
-        Counter()
+      VStack {
+        HStack {
+          Counter()
+          Spacer()
+        }
         Spacer()
       },
       self.uiContext
@@ -107,30 +109,23 @@ class TestViewRenderer: ViewRenderer {
     }
     
     self.root.size = self.windowSize
-    //    benchmark(title: "Calc size") {
     _ = self.root.calcSize(self.windowSize)
-    //    }
-    //    benchmark(title: "Calc Position") {
     self.root.calcPosition(.init())
-    self.root.handleHitTest(self.input)
-    //    }
+//    self.root.handleHitTest(self.input)
     
-    //    if frame < 1 {
-    //      self.root.debugHierarchy("")
-    //      self.frame += 1
-    //    }
-    
-    //    self.input.keyDown(.escape) {
-    //      self.root.removeChild()
-    //    }
+//    input.leftMouseDown {
+//      self.uiContext.handleHitTest(self.hittableGrid2D, self.input, graphics)
+//    }
+    self.uiContext.handleHitTest(self.hittableGrid2D, self.input, graphics)
     
     graphics.context(in: view) { _ in
-      //      benchmark(title: "Submit to render") {
       self.root.render(graphics)
-      //      }
+//      let boxSize = float2(100, 100)
+//      let box = BoundingBox2D(center: float2() - self.graphics2D!.size * 0.5 + boxSize * 0.5, size: boxSize)
+//      print(box.center)
+//      graphics.draw(square: Square(position: box.center, size: box.size, rotation: 0, color: .black))
       //      gameView.run(graphics.size)
       //      gameView.draw(in: graphics)
     }
-    //    print("------------------------------------------")
   }
 }
