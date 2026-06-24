@@ -116,7 +116,8 @@ class TestViewRenderer: ViewRenderer {
     self.uiContext.handleHitTest(self.hittableGrid2D, self.input, graphics)
     
     graphics.context(in: view) { _ in
-      self.root.render(graphics)
+      self.uiContext.handleRenderableViews(graphics)
+//      self.root.render(graphics)
 //      let boxSize = float2(100, 100)
 //      let box = BoundingBox2D(center: float2() - self.graphics2D!.size * 0.5 + boxSize * 0.5, size: boxSize)
 //      print(box.center)

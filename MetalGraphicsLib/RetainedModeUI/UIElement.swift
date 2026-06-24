@@ -43,7 +43,7 @@ public struct UIElementBuilder {
     self.depth = parentDepth
   }
   open func calcPosition(_ position: float2) -> Void {}
-  open func render(_ renderer: Graphics2D) -> Void {}
+//  open func render(_ renderer: Graphics2D) -> Void {}
   open func handleHitTest(_ input: Input) -> Bool {
     return false
   }
@@ -111,9 +111,9 @@ open class SingleChildElement : UIElement {
     child?.calcPosition(position)
   }
   
-  open override func render(_ renderer: Graphics2D) {
-    self.child?.render(renderer)
-  }
+//  open override func render(_ renderer: Graphics2D) {
+//    self.child?.render(renderer)
+//  }
   
   @discardableResult
   open override func handleHitTest(_ input: Input) -> Bool {
@@ -160,7 +160,13 @@ open class SingleChildElement : UIElement {
   }
 }
 
-public class MultiChildElement : UIElement {
+open class UIRenderableElement : SingleChildElement, @MainActor Identifiable {
+  public var id: UInt = .random(in: .min ... .max)
+  
+  open func render(_ renderer: Graphics2D) -> Void {}
+}
+
+open class MultiChildElement : UIElement {
   public var children: [UIElement] = []
   
   public override func debugHierarchy(_ offset: String) {
@@ -171,11 +177,11 @@ public class MultiChildElement : UIElement {
     }
   }
   
-  public override func render(_ renderer: Graphics2D) {
-    for child in self.children {
-      child.render(renderer)
-    }
-  }
+//  public override func render(_ renderer: Graphics2D) {
+//    for child in self.children {
+//      child.render(renderer)
+//    }
+//  }
   
   open override func handleHitTest(_ input: Input) -> Bool {
     var hit: Bool = false

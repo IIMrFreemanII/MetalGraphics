@@ -1,4 +1,4 @@
-public class Rectangle : SingleChildElement {
+public class Rectangle : UIRenderableElement {
   public var position: SIMD2<Float> = .init()
   public var size: SIMD2<Float> = .init()
   public var color: SIMD4<Float> = .black
@@ -9,6 +9,14 @@ public class Rectangle : SingleChildElement {
     self.color = color
     
     self.child = content()
+  }
+  
+  public override func mount(_ context: UIContext) {
+    context.registerRenderableView(self)
+  }
+  
+  public override func unmount(_ context: UIContext) {
+    context.unregisterRenderableView(self)
   }
   
   public override func debugHierarchy(_ offset: String) {
@@ -37,7 +45,5 @@ public class Rectangle : SingleChildElement {
     // origin -> top left
     let newPosition = self.position - renderer.size * 0.5 + self.size * 0.5
     renderer.draw(square: Square(position: newPosition, size: self.size, color: self.color))
-    
-    self.child?.render(renderer)
   }
 }

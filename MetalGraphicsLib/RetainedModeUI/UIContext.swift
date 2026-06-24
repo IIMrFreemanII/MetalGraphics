@@ -25,6 +25,21 @@ public class UIContext {
   
   private var keyHandlers: [Int : () -> Void] = [:]
   
+  private var renderableViews: [UInt : UIRenderableElement] = [:]
+  
+  public func registerRenderableView(_ view: UIRenderableElement) -> Void {
+    self.renderableViews[view.id] = view
+  }
+  
+  public func unregisterRenderableView(_ view: UIRenderableElement) -> Void {
+    self.renderableViews.removeValue(forKey: view.id)
+  }
+  
+  public func handleRenderableViews(_ renderer: Graphics2D) -> Void {
+    let viewsToRender = self.renderableViews.values.sorted(by: { $0.depth < $1.depth })
+    viewsToRender.forEach { $0.render(renderer) }
+  }
+  
   private var hittableViews: [UInt : HittableView] = [:]
   // 2d grid to store hittable views and handle hit tests against them
   
