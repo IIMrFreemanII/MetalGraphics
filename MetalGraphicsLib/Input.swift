@@ -235,6 +235,10 @@ public extension Input {
       cb(self.dragGesture)
     }
   }
+  
+  var mouseMoved: Bool {
+    self.mouseDelta.x != 0 || self.mouseDelta.y != 0
+  }
 
   var mouseDown: Bool {
     self.leftMouseDown || self.rightMouseDown

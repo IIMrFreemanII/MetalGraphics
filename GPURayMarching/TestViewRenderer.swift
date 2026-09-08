@@ -38,6 +38,7 @@ class Counter : SingleChildElement {
           }
           .onHover { hover, _ in
             temp?.color = hover ? .black : item.color
+            print("\(item.id) \(hover)")
 //            print(item.id, hover)
           }
       },
@@ -108,12 +109,18 @@ class TestViewRenderer: ViewRenderer {
       return
     }
     
-    self.root.size = self.windowSize
-    _ = self.root.calcSize(self.windowSize)
-    self.root.calcPosition(.init())
+    if self.uiContext.dirtyLayout {
+      self.root.size = self.windowSize
+      _ = self.root.calcSize(self.windowSize)
+      self.root.calcPosition(.init())
+      
+      self.uiContext.dirtyLayout = false
+    }
 //    self.root.handleHitTest(self.input)
     
-    self.uiContext.handleHitTest(self.hittableGrid2D, self.input, graphics)
+    if self.input.mouseMoved || self.input.mousePressed {
+      self.uiContext.handleHitTest(self.hittableGrid2D, self.input, graphics)
+    }
     
     graphics.context(in: view) { _ in
       self.uiContext.handleRenderableViews(graphics)

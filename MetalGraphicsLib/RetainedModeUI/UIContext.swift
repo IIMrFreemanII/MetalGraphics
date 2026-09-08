@@ -27,6 +27,8 @@ public class UIContext {
   
   private var renderableViews: [UInt : UIRenderableElement] = [:]
   
+  public var dirtyLayout: Bool = true
+  
   public func registerRenderableView(_ view: UIRenderableElement) -> Void {
     self.renderableViews[view.id] = view
   }

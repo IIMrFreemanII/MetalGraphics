@@ -145,6 +145,7 @@ open class SingleChildElement : UIElement {
     self.child = element
     
     if self.mounted {
+      context.dirtyLayout = true
       self.child!.handleMount(context)
     }
   }
@@ -154,6 +155,7 @@ open class SingleChildElement : UIElement {
       self.child = nil
       
       if self.mounted {
+        context.dirtyLayout = true
         child.handleUnmount(context)
       }
     }
@@ -220,6 +222,7 @@ open class MultiChildElement : UIElement {
   
   public func appendChild(_ element: UIElement, _ context: UIContext) -> Void {
     self.children.append(element)
+    context.dirtyLayout = true
     
     if self.mounted {
       element.handleMount(context)
@@ -230,6 +233,7 @@ open class MultiChildElement : UIElement {
     self.children.insert(element, at: index)
     
     if self.mounted {
+      context.dirtyLayout = true
       element.handleMount(context)
     }
   }
@@ -238,6 +242,7 @@ open class MultiChildElement : UIElement {
     self.children = elements
     
     if self.mounted {
+      context.dirtyLayout = true
       for child in children {
         child.handleMount(context)
       }
@@ -249,6 +254,7 @@ open class MultiChildElement : UIElement {
     let elem = self.children.remove(at: index)
     
     if self.mounted {
+      context.dirtyLayout = true
       elem.handleUnmount(context)
     }
     
@@ -257,6 +263,7 @@ open class MultiChildElement : UIElement {
   
   public func removeAll(_ context: UIContext) -> Void {
     if self.mounted {
+      context.dirtyLayout = true
       for child in children {
         child.handleUnmount(context)
       }

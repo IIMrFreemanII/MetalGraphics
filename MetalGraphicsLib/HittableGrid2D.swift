@@ -51,20 +51,17 @@ public struct HittableGridCell {
       }
     }
     
-    var tapHandled = false
-    
     for view in cell.hittableViews {
       let result = pointInAABBoxTopLeftOrigin(point: input.mousePosition, position: view.position, size: view.size)
       if result {
-        if let hoverHandler = view.onHover {
-          if !view.isHovered {
-            view.isHovered = true
-            hoverHandler(true, input)
-            self.hoveredViews[view.id] = view
-          }
-        } else if let tapHandler = view.onTap, !tapHandled, input.mouseDown {
+        if let hoverHandler = view.onHover, !view.isHovered {
+          view.isHovered = true
+          hoverHandler(true, input)
+          self.hoveredViews[view.id] = view
+        }
+        
+        if let tapHandler = view.onTap, input.mouseDown {
           tapHandler(input)
-          tapHandled = true
         }
       }
     }
