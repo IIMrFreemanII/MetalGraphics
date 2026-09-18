@@ -114,6 +114,7 @@ class TestViewRenderer: ViewRenderer {
       _ = self.root.calcSize(self.windowSize)
       self.root.calcPosition(.init())
       
+      self.uiContext.dirtyGrid = true
       self.uiContext.dirtyLayout = false
     }
 //    self.root.handleHitTest(self.input)

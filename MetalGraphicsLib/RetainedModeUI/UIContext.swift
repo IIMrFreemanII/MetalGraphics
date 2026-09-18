@@ -28,6 +28,7 @@ public class UIContext {
   private var renderableViews: [UInt : UIRenderableElement] = [:]
   
   public var dirtyLayout: Bool = true
+  public var dirtyGrid: Bool = true
   
   public func registerRenderableView(_ view: UIRenderableElement) -> Void {
     self.renderableViews[view.id] = view
@@ -54,9 +55,13 @@ public class UIContext {
   }
   
   public func handleHitTest(_ grid: HittableGrid2D, _ input: Input, _ renderer: Graphics2D) -> Void {
-    grid.reset()
-    self.hittableViews.values.forEach { grid.mapViewToGrid($0, renderer) }
-    grid.sortByDepth()
+    if self.dirtyGrid {
+      grid.reset()
+      self.hittableViews.values.forEach { grid.mapViewToGrid($0, renderer) }
+      grid.sortByDepth()
+      
+      self.dirtyGrid = false
+    }
     grid.handleEvents(input)
   }
   
