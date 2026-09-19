@@ -19,7 +19,7 @@ public struct Number2Field<T: SIMDScalar> : View {
 }
 
 #Preview {
-  @Previewable @State var value: SIMD2<Int> = .init(0, 1)
+  @Previewable @SwiftUI.State var value: SIMD2<Int> = .init(0, 1)
   
   return Number2Field(label: "Position:", value: $value)
     .frame(width: 300, height: 100)

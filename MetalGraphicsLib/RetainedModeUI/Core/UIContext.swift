@@ -29,7 +29,15 @@ public class UIContext {
   
   public var dirtyLayout: Bool = true
   public var dirtyGrid: Bool = true
-  
+  public var dirtyRender: Bool = true
+
+  public func invalidate(layout: Bool = false) -> Void {
+    self.dirtyRender = true
+    if layout {
+      self.dirtyLayout = true
+    }
+  }
+
   public func registerRenderableView(_ view: UIRenderableElement) -> Void {
     self.renderableViews[view.id] = view
   }

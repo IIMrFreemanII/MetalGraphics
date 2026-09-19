@@ -19,8 +19,8 @@ public struct NumberField<T : SIMDScalar> : View {
   public var label: String
   @Binding public var value: T
   
-  @State private var text: String = "0"
-  @State private var isValid: Bool = true
+  @SwiftUI.State private var text: String = "0"
+  @SwiftUI.State private var isValid: Bool = true
   
   private func validateNumber() {
     if let value = stringToSIMDScalar(text, T.self) {
@@ -52,7 +52,7 @@ public struct NumberField<T : SIMDScalar> : View {
 }
 
 #Preview {
-  @Previewable @State var value: Int = 3
+  @Previewable @SwiftUI.State var value: Int = 3
   
   return NumberField(label: "X:", value: $value)
     .frame(width: 200, height: 100)

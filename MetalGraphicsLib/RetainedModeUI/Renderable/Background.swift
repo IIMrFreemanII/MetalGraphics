@@ -1,7 +1,8 @@
-public class Rectangle : UIRenderableElement {
+@MainActor public class Background : UIRenderableElement {
   public var position: SIMD2<Float> = .init()
   public var size: SIMD2<Float> = .init()
   public var color: SIMD4<Float> = .black
+  private var colorState: State<SIMD4<Float>>?
   
   public init(_ color: SIMD4<Float>, @UIElementBuilder content: () -> UIElement = { EmptyElement() }) {
     super.init()
@@ -11,8 +12,16 @@ public class Rectangle : UIRenderableElement {
     self.child = content()
   }
   
+  public convenience init(_ color: State<SIMD4<Float>>, @UIElementBuilder content: () -> UIElement = { EmptyElement() }) {
+    self.init(color.value, content: content)
+    
+    self.colorState = color
+  }
+  
   public override func mount(_ context: UIContext) {
     context.registerRenderableView(self)
+    
+    self.bind(self.colorState, to: \.color, context)
   }
   
   public override func unmount(_ context: UIContext) {
@@ -29,10 +38,10 @@ public class Rectangle : UIRenderableElement {
   }
   
   public override func calcSize(_ availableSize: float2) -> float2 {
-    _ = child?.calcSize(availableSize)
-    self.size = availableSize
+    let contentSize = child?.calcSize(availableSize) ?? availableSize
+    self.size = contentSize
     
-    return availableSize
+    return contentSize
   }
   
   public override func calcPosition(_ position: float2) {

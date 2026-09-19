@@ -110,7 +110,7 @@ struct Inspector: View {
 }
 
 public struct Editor: View {
-  @State private var showDetails = true
+  @SwiftUI.State private var showDetails = true
   @ObservedObject private var global = Global.shared
   public var renderer: ViewRenderer
   

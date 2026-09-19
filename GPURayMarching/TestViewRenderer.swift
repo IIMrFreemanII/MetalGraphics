@@ -13,10 +13,12 @@ struct Item: Identifiable {
 }
 
 class Counter : SingleChildElement {
-  var timer: Timer!
+  var timer: Timer?
   
   let colors: [float4] = [.red, .green, .blue]
   var items: ObservableCollection<Item> = .init([.init(.red), .init(.green), .init(.blue)])
+  
+  @State var color: float4 = .red
   
   override func mount(_ context: UIContext) {
     super.mount(context)
@@ -26,28 +28,30 @@ class Counter : SingleChildElement {
 //    }
     
     self.setChild(
-      VList(items: self.items) { item in
-        var temp: Rectangle?
-        
-        return Rectangle(item.color)
-          .ref(&temp)
-          .frame(width: 100, height: 100)
-          .onTap { input in
-            print("Tapped at item \(item.id)")
-            self.items.remove(with: item.id)
-          }
-          .onHover { hover, _ in
-            temp?.color = hover ? .black : item.color
-            print("\(item.id) \(hover)")
-//            print(item.id, hover)
-          }
-      },
+//      VList(items: self.items) { item in
+//        let color = State(item.color)
+//        
+//        return Rectangle(color)
+//          .frame(width: 100, height: 100)
+//          .onTap { input in
+//            print("Tapped at item \(item.id)")
+//            self.items.remove(with: item.id)
+//          }
+//          .onHover { hover, _ in
+//            color.value = hover ? .black : item.color
+//          }
+//      },
+      Rectangle($color)
+        .frame(width: 100, height: 100)
+        .onHover { hovered, _ in
+          self.color = hovered ? .black : .red
+        },
       context
     )
   }
   
   override func unmount(_ context: UIContext) {
-    timer.invalidate()
+    timer?.invalidate()
   }
 }
 
@@ -125,6 +129,7 @@ class TestViewRenderer: ViewRenderer {
     
     graphics.context(in: view) { _ in
       self.uiContext.handleRenderableViews(graphics)
+      self.uiContext.dirtyRender = false
 //      self.root.render(graphics)
 //      let boxSize = float2(100, 100)
 //      let box = BoundingBox2D(center: float2() - self.graphics2D!.size * 0.5 + boxSize * 0.5, size: boxSize)

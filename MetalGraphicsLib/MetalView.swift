@@ -2,7 +2,7 @@ import MetalKit
 import SwiftUI
 
 public struct MetalView: View {
-  @State private var metalView = MyMTKView()
+  @SwiftUI.State private var metalView = MyMTKView()
   public let viewRenderer: ViewRenderer
   
   public init(viewRenderer: ViewRenderer) {

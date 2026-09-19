@@ -6,9 +6,13 @@ public class ExpandedFrame : SingleChildElement {
   
   private var size: float2 = .init()
   
-  public init(_ axis: Axis, _ alignment: Alignment = .center) {
+  public init(_ axis: Axis, _ alignment: Alignment = .center,  @UIElementBuilder content: () -> UIElement = { EmptyElement() }) {
     self.axis = axis
     self.alignment = alignment
+    
+    super.init()
+    
+    self.child = content()
   }
   
   public override func getSize() -> float2 {
