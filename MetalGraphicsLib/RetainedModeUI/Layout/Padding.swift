@@ -2,7 +2,7 @@ public class Padding : SingleChildElement {
   public var inset: Inset = .init()
   public var size: SIMD2<Float> = .init()
   
-  public init(_ inset: @autoclosure @escaping () -> Inset, @UIElementBuilder content: @escaping () -> [UIElement] = { [] }) {
+  public init(_ inset: @autoclosure @escaping () -> Inset, @UIElementBuilder content: @escaping () -> [UIElementNode] = { [] }) {
     super.init()
     
     self.bind(\.inset, to: inset, layout: true)

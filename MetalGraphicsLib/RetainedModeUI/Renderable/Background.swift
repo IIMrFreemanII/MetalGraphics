@@ -3,7 +3,7 @@
   public var size: SIMD2<Float> = .init()
   public var color: SIMD4<Float> = .black
   
-  public init(_ color: @autoclosure @escaping () -> SIMD4<Float>, @UIElementBuilder content: @escaping () -> [UIElement] = { [] }) {
+  public init(_ color: @autoclosure @escaping () -> SIMD4<Float>, @UIElementBuilder content: @escaping () -> [UIElementNode] = { [] }) {
     super.init()
     
     self.bind(\.color, to: color)

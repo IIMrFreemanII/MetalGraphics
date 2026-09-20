@@ -15,7 +15,7 @@ public class HittableView: SingleChildElement, @MainActor Identifiable {
     context.unregisterHittableView(self)
   }
   
-  init(onTap: ((Input) -> Void)? = nil, onHover: ((Bool, Input) -> Void)? = nil, @UIElementBuilder content: @escaping () -> [UIElement]) {
+  init(onTap: ((Input) -> Void)? = nil, onHover: ((Bool, Input) -> Void)? = nil, @UIElementBuilder content: @escaping () -> [UIElementNode]) {
     self.onTap = onTap
     self.onHover = onHover
     self.id = .random(in: .min ... .max)

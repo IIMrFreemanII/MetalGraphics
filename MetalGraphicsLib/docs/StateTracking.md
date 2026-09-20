@@ -10,7 +10,8 @@ Every reactive update rests on one rule: **reading `wrappedValue` while a tracke
 | `DependencyTracker` | same file | A static **stack** of trackers. `track { … }` pushes a fresh tracker, runs the closure, pops it, and returns `(result, statesRead)`. `record` adds only to the top tracker. |
 | `Reaction<T>` | [StateBindable.swift](../MetalGraphicsLib/RetainedModeUI/State/StateBindable.swift) | **The one reactive primitive.** It evaluates an expression under a tracker, subscribes to the states it read, and re-evaluates on change, re-tracking each time. Both property bindings and builder content are built on it. |
 | `bind(_:to:)` | same file | Creates a `Reaction` for one property expression, e.g. `self.color`, and assigns each new value through a key path. |
-| `DynamicContent` | [UIElementBuilder.swift](../MetalGraphicsLib/RetainedModeUI/Core/UIElementBuilder.swift) | Makes a `Reaction` out of a builder closure. Its `compute` is "run the builder, reconcile against the previous structure, flatten". |
+| `UIElementNode` | [UIElementBuilder.swift](../MetalGraphicsLib/RetainedModeUI/Core/UIElementBuilder.swift) | What a builder run produces: `.element(thunk)` per statement and `.branch(tag, …)` per conditional. No elements are constructed by a run. |
+| `DynamicContent` | same file | Makes a `Reaction` out of a builder closure. Its `compute` is "run the builder, then materialize the nodes against a positional cache". |
 | `reactions` / `setContent` / `applyContent` | [UIElement.swift](../MetalGraphicsLib/RetainedModeUI/Core/UIElement.swift) | Every element holds one `reactions` list, activated on mount and cancelled on unmount. Content is just another reaction in that list; containers override `applyContent` to say how to apply the result. |
 
 ## 2. Construction: building the tree (nothing is subscribed yet)
@@ -28,9 +29,10 @@ VStack(spacing: self.gap) {
 2. **`setContent(content)`** creates the content `Reaction`, whose `compute` calls the builder inside `DependencyTracker.track`:
    - **Tracker A is pushed** (the VStack builder's tracker).
    - The closure runs. `if self.isLoggedIn` reads `wrappedValue`, so **`isLoggedIn` is recorded in A**.
-   - `buildEither(second:)` wraps the result as `ConditionalBranch(tag: 1, [Rectangle(.blue)])`.
+   - `buildEither(second:)` records the outcome as `.branch(tag: 1, …)`. The branch's contents are thunks, so `Rectangle(.blue)` has not been built yet.
    - `Rectangle(self.color)` calls `bind(\.color, …)`, which evaluates `self.color` under **its own tracker B**, pushed on top of A. The read is recorded in B, which is then discarded, so **`color` does not go into A**. The same happens for `self.w` inside `.frame(…)`.
-   - Tracker A is popped. The reaction keeps `dependencies` (just `isLoggedIn`) and its `value`, the flattened list that becomes `children`. `DynamicContent` remembers the unflattened `structure`, branch markers included, for the next reconciliation.
+   - Tracker A is popped, and the nodes are **materialized**: a cache shaped like the node tree is walked by position, each `.element` thunk is called once and its element stored in its slot, and a `.branch` whose tag differs from last time clears its slot first. Materialization runs under its own tracker, so constructing elements never adds dependencies to the builder.
+   - The reaction keeps `dependencies` (just `isLoggedIn`) and its `value`, the materialized list that becomes `children`.
 
 **Why the stack matters:** each closure's reads go only to the innermost active tracker. Conditions in the builder body belong to the container, and element arguments belong to that element. Changing `color` never re-runs the `VStack` builder.
 
@@ -61,12 +63,12 @@ The result is a set of per-state handlers:
 ## 5. A condition change: `isLoggedIn.toggle()`
 
 1. The VStack's content reaction runs:
-   - Its `compute` re-runs the whole builder closure under a new tracker A′. This constructs **new** element instances for every statement.
-   - **`reconcile(old, new)`** walks the two structures index by index. This is safe because every statement produces exactly one entry:
-     - **Branch with a different tag** (1 → 0): take the new branch, i.e. the new green `Rectangle`.
-     - **Branch with the same tag**: keep the old branch and recurse into its elements.
-     - **Plain element**: keep the **old** instance and discard the freshly built one. The discarded one was never mounted, so it holds no subscriptions and nothing leaks.
-   - It flattens the new structure and re-subscribes to A′'s dependencies. The new branch might read different states.
+   - Its `compute` re-runs the whole builder closure under a new tracker A′. The run produces nodes only: one thunk per statement and the tag each conditional took. Nothing is constructed yet.
+   - **Materialization** walks the nodes against the cache. Every statement yields exactly one slot at each level, so slots are found by index:
+     - **Branch with a different tag** (1 → 0): the slot is cleared, so the new branch's thunk runs and builds the green `Rectangle`.
+     - **Branch with the same tag**: its slot and everything under it is reused.
+     - **Plain element**: the cached instance is returned and its thunk is never called, so a toggle constructs only what actually changed.
+   - It re-subscribes to A′'s dependencies. The new branch might read different states.
 2. The reaction's `apply` calls `applyContent`, which for `MultiChildElement` is `replaceChildren(elements, context)`:
    - children that disappeared (`===`, i.e. compared by instance) → `handleUnmount`. That unregisters them as renderable/hittable and cancels their bindings.
    - new children → `calcDepth` then `handleMount`, which runs the sequence from section 3 for the new subtree.
@@ -112,7 +114,7 @@ The reactions themselves are kept, along with their expressions and the builder 
 - **Tracked:** `self.isLoggedIn`, which reads `wrappedValue`.
 - **Not tracked:** `_isLoggedIn.value`.
 - Reads **in the builder body** (conditions) re-run the builder. Reads **inside element arguments** only update that element.
-- A value copied into a local first (`let c = self.color; Rectangle(c)`) is read by the builder's tracker, not the element's. It triggers a pointless builder re-run, and the reconciler keeps the old element with the old value.
+- A value copied into a local first (`let c = self.color; Rectangle(c)`) is read by the builder's tracker, not the element's. It triggers a pointless builder re-run, and materialization returns the cached element with the old value.
 - Event handlers like `onTap` and timers run with no tracker active, so their reads are never recorded.
 - `for` loops in builders are unsupported. Use `VList` / `HList` for collections.
 - `if let` swaps content only when the value flips between nil and non-nil.

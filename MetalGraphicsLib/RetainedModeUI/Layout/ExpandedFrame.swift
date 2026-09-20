@@ -6,7 +6,7 @@ public class ExpandedFrame : SingleChildElement {
   
   private var size: float2 = .init()
   
-  public init(_ axis: @autoclosure @escaping () -> Axis, _ alignment: @autoclosure @escaping () -> Alignment = .center, @UIElementBuilder content: @escaping () -> [UIElement] = { [] }) {
+  public init(_ axis: @autoclosure @escaping () -> Axis, _ alignment: @autoclosure @escaping () -> Alignment = .center, @UIElementBuilder content: @escaping () -> [UIElementNode] = { [] }) {
     self.axis = DependencyTracker.untracked(axis)
     self.alignment = DependencyTracker.untracked(alignment)
     

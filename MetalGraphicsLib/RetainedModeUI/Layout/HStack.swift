@@ -10,7 +10,7 @@ public class HStack : MultiChildElement {
     .init(contentWidth, maxHeight)
   }
   
-  public init(alignment: @autoclosure @escaping () -> VerticalAlignment = .center, spacing: @autoclosure @escaping () -> Float = 0, @UIElementBuilder content: @escaping () -> [UIElement] = { [] }) {
+  public init(alignment: @autoclosure @escaping () -> VerticalAlignment = .center, spacing: @autoclosure @escaping () -> Float = 0, @UIElementBuilder content: @escaping () -> [UIElementNode] = { [] }) {
     super.init()
     
     self.bind(\.alignment, to: alignment, layout: true)

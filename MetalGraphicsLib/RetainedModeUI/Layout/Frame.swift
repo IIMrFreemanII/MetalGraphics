@@ -4,7 +4,7 @@ public class Frame : SingleChildElement {
   public var size: float2 = .init()
   public var alignment: Alignment = .center
   
-  public init(_ size: @autoclosure @escaping () -> float2, _ alignment: @autoclosure @escaping () -> Alignment = .center, @UIElementBuilder content: @escaping () -> [UIElement] = { [] }) {
+  public init(_ size: @autoclosure @escaping () -> float2, _ alignment: @autoclosure @escaping () -> Alignment = .center, @UIElementBuilder content: @escaping () -> [UIElementNode] = { [] }) {
     super.init()
     
     self.bind(\.size, to: size, layout: true)

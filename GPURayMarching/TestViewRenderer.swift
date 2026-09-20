@@ -12,13 +12,13 @@ struct Item: Identifiable {
   }
 }
 
-class Counter : SingleChildElement {
+class CounterDemo : SingleChildElement {
   var timer: Timer?
   
   let colors: [float4] = [.red, .green, .blue]
   var items: ObservableCollection<Item> = .init([.init(.red), .init(.green), .init(.blue)])
   
-  @State var color: float4 = .red
+  @State var color: float4 = .blue
   @State var isLoggedIn = false
   @State var size: Float = 100
   
@@ -27,8 +27,13 @@ class Counter : SingleChildElement {
     
     self.setChild(
       VStack(spacing: 10) {
-        Rectangle(self.isLoggedIn ? .green : .blue)
-          .frame(width: 100, height: 100)
+        if self.isLoggedIn {
+          Rectangle(.green)
+            .frame(width: 100, height: 100)
+        } else {
+          Rectangle(.red)
+            .frame(width: 100, height: 100)
+        }
         Rectangle(self.color)
           .frame(width: 100, height: 100)
           .onHover { hovered, _ in
@@ -58,7 +63,8 @@ class TestViewRenderer: ViewRenderer {
     self.root.setChild(
       VStack {
         HStack {
-          ListDemo()   // swap for Counter() to see the conditional-rendering demo
+          CounterDemo()
+//          ListDemo()   // swap for Counter() to see the conditional-rendering demo
           Spacer()
         }
         Spacer()

@@ -33,7 +33,7 @@ import Combine
 
   // Sets children from a builder closure; `if` / `if-else` / `if let` inside it
   // re-evaluate when the `State`s they read change.
-  public func setContent(_ build: @escaping () -> [UIElement], _ context: UIContext? = nil) -> Void {
+  public func setContent(_ build: @escaping () -> [UIElementNode], _ context: UIContext? = nil) -> Void {
     self.clearContent()
 
     let reaction = DynamicContent.reaction(build) { [weak self] elements, context in
