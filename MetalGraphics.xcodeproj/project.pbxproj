@@ -40,6 +40,7 @@
 		157C8D9C2C5188FC009CD7CE /* Rectangle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D9B2C5188FC009CD7CE /* Rectangle.swift */; };
 		159419A72C147B0E00C56203 /* GPURayMarchingApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419A62C147B0E00C56203 /* GPURayMarchingApp.swift */; };
 		159419A92C147B0E00C56203 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419A82C147B0E00C56203 /* ContentView.swift */; };
+		15A1B2C42C147B0E00C56203 /* ListDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A1B2C32C147B0E00C56203 /* ListDemo.swift */; };
 		159419AB2C147B0F00C56203 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 159419AA2C147B0F00C56203 /* Assets.xcassets */; };
 		159419AE2C147B0F00C56203 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 159419AD2C147B0F00C56203 /* Preview Assets.xcassets */; };
 		159419EA2C1490B700C56203 /* MetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419B42C147BAA00C56203 /* MetalView.swift */; };
@@ -164,6 +165,7 @@
 		159419A42C147B0E00C56203 /* GPURayMarching.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GPURayMarching.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		159419A62C147B0E00C56203 /* GPURayMarchingApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GPURayMarchingApp.swift; sourceTree = "<group>"; };
 		159419A82C147B0E00C56203 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		15A1B2C32C147B0E00C56203 /* ListDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListDemo.swift; sourceTree = "<group>"; };
 		159419AA2C147B0F00C56203 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		159419AD2C147B0F00C56203 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		159419AF2C147B0F00C56203 /* GPURayMarching.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GPURayMarching.entitlements; sourceTree = "<group>"; };
@@ -323,6 +325,7 @@
 			children = (
 				159419A62C147B0E00C56203 /* GPURayMarchingApp.swift */,
 				159419A82C147B0E00C56203 /* ContentView.swift */,
+				15A1B2C32C147B0E00C56203 /* ListDemo.swift */,
 				159419AA2C147B0F00C56203 /* Assets.xcassets */,
 				159419AF2C147B0F00C56203 /* GPURayMarching.entitlements */,
 				159419AC2C147B0F00C56203 /* Preview Content */,
@@ -661,6 +664,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				159419A92C147B0E00C56203 /* ContentView.swift in Sources */,
+				15A1B2C42C147B0E00C56203 /* ListDemo.swift in Sources */,
 				15941A0D2C149DE300C56203 /* TestViewRenderer.swift in Sources */,
 				159419A72C147B0E00C56203 /* GPURayMarchingApp.swift in Sources */,
 				15941A1A2C15DD9200C56203 /* Shaders.metal in Sources */,

@@ -92,6 +92,21 @@ This order matters. If layout ran before hit-testing, an element mounted by `onT
 
 The reactions themselves are kept, along with their expressions and the builder closure. A later remount re-evaluates them, so it picks up any changes made while the element was detached.
 
+## 8. Collections
+
+`ObservableCollection<T>` is the list counterpart of `State`. It reports structural changes
+(`insert` / `remove` / `replaceAll`) and conforms to `TrackableState`:
+
+- `items` is the untracked read; `collection` is tracked, so `if items.collection.isEmpty { … }`
+  inside a builder re-runs that builder when the collection changes. Assigning `collection`
+  replaces everything.
+- `VList` / `HList` are `VStack` / `HStack` subclasses holding a `ListContent`, which is an
+  `AnyReaction` and so follows the same mount/unmount lifecycle as everything else. It subscribes
+  to `observeChanges` for incremental updates and re-syncs on every activation, which repairs
+  changes made while the list was unmounted.
+- Item elements are cached by `T.ID`, so an item that survives a `replaceAll` or a remount keeps
+  its element and therefore its own state.
+
 ## Rules that follow from this flow
 
 - **Tracked:** `self.isLoggedIn`, which reads `wrappedValue`.

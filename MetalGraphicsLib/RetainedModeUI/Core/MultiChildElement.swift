@@ -63,11 +63,13 @@ open class MultiChildElement : UIElement {
   }
   
   // Unmounts children that are gone and mounts new ones, keeping shared instances as is.
-  private func replaceChildren(_ elements: [UIElement], _ context: UIContext) -> Void {
+  public func replaceChildren(_ elements: [UIElement], _ context: UIContext) -> Void {
     let old = self.children
     self.children = elements
     context.dirtyLayout = true
-    
+
+    guard self.mounted else { return }
+
     for child in old where !elements.contains(where: { $0 === child }) {
       child.handleUnmount(context)
     }
@@ -78,33 +80,22 @@ open class MultiChildElement : UIElement {
   }
   
   public func appendChild(_ element: UIElement, _ context: UIContext) -> Void {
-    self.children.append(element)
-    context.dirtyLayout = true
-    
-    if self.mounted {
-      element.handleMount(context)
-    }
+    self.insertChild(element, at: self.children.count, context)
   }
   
   public func insertChild(_ element: UIElement, at index: Int, _ context: UIContext) -> Void {
-    self.children.insert(element, at: index)
+    self.children.insert(element, at: index.clamped(to: 0 ... self.children.count))
+    context.dirtyLayout = true
     
     if self.mounted {
-      context.dirtyLayout = true
+      element.calcDepth(self.depth)
       element.handleMount(context)
     }
   }
   
   public func setChildren(_ elements: [UIElement], _ context: UIContext) -> Void {
     self.clearContent()
-    self.children = elements
-    
-    if self.mounted {
-      context.dirtyLayout = true
-      for child in children {
-        child.handleMount(context)
-      }
-    }
+    self.replaceChildren(elements, context)
   }
   
   @discardableResult

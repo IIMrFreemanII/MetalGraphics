@@ -20,12 +20,15 @@ import Combine
   }
   internal func handleUnmount(_ context: UIContext) -> Void {}
   
+  // Iterates a snapshot: a reaction may add or drop reactions while it runs.
   internal func activateReactions(_ context: UIContext) -> Void {
-    self.reactions.forEach { $0.activate(context) }
+    let reactions = self.reactions
+    reactions.forEach { $0.activate(context) }
   }
 
   internal func deactivateReactions() -> Void {
-    self.reactions.forEach { $0.deactivate() }
+    let reactions = self.reactions
+    reactions.forEach { $0.deactivate() }
   }
 
   // Sets children from a builder closure; `if` / `if-else` / `if let` inside it

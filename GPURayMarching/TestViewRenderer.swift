@@ -25,24 +25,7 @@ class Counter : SingleChildElement {
   override func mount(_ context: UIContext) {
     super.mount(context)
     
-//    self.timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-//      self.items.append(.init(self.colors[.random(in: 0..<self.colors.count)]))
-//    }
-    
     self.setChild(
-//      VList(items: self.items) { item in
-//        let color = State(item.color)
-//        
-//        return Rectangle(color)
-//          .frame(width: 100, height: 100)
-//          .onTap { input in
-//            print("Tapped at item \(item.id)")
-//            self.items.remove(with: item.id)
-//          }
-//          .onHover { hover, _ in
-//            color.value = hover ? .black : item.color
-//          }
-//      },
       VStack(spacing: 10) {
         Rectangle(self.isLoggedIn ? .green : .blue)
           .frame(width: 100, height: 100)
@@ -65,39 +48,17 @@ class Counter : SingleChildElement {
 }
 
 class TestViewRenderer: ViewRenderer {
-  //  private let gameView = IMGameView()
   let root = Frame(float2())
-  
-  //  func createRect(_ size: float2) -> UIElement {
-  //    let background = Background(color: .red)
-  //    let frame = Frame(size, .center)
-  //    background.setChild(frame)
-  //
-  //    let background1 = Background(color: .green)
-  //    let frame1 = Frame(size * 0.5, .center)
-  //    background1.setChild(frame1)
-  //    frame.setChild(background1)
-  //
-  ////    let padding = Padding(.init(all: 10))
-  ////    padding.setChild(background)
-  //
-  //    return background
-  //  }
   
   override func start() {
     self.graphics2D = Graphics2D(renderer: self)
-    //    self.gameView.renderer = self
     
     self.root.mounted = true
-    //    benchmark(title: "Mount") {
-    //    self.root.setChild(HStack {
-    //      Counter()
-    //      Counter()
-    //    })
+    
     self.root.setChild(
       VStack {
         HStack {
-          Counter()
+          ListDemo()   // swap for Counter() to see the conditional-rendering demo
           Spacer()
         }
         Spacer()
