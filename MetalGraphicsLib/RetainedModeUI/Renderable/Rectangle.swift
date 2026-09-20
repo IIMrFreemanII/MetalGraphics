@@ -2,26 +2,17 @@ public class Rectangle : UIRenderableElement {
   public var position: SIMD2<Float> = .init()
   public var size: SIMD2<Float> = .init()
   public var color: SIMD4<Float> = .black
-  private var colorState: State<SIMD4<Float>>?
   
-  public init(_ color: SIMD4<Float>, @UIElementBuilder content: () -> UIElement = { EmptyElement() }) {
+  public init(_ color: @autoclosure @escaping () -> SIMD4<Float>, @UIElementBuilder content: @escaping () -> [UIElement] = { [] }) {
     super.init()
     
-    self.color = color
+    self.bind(\.color, to: color)
     
-    self.child = content()
-  }
-  
-  public convenience init(_ color: State<SIMD4<Float>>, @UIElementBuilder content: () -> UIElement = { EmptyElement() }) {
-    self.init(color.value, content: content)
-    
-    self.colorState = color
+    self.setContent(content)
   }
   
   public override func mount(_ context: UIContext) {
     context.registerRenderableView(self)
-    
-    self.bind(self.colorState, to: \.color, context)
   }
   
   public override func unmount(_ context: UIContext) {

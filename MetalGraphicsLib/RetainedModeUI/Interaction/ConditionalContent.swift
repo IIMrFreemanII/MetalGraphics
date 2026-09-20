@@ -5,9 +5,9 @@ public class ConditionalContent : SingleChildElement {
   public var content: UIElement
   public var cancellable: AnyCancellable?
   
-  public init(_ subject: any Subject<Bool, Never>, @UIElementBuilder content: () -> UIElement) {
+  public init(_ subject: any Subject<Bool, Never>, @UIElementBuilder content: () -> [UIElement]) {
     self.subject = subject
-    self.content = content()
+    self.content = UIElementBuilder.flatten(content()).first ?? EmptyElement()
   }
   
   public override func mount(_ context: UIContext) {
@@ -22,7 +22,6 @@ public class ConditionalContent : SingleChildElement {
   
   public override func unmount(_ context: UIContext) {
     cancellable?.cancel()
-    removeChild(context)
   }
 }
 
@@ -32,10 +31,10 @@ public class ConditionalElseContent : SingleChildElement {
   public var falseContent: UIElement
   public var cancellable: AnyCancellable?
   
-  public init(_ subject: any Subject<Bool, Never>, @UIElementBuilder _ trueContent: () -> UIElement, @UIElementBuilder _ falseContent: () -> UIElement) {
+  public init(_ subject: any Subject<Bool, Never>, @UIElementBuilder _ trueContent: () -> [UIElement], @UIElementBuilder _ falseContent: () -> [UIElement]) {
     self.subject = subject
-    self.trueContent = trueContent()
-    self.falseContent = falseContent()
+    self.trueContent = UIElementBuilder.flatten(trueContent()).first ?? EmptyElement()
+    self.falseContent = UIElementBuilder.flatten(falseContent()).first ?? EmptyElement()
   }
   
   public override func mount(_ context: UIContext) {
@@ -46,6 +45,5 @@ public class ConditionalElseContent : SingleChildElement {
   
   public override func unmount(_ context: UIContext) {
     cancellable?.cancel()
-    removeChild(context)
   }
 }

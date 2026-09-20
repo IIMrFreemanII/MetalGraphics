@@ -15,14 +15,14 @@ public class HittableView: SingleChildElement, @MainActor Identifiable {
     context.unregisterHittableView(self)
   }
   
-  init(onTap: ((Input) -> Void)? = nil, onHover: ((Bool, Input) -> Void)? = nil, @UIElementBuilder content: () -> UIElement) {
+  init(onTap: ((Input) -> Void)? = nil, onHover: ((Bool, Input) -> Void)? = nil, @UIElementBuilder content: @escaping () -> [UIElement]) {
     self.onTap = onTap
     self.onHover = onHover
     self.id = .random(in: .min ... .max)
     
     super.init()
     
-    self.child = content()
+    self.setContent(content)
   }
   
   func handleEvents(_ result: Bool, _ input: Input) {

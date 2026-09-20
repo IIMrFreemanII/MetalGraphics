@@ -33,6 +33,7 @@ open class MultiChildElement : UIElement {
     if !self.mounted {
       self.mounted = true
       self.mount(context)
+      self.activateReactions(context)
       
       for child in children {
         child.calcDepth(self.depth)
@@ -44,11 +45,35 @@ open class MultiChildElement : UIElement {
   override func handleUnmount(_ context: UIContext) {
     if self.mounted {
       self.mounted = false
+      self.deactivateReactions()
       self.unmount(context)
       
       for child in children {
         child.handleUnmount(context)
       }
+    }
+  }
+  
+  override func applyContent(_ elements: [UIElement], _ context: UIContext?) -> Void {
+    if let context {
+      self.replaceChildren(elements, context)
+    } else {
+      self.children = elements
+    }
+  }
+  
+  // Unmounts children that are gone and mounts new ones, keeping shared instances as is.
+  private func replaceChildren(_ elements: [UIElement], _ context: UIContext) -> Void {
+    let old = self.children
+    self.children = elements
+    context.dirtyLayout = true
+    
+    for child in old where !elements.contains(where: { $0 === child }) {
+      child.handleUnmount(context)
+    }
+    for child in elements where !old.contains(where: { $0 === child }) {
+      child.calcDepth(self.depth)
+      child.handleMount(context)
     }
   }
   
@@ -71,6 +96,7 @@ open class MultiChildElement : UIElement {
   }
   
   public func setChildren(_ elements: [UIElement], _ context: UIContext) -> Void {
+    self.clearContent()
     self.children = elements
     
     if self.mounted {

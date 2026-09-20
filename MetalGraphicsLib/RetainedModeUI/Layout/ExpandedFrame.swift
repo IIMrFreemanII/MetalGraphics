@@ -1,18 +1,20 @@
 import simd
 
 public class ExpandedFrame : SingleChildElement {
-  public let axis: Axis
-  public let alignment: Alignment
+  public var axis: Axis
+  public var alignment: Alignment
   
   private var size: float2 = .init()
   
-  public init(_ axis: Axis, _ alignment: Alignment = .center,  @UIElementBuilder content: () -> UIElement = { EmptyElement() }) {
-    self.axis = axis
-    self.alignment = alignment
+  public init(_ axis: @autoclosure @escaping () -> Axis, _ alignment: @autoclosure @escaping () -> Alignment = .center, @UIElementBuilder content: @escaping () -> [UIElement] = { [] }) {
+    self.axis = DependencyTracker.untracked(axis)
+    self.alignment = DependencyTracker.untracked(alignment)
     
     super.init()
     
-    self.child = content()
+    self.bind(\.axis, to: axis, layout: true)
+    self.bind(\.alignment, to: alignment, layout: true)
+    self.setContent(content)
   }
   
   public override func getSize() -> float2 {

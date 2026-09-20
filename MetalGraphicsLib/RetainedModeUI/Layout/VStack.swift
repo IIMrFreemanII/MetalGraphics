@@ -10,13 +10,13 @@ public class VStack : MultiChildElement {
     .init(maxWidth, contentHeight)
   }
   
-  public init(alignment: HorizontalAlignment = .center, spacing: Float = 0, @UIElementBuilder content: () -> [UIElement] = { [] }) {
+  public init(alignment: @autoclosure @escaping () -> HorizontalAlignment = .center, spacing: @autoclosure @escaping () -> Float = 0, @UIElementBuilder content: @escaping () -> [UIElement] = { [] }) {
     super.init()
     
-    self.alignment = alignment
-    self.spacing = spacing
+    self.bind(\.alignment, to: alignment, layout: true)
+    self.bind(\.spacing, to: spacing, layout: true)
     
-    self.children = content()
+    self.setContent(content)
   }
   
   public override func getSize() -> float2 {
