@@ -1,5 +1,4 @@
 import simd
-import Combine
 
 open class SingleChildElement : UIElement {
   open var child: UIElement?
@@ -35,7 +34,7 @@ open class SingleChildElement : UIElement {
     if !self.mounted {
       self.mounted = true
       self.mount(context)
-      self.activateReactions(context)
+      self.onMount(context)
       
       if let child = self.child {
         child.calcDepth(self.depth)
@@ -47,24 +46,18 @@ open class SingleChildElement : UIElement {
   override func handleUnmount(_ context: UIContext) {
     if self.mounted {
       self.mounted = false
-      self.deactivateReactions()
+      self.onUnmount(context)
       self.unmount(context)
 
       self.child?.handleUnmount(context)
     }
   }
   
-  override func applyContent(_ elements: [UIElement], _ context: UIContext?) -> Void {
+  override func applyContent(_ elements: [UIElement]) -> Void {
     if elements.count > 1 {
       assertionFailure("\(type(of: self)) takes a single child, got \(elements.count)")
     }
-    let element = elements.first ?? self.emptyChild
-    
-    if let context {
-      self.replaceChild(element, context)
-    } else {
-      self.child = element
-    }
+    self.child = elements.first ?? self.emptyChild
   }
   
   // Unmounts the previous child (if different) and mounts the new one.
@@ -84,7 +77,6 @@ open class SingleChildElement : UIElement {
   }
   
   open func setChild(_ element: UIElement, _ context: UIContext) -> Void {
-    self.clearContent()
     self.replaceChild(element, context)
   }
   

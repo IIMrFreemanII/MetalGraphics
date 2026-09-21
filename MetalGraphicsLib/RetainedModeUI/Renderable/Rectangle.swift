@@ -6,9 +6,9 @@ public class Rectangle : UIRenderableElement {
   public init(_ color: @autoclosure @escaping () -> SIMD4<Float>, @UIElementBuilder content: @escaping () -> [UIElementNode] = { [] }) {
     super.init()
     
-    self.bind(\.color, to: color)
+    self.color = color()
     
-    self.setContent(content)
+    self.setStaticContent(content)
   }
   
   public override func mount(_ context: UIContext) {

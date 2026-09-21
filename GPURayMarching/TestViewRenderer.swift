@@ -1,6 +1,7 @@
 import MetalGraphicsLib
 import MetalKit
 import Combine
+import ReactiveUI
 
 struct Item: Identifiable {
   var id: Int
@@ -12,35 +13,29 @@ struct Item: Identifiable {
   }
 }
 
-class ToggleDemo : SingleChildElement {
+@Component
+final class ToggleDemo : SingleChildElement {
   @State var color: float4 = .blue
-  @State var isLoggedIn = false
-  
-  override func mount(_ context: UIContext) {
-    
-    self.setChild(
-      VStack(spacing: 10) {
-        if self.isLoggedIn {
-          Rectangle(.green)
-            .frame(width: 100, height: 100)
-        } else {
-          Rectangle(.red)
-            .frame(width: 100, height: 100)
-        }
-        Rectangle(self.color)
+  @State var isLoggedIn: Bool = false
+
+  @UIElementBuilder var body: [UIElementNode] {
+    VStack(spacing: 10) {
+      if self.isLoggedIn {
+        Rectangle(.green)
           .frame(width: 100, height: 100)
-          .onHover { hovered, _ in
-            self.color = hovered ? .black : .red
-          }
-          .onTap { _ in
-            self.isLoggedIn.toggle()
-          }
-      },
-      context
-    )
-  }
-  
-  override func unmount(_ context: UIContext) {
+      } else {
+        Rectangle(.red)
+          .frame(width: 100, height: 100)
+      }
+      Rectangle(self.color)
+        .frame(width: 100, height: 100)
+        .onHover { [weak self] hovered, _ in
+          self?.color = hovered ? .black : .blue
+        }
+        .onTap { [weak self] _ in
+          self?.isLoggedIn.toggle()
+        }
+    }
   }
 }
 
@@ -55,8 +50,8 @@ class TestViewRenderer: ViewRenderer {
     self.root.setChild(
       VStack {
         HStack {
-          CounterDemo()
-//          ListDemo()   // swap for Counter() to see the conditional-rendering demo
+          ListDemo()
+//          ToggleDemo()   // swap for ToggleDemo() to see the conditional-rendering demo
           Spacer()
         }
         Spacer()

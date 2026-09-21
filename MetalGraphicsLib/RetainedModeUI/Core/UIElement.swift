@@ -1,65 +1,43 @@
 import simd
-import Combine
 
 @MainActor open class UIElement {
   public var mounted = false
   public var depth: Int = 0
-  // Property bindings and builder content; subscribed on mount, cancelled on unmount.
-  internal var reactions: [AnyReaction] = []
-  private var contentReaction: Reaction<[UIElement]>?
 
   public init() {}
   
-  open func mount(_ context: UIContext) -> Void {
-//    print("mount: \(self)")
-  }
+  /// The element's own mount behaviour. Built-in elements override this to register themselves
+  /// with the context; `@Component` generates it, which is why a component must not write one (F7).
+  ///
+  /// To run your own code on mount, override `onMount(_:)` instead.
+  open func mount(_ context: UIContext) -> Void {}
+  
+  /// Called just after this element mounts, before its children do.
+  ///
+  /// The hook to override in your own elements and components. Unlike `mount(_:)` it is never
+  /// generated and never owned by the macro, so overriding it can never collide with `@Component`.
+  open func onMount(_ context: UIContext) -> Void {}
+  
   internal func handleMount(_ context: UIContext) -> Void {}
   
-  open func unmount(_ context: UIContext) -> Void {
-//    print("unmount: \(self)")
-  }
+  /// The element's own unmount behaviour. The mirror of `mount(_:)`, and macro-owned in the same
+  /// way. To run your own code on unmount, override `onUnmount(_:)` instead.
+  open func unmount(_ context: UIContext) -> Void {}
+
+  /// Called just before this element unmounts, before its children do.
+  open func onUnmount(_ context: UIContext) -> Void {}
+
   internal func handleUnmount(_ context: UIContext) -> Void {}
   
-  // Iterates a snapshot: a reaction may add or drop reactions while it runs.
-  internal func activateReactions(_ context: UIContext) -> Void {
-    let reactions = self.reactions
-    reactions.forEach { $0.activate(context) }
+  // Sets children from a builder closure, once. Builder content used to be a reaction that
+  // re-ran when a `State` it read changed; a `@Component`'s content is now generated straight
+  // into its `__build`, so nothing here re-evaluates.
+  public func setStaticContent(_ build: () -> [UIElementNode]) -> Void {
+    self.applyContent(DynamicContent.elements(build()))
   }
 
-  internal func deactivateReactions() -> Void {
-    let reactions = self.reactions
-    reactions.forEach { $0.deactivate() }
-  }
-
-  // Sets children from a builder closure; `if` / `if-else` / `if let` inside it
-  // re-evaluate when the `State`s they read change.
-  public func setContent(_ build: @escaping () -> [UIElementNode], _ context: UIContext? = nil) -> Void {
-    self.clearContent()
-
-    let reaction = DynamicContent.reaction(build) { [weak self] elements, context in
-      self?.applyContent(elements, context)
-    }
-    self.contentReaction = reaction
-    self.reactions.append(reaction)
-
-    if self.mounted, let context {
-      reaction.activate(context)
-    } else {
-      self.applyContent(reaction.value, nil)
-    }
-  }
-
-  // Drops the builder closure; used when children are set imperatively instead.
-  public func clearContent() -> Void {
-    guard let reaction = self.contentReaction else { return }
-
-    reaction.deactivate()
-    self.reactions.removeAll { $0 === reaction }
-    self.contentReaction = nil
-  }
-
-  // Applies the builder's result. `context` is nil while the element is unmounted.
-  internal func applyContent(_ elements: [UIElement], _ context: UIContext?) -> Void {
+  // Applies content at construction time, before the element is mounted.
+  internal func applyContent(_ elements: [UIElement]) -> Void {
     assertionFailure("\(type(of: self)) does not accept content")
   }
 

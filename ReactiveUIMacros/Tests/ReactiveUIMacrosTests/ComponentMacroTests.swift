@@ -1,0 +1,445 @@
+import SwiftSyntaxMacros
+import SwiftSyntaxMacrosTestSupport
+import Testing
+
+@testable import ReactiveUIMacrosPlugin
+
+@Suite("@Component expansion")
+struct ComponentMacroTests {
+
+  // The anchor test: every CodeGen change is checked against this.
+  @Test("ToggleDemo: a conditional, a container, and a reactive argument")
+  func toggleDemo() {
+    assertMacroExpansion(
+      """
+      @Component
+      final class ToggleDemo: SingleChildElement {
+        @State var color: float4 = .blue
+        @State var isLoggedIn: Bool = false
+
+        @UIElementBuilder var body: [UIElementNode] {
+          VStack(spacing: 10) {
+            if self.isLoggedIn {
+              Rectangle(.green)
+                .frame(width: 100, height: 100)
+            } else {
+              Rectangle(.red)
+                .frame(width: 100, height: 100)
+            }
+            Rectangle(self.color)
+              .frame(width: 100, height: 100)
+              .onTap { [weak self] _ in
+                self.isLoggedIn.toggle()
+              }
+          }
+        }
+      }
+      """,
+      expandedSource: """
+      final class ToggleDemo: SingleChildElement {
+        @State var color: float4 = .blue
+        @State var isLoggedIn: Bool = false
+
+        @UIElementBuilder var body: [UIElementNode] {
+          VStack(spacing: 10) {
+            if self.isLoggedIn {
+              Rectangle(.green)
+                .frame(width: 100, height: 100)
+            } else {
+              Rectangle(.red)
+                .frame(width: 100, height: 100)
+            }
+            Rectangle(self.color)
+              .frame(width: 100, height: 100)
+              .onTap { [weak self] _ in
+                self.isLoggedIn.toggle()
+              }
+          }
+        }
+
+          private var __context: UIContext? = nil
+
+          private var __needsRefresh: Bool = false
+
+          private var __built: Bool = false
+
+          private var __n0a: VStack? = nil
+
+          private var __n0_0_0_0a: Rectangle? = nil
+
+          private var __n0_0_0_0b: Frame? = nil
+
+          private var __n0_0_1_0a: Rectangle? = nil
+
+          private var __n0_0_1_0b: Frame? = nil
+
+          private var __n0_1a: Rectangle? = nil
+
+          private var __n0_1b: Frame? = nil
+
+          private var __n0_1c: HittableView? = nil
+
+          private var __tag0_0: Int = -1
+
+          private var __slot0_0: [UIElement] = []
+
+          public override func mount(_ context: UIContext) {
+            self.__context = context
+            if !self.__built {
+              self.__built = true
+              self.setChild(self.__build(context), context)
+            } else if self.__needsRefresh {
+              self.__needsRefresh = false
+              self.__refreshAll()
+            }
+          }
+
+          public override func unmount(_ context: UIContext) {
+            self.__context = nil
+          }
+
+          private func __refreshAll() {
+            self.__update_color()
+            self.__update_isLoggedIn()
+          }
+
+          private func __build(_ context: UIContext) -> UIElement {
+            let n0a = VStack(spacing: 10)
+            self.__n0a = n0a
+            self.__tag0_0 = self.__evalTag0_0()
+            self.__slot0_0 = self.__enter0_0(self.__tag0_0, context)
+            let n0_1a = Rectangle(self._color)
+            self.__n0_1a = n0_1a
+            let n0_1b = n0_1a.frame(width: 100, height: 100)
+            self.__n0_1b = n0_1b
+            let n0_1c = n0_1b.onTap { [weak self] _ in
+                    self.isLoggedIn.toggle()
+                  }
+            self.__n0_1c = n0_1c
+            self.__applyChildren0(context)
+            var root: [UIElement] = []
+            if let e = self.__n0a {
+                root.append(e)
+            }
+            return root.first ?? EmptyElement()
+          }
+
+          private func __applyChildrenRoot(_ context: UIContext) {
+            var children: [UIElement] = []
+            if let e = self.__n0a {
+                children.append(e)
+            }
+            self.setChild(children.first ?? EmptyElement(), context)
+          }
+
+          private func __applyChildren0(_ context: UIContext) {
+            var children: [UIElement] = []
+            children.append(contentsOf: self.__slot0_0)
+            if let e = self.__n0_1c {
+                children.append(e)
+            }
+            if let owner = self.__n0a {
+                owner.replaceChildren(children, context)
+            }
+          }
+
+          private func __evalTag0_0() -> Int {
+            (self._isLoggedIn) ? 0 : 1
+          }
+
+          private func __enter0_0(_ tag: Int, _ context: UIContext) -> [UIElement] {
+            switch tag {
+            case 0:
+              let n0_0_0_0a = Rectangle(.green)
+              self.__n0_0_0_0a = n0_0_0_0a
+              let n0_0_0_0b = n0_0_0_0a.frame(width: 100, height: 100)
+              self.__n0_0_0_0b = n0_0_0_0b
+              var elements: [UIElement] = []
+              if let e = self.__n0_0_0_0b {
+                  elements.append(e)
+              }
+              return elements
+            case 1:
+              let n0_0_1_0a = Rectangle(.red)
+              self.__n0_0_1_0a = n0_0_1_0a
+              let n0_0_1_0b = n0_0_1_0a.frame(width: 100, height: 100)
+              self.__n0_0_1_0b = n0_0_1_0b
+              var elements: [UIElement] = []
+              if let e = self.__n0_0_1_0b {
+                  elements.append(e)
+              }
+              return elements
+            default:
+              return []
+            }
+          }
+
+          private func __leave0_0(_ tag: Int) {
+            switch tag {
+            case 0:
+              self.__n0_0_0_0a = nil
+              self.__n0_0_0_0b = nil
+            case 1:
+              self.__n0_0_1_0a = nil
+              self.__n0_0_1_0b = nil
+            default:
+              break
+            }
+          }
+
+          private func __swap0_0(_ context: UIContext) {
+            let tag = self.__evalTag0_0()
+            guard tag != self.__tag0_0 else {
+              return
+            }
+            let previous = self.__tag0_0
+            self.__tag0_0 = tag
+            self.__slot0_0 = self.__enter0_0(tag, context)
+            self.__leave0_0(previous)
+            self.__applyChildren0(context)
+          }
+
+          private func __update_color() {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            if let n = self.__n0_1a {
+                n.setColor(self._color, context)
+            }
+          }
+
+          private func __update_isLoggedIn() {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            self.__swap0_0(context)
+          }
+      }
+
+      extension ToggleDemo: ReactiveComponent {
+      }
+      """,
+      macros: ["Component": ComponentMacro.self]
+    )
+  }
+
+  // One expression reading three states is emitted into all three update methods. The
+  // redundant store when a non-deciding state changes is the intended trade: there is no
+  // re-tracking, and it is still cheaper than the subscription churn it replaced.
+  @Test("a multi-state expression fans out to every state it reads")
+  func multiStateExpression() {
+    assertMacroExpansion(
+      """
+      @Component
+      final class C: SingleChildElement {
+        @State var isOn: Bool = false
+        @State var a: float4 = .red
+        @State var b: float4 = .blue
+
+        @UIElementBuilder var body: [UIElementNode] {
+          Rectangle(self.isOn ? self.a : self.b)
+        }
+      }
+      """,
+      expandedSource: """
+      final class C: SingleChildElement {
+        @State var isOn: Bool = false
+        @State var a: float4 = .red
+        @State var b: float4 = .blue
+
+        @UIElementBuilder var body: [UIElementNode] {
+          Rectangle(self.isOn ? self.a : self.b)
+        }
+
+          private var __context: UIContext? = nil
+
+          private var __needsRefresh: Bool = false
+
+          private var __built: Bool = false
+
+          private var __n0a: Rectangle? = nil
+
+          public override func mount(_ context: UIContext) {
+            self.__context = context
+            if !self.__built {
+              self.__built = true
+              self.setChild(self.__build(context), context)
+            } else if self.__needsRefresh {
+              self.__needsRefresh = false
+              self.__refreshAll()
+            }
+          }
+
+          public override func unmount(_ context: UIContext) {
+            self.__context = nil
+          }
+
+          private func __refreshAll() {
+            self.__update_isOn()
+            self.__update_a()
+            self.__update_b()
+          }
+
+          private func __build(_ context: UIContext) -> UIElement {
+            let n0a = Rectangle(self._isOn ? self._a : self._b)
+            self.__n0a = n0a
+            var root: [UIElement] = []
+            if let e = self.__n0a {
+                root.append(e)
+            }
+            return root.first ?? EmptyElement()
+          }
+
+          private func __applyChildrenRoot(_ context: UIContext) {
+            var children: [UIElement] = []
+            if let e = self.__n0a {
+                children.append(e)
+            }
+            self.setChild(children.first ?? EmptyElement(), context)
+          }
+
+          private func __update_isOn() {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            if let n = self.__n0a {
+                n.setColor(self._isOn ? self._a : self._b, context)
+            }
+          }
+
+          private func __update_a() {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            if let n = self.__n0a {
+                n.setColor(self._isOn ? self._a : self._b, context)
+            }
+          }
+
+          private func __update_b() {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            if let n = self.__n0a {
+                n.setColor(self._isOn ? self._a : self._b, context)
+            }
+          }
+      }
+
+      extension C: ReactiveComponent {
+      }
+      """,
+      macros: ["Component": ComponentMacro.self]
+    )
+  }
+
+  // The layout-vs-render distinction lives in the library's setters, so what the macro has to
+  // get right is only which setter name an argument maps to.
+  @Test("arguments route to the right setter: size is layout, color is not")
+  func setterRouting() {
+    assertMacroExpansion(
+      """
+      @Component
+      final class C: SingleChildElement {
+        @State var w: Float = 10
+        @State var c: float4 = .red
+
+        @UIElementBuilder var body: [UIElementNode] {
+          Rectangle(self.c)
+            .frame(width: self.w, height: 100)
+        }
+      }
+      """,
+      expandedSource: """
+      final class C: SingleChildElement {
+        @State var w: Float = 10
+        @State var c: float4 = .red
+
+        @UIElementBuilder var body: [UIElementNode] {
+          Rectangle(self.c)
+            .frame(width: self.w, height: 100)
+        }
+
+          private var __context: UIContext? = nil
+
+          private var __needsRefresh: Bool = false
+
+          private var __built: Bool = false
+
+          private var __n0a: Rectangle? = nil
+
+          private var __n0b: Frame? = nil
+
+          public override func mount(_ context: UIContext) {
+            self.__context = context
+            if !self.__built {
+              self.__built = true
+              self.setChild(self.__build(context), context)
+            } else if self.__needsRefresh {
+              self.__needsRefresh = false
+              self.__refreshAll()
+            }
+          }
+
+          public override func unmount(_ context: UIContext) {
+            self.__context = nil
+          }
+
+          private func __refreshAll() {
+            self.__update_w()
+            self.__update_c()
+          }
+
+          private func __build(_ context: UIContext) -> UIElement {
+            let n0a = Rectangle(self._c)
+            self.__n0a = n0a
+            let n0b = n0a.frame(width: self._w, height: 100)
+            self.__n0b = n0b
+            var root: [UIElement] = []
+            if let e = self.__n0b {
+                root.append(e)
+            }
+            return root.first ?? EmptyElement()
+          }
+
+          private func __applyChildrenRoot(_ context: UIContext) {
+            var children: [UIElement] = []
+            if let e = self.__n0b {
+                children.append(e)
+            }
+            self.setChild(children.first ?? EmptyElement(), context)
+          }
+
+          private func __update_w() {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            if let n = self.__n0b {
+                n.setSize(float2(self._w, 100), context)
+            }
+          }
+
+          private func __update_c() {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            if let n = self.__n0a {
+                n.setColor(self._c, context)
+            }
+          }
+      }
+
+      extension C: ReactiveComponent {
+      }
+      """,
+      macros: ["Component": ComponentMacro.self]
+    )
+  }
+}

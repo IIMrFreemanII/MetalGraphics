@@ -88,6 +88,14 @@ import SwiftUI
     )
 
     self.start()
+
+    // `start()` is where a subclass creates its `Graphics2D`, so the sizing pass above ran
+    // while `graphics2D` was still nil and skipped the render grid entirely. Without this the
+    // grid keeps the 10x10 default from its `lazy` initializer — a 500x500 box around the
+    // origin — while the window is much larger, so every shape outside that box maps to no
+    // cell and the compute pass rasterizes nothing. The result was a blank first frame that
+    // stayed blank until a window resize happened to run this code again.
+    self.resizeRenderGrid(for: self.input.windowSize)
   }
 
   open func start() {}
@@ -109,31 +117,42 @@ extension ViewRenderer: MTKViewDelegate {
       self.windowSize = windowSize
     }
     self.input.windowSize = windowSize
-    
-    do {
-      let newGridSize = int2(floor(windowSize / hittableGrid2D.cellSize)) &+ 1
-      let prevCellSize = hittableGrid2D.cellSize
-      let prevPosition = hittableGrid2D.position
-      let notZero = newGridSize.x > 0 && newGridSize.y > 0
-      
-      if newGridSize != hittableGrid2D.cellCount, notZero {
-        self.hittableGrid2D = .init(position: prevPosition, size: newGridSize, cellSize: prevCellSize)
-      }
+
+    self.resizeHittableGrid(for: windowSize)
+    self.resizeRenderGrid(for: windowSize)
+  }
+
+  /// Both grids cover the window in cells of a fixed size, so a new window size means a new
+  /// cell count. Split out of `mtkView(_:drawableSizeWillChange:)` because the render grid
+  /// also has to be sized once more after `start()`, when `graphics2D` first exists.
+  func resizeHittableGrid(for windowSize: float2) {
+    let newGridSize = int2(floor(windowSize / hittableGrid2D.cellSize)) &+ 1
+    guard newGridSize.x > 0, newGridSize.y > 0, newGridSize != hittableGrid2D.cellCount else {
+      return
     }
 
-    if let graphics2D = self.graphics2D {
-      let newGridSize = int2(floor(windowSize / graphics2D.grid.cellSize)) &+ 1
-      let prevCellSize = graphics2D.grid.cellSize
-      let prevPosition = graphics2D.grid.position
-      let notZero = newGridSize.x > 0 && newGridSize.y > 0
+    self.hittableGrid2D = .init(
+      position: hittableGrid2D.position, size: newGridSize, cellSize: hittableGrid2D.cellSize
+    )
+    self.uiContext.dirtyGrid = true
+  }
 
-      if newGridSize != graphics2D.grid.size, notZero {
-        //      print("trigger newGridSize: \(newGridSize)")
-        graphics2D.resizeCb = {
-          //        print("newGridSize: \(newGridSize)")
-          graphics2D.grid = GraphicsGrid2D(position: prevPosition, size: newGridSize, cellSize: prevCellSize, graphics: graphics2D)
-        }
-      }
+  func resizeRenderGrid(for windowSize: float2) {
+    guard let graphics2D = self.graphics2D else { return }
+
+    let newGridSize = int2(floor(windowSize / graphics2D.grid.cellSize)) &+ 1
+    guard newGridSize.x > 0, newGridSize.y > 0, newGridSize != graphics2D.grid.size else {
+      return
+    }
+
+    let prevCellSize = graphics2D.grid.cellSize
+    let prevPosition = graphics2D.grid.position
+    // Deferred rather than applied here: `endFrame` runs this immediately before mapping
+    // shapes into the grid, so the replacement never lands mid-frame.
+    graphics2D.resizeCb = {
+      graphics2D.grid = GraphicsGrid2D(
+        position: prevPosition, size: newGridSize, cellSize: prevCellSize, graphics: graphics2D
+      )
     }
   }
 

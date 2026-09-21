@@ -7,9 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		150A31EB305F2D2500D14DEA /* StateTracking.md in Resources */ = {isa = PBXBuildFile; fileRef = 150A31E9305F2D2500D14DEA /* StateTracking.md */; };
+		1AAA00042F00000100AAAAAA /* ReactiveUI in Frameworks */ = {isa = PBXBuildFile; productRef = 1AAA00022F00000100AAAAAA /* ReactiveUI */; };
+		150A31EB305F2D2500D14DEA /* CompileTimeState.md in Resources */ = {isa = PBXBuildFile; fileRef = 150A31E9305F2D2500D14DEA /* CompileTimeState.md */; };
 		1541F3E42D00F91500FE4873 /* UIContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1541F3E32D00F91000FE4873 /* UIContext.swift */; };
-		157C8D182C3BC064009CD7CE /* Runtime in Frameworks */ = {isa = PBXBuildFile; productRef = 157C8D172C3BC064009CD7CE /* Runtime */; };
 		157C8D622C484E33009CD7CE /* IMView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D612C484E33009CD7CE /* IMView.swift */; };
 		157C8D642C484E89009CD7CE /* IMGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D632C484E89009CD7CE /* IMGameView.swift */; };
 		157C8D662C4C54A8009CD7CE /* IMAlignment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 157C8D652C4C54A8009CD7CE /* IMAlignment.swift */; };
@@ -68,7 +68,7 @@
 		15941A132C15BCC000C56203 /* MyMTKView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15941A122C15BCC000C56203 /* MyMTKView.swift */; };
 		15941A1A2C15DD9200C56203 /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 15941A0E2C14A2C100C56203 /* Shaders.metal */; };
 		159CB8D32CFB71B5006E74C5 /* VList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159CB8D22CFB71AC006E74C5 /* VList.swift */; };
-		159CB8D52CFB71EC006E74C5 /* ObservableCollection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159CB8D42CFB71E6006E74C5 /* ObservableCollection.swift */; };
+		15B0C1022E10000000000002 /* ListRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B0C1012E10000000000001 /* ListRows.swift */; };
 		159CB8D72CFB7219006E74C5 /* HList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159CB8D62CFB7217006E74C5 /* HList.swift */; };
 		159CB8D92CFCF4D3006E74C5 /* HittableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159CB8D82CFCF4CC006E74C5 /* HittableView.swift */; };
 		15A049D02C207E0700D28009 /* MetalGraphicsLib.h in Headers */ = {isa = PBXBuildFile; fileRef = 159419E52C1490A200C56203 /* MetalGraphicsLib.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -96,11 +96,10 @@
 		15DF1C402C317DFA00E8E7E6 /* Sphere.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15DF1C3F2C317DFA00E8E7E6 /* Sphere.swift */; };
 		15DF1C422C317E0300E8E7E6 /* Cube.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15DF1C412C317E0300E8E7E6 /* Cube.swift */; };
 		15E455E02FCE1FFC0026C83B /* HittableGrid2D.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15E455DF2FCE1FEC0026C83B /* HittableGrid2D.swift */; };
-		5A7E00022E00000000000002 /* State.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00012E00000000000001 /* State.swift */; };
 		5A7E00032E00000000000106 /* UIElementBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00032E00000000000006 /* UIElementBuilder.swift */; };
+		5A7E00112E00000000000108 /* UIElement+ReactiveSetters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00112E00000000000008 /* UIElement+ReactiveSetters.swift */; };
 		5A7E00042E00000000000108 /* UIElement+Modifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00042E00000000000008 /* UIElement+Modifiers.swift */; };
 		5A7E00052E0000000000010A /* SingleChildElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00052E0000000000000A /* SingleChildElement.swift */; };
-		5A7E00062E0000000000010C /* StateBindable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00062E0000000000000C /* StateBindable.swift */; };
 		5A7E00072E0000000000010E /* UIRenderableElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00072E0000000000000E /* UIRenderableElement.swift */; };
 		5A7E00082E00000000000110 /* MultiChildElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00082E00000000000010 /* MultiChildElement.swift */; };
 		5A7E00092E00000000000112 /* LeafElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00092E00000000000012 /* LeafElement.swift */; };
@@ -131,7 +130,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		150A31E9305F2D2500D14DEA /* StateTracking.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = StateTracking.md; sourceTree = "<group>"; };
+		150A31E9305F2D2500D14DEA /* CompileTimeState.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CompileTimeState.md; sourceTree = "<group>"; };
 		1541F3E32D00F91000FE4873 /* UIContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIContext.swift; sourceTree = "<group>"; };
 		157C8D612C484E33009CD7CE /* IMView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMView.swift; sourceTree = "<group>"; };
 		157C8D632C484E89009CD7CE /* IMGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMGameView.swift; sourceTree = "<group>"; };
@@ -194,7 +193,7 @@
 		15941A122C15BCC000C56203 /* MyMTKView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyMTKView.swift; sourceTree = "<group>"; };
 		15941A152C15DC2F00C56203 /* Math.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Math.metal; sourceTree = "<group>"; };
 		159CB8D22CFB71AC006E74C5 /* VList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VList.swift; sourceTree = "<group>"; };
-		159CB8D42CFB71E6006E74C5 /* ObservableCollection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObservableCollection.swift; sourceTree = "<group>"; };
+		15B0C1012E10000000000001 /* ListRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListRows.swift; sourceTree = "<group>"; };
 		159CB8D62CFB7217006E74C5 /* HList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HList.swift; sourceTree = "<group>"; };
 		159CB8D82CFCF4CC006E74C5 /* HittableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HittableView.swift; sourceTree = "<group>"; };
 		15A049D12C221AA600D28009 /* Line.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Line.swift; sourceTree = "<group>"; };
@@ -222,11 +221,10 @@
 		15DF1C3F2C317DFA00E8E7E6 /* Sphere.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sphere.swift; sourceTree = "<group>"; };
 		15DF1C412C317E0300E8E7E6 /* Cube.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Cube.swift; sourceTree = "<group>"; };
 		15E455DF2FCE1FEC0026C83B /* HittableGrid2D.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HittableGrid2D.swift; sourceTree = "<group>"; };
-		5A7E00012E00000000000001 /* State.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = State.swift; sourceTree = "<group>"; };
 		5A7E00032E00000000000006 /* UIElementBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIElementBuilder.swift; sourceTree = "<group>"; };
+		5A7E00112E00000000000008 /* UIElement+ReactiveSetters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIElement+ReactiveSetters.swift"; sourceTree = "<group>"; };
 		5A7E00042E00000000000008 /* UIElement+Modifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIElement+Modifiers.swift"; sourceTree = "<group>"; };
 		5A7E00052E0000000000000A /* SingleChildElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleChildElement.swift; sourceTree = "<group>"; };
-		5A7E00062E0000000000000C /* StateBindable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateBindable.swift; sourceTree = "<group>"; };
 		5A7E00072E0000000000000E /* UIRenderableElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIRenderableElement.swift; sourceTree = "<group>"; };
 		5A7E00082E00000000000010 /* MultiChildElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiChildElement.swift; sourceTree = "<group>"; };
 		5A7E00092E00000000000012 /* LeafElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeafElement.swift; sourceTree = "<group>"; };
@@ -238,7 +236,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				159419EF2C1490F600C56203 /* MetalGraphicsLib.framework in Frameworks */,
-				157C8D182C3BC064009CD7CE /* Runtime in Frameworks */,
+				1AAA00042F00000100AAAAAA /* ReactiveUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -255,7 +253,7 @@
 		150A31EA305F2D2500D14DEA /* docs */ = {
 			isa = PBXGroup;
 			children = (
-				150A31E9305F2D2500D14DEA /* StateTracking.md */,
+				150A31E9305F2D2500D14DEA /* CompileTimeState.md */,
 			);
 			path = docs;
 			sourceTree = "<group>";
@@ -283,7 +281,6 @@
 				5A7E10002E00000000000000 /* Core */,
 				5A7E10012E00000000000000 /* Layout */,
 				5A7E10022E00000000000000 /* Renderable */,
-				5A7E10032E00000000000000 /* State */,
 				5A7E10042E00000000000000 /* Interaction */,
 			);
 			path = RetainedModeUI;
@@ -486,6 +483,7 @@
 			isa = PBXGroup;
 			children = (
 				157C8D822C4FEEA9009CD7CE /* UIElement.swift */,
+				5A7E00112E00000000000008 /* UIElement+ReactiveSetters.swift */,
 				5A7E00042E00000000000008 /* UIElement+Modifiers.swift */,
 				5A7E00032E00000000000006 /* UIElementBuilder.swift */,
 				5A7E00052E0000000000000A /* SingleChildElement.swift */,
@@ -508,6 +506,7 @@
 				157C8D872C504C94009CD7CE /* VStack.swift */,
 				159CB8D62CFB7217006E74C5 /* HList.swift */,
 				159CB8D22CFB71AC006E74C5 /* VList.swift */,
+				15B0C1012E10000000000001 /* ListRows.swift */,
 				157C8D892C504CB9009CD7CE /* Spacer.swift */,
 			);
 			path = Layout;
@@ -521,16 +520,6 @@
 				157C8D8D2C504CF7009CD7CE /* Background.swift */,
 			);
 			path = Renderable;
-			sourceTree = "<group>";
-		};
-		5A7E10032E00000000000000 /* State */ = {
-			isa = PBXGroup;
-			children = (
-				5A7E00012E00000000000001 /* State.swift */,
-				5A7E00062E0000000000000C /* StateBindable.swift */,
-				159CB8D42CFB71E6006E74C5 /* ObservableCollection.swift */,
-			);
-			path = State;
 			sourceTree = "<group>";
 		};
 		5A7E10042E00000000000000 /* Interaction */ = {
@@ -571,7 +560,7 @@
 			);
 			name = GPURayMarching;
 			packageProductDependencies = (
-				157C8D172C3BC064009CD7CE /* Runtime */,
+				1AAA00022F00000100AAAAAA /* ReactiveUI */,
 			);
 			productName = GPURayMarching;
 			productReference = 159419A42C147B0E00C56203 /* GPURayMarching.app */;
@@ -603,7 +592,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1540;
-				LastUpgradeCheck = 1610;
+				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					159419A32C147B0E00C56203 = {
 						CreatedOnToolsVersion = 15.4;
@@ -623,7 +612,7 @@
 			);
 			mainGroup = 159419852C147A6900C56203;
 			packageReferences = (
-				157C8D162C3BC064009CD7CE /* XCRemoteSwiftPackageReference "Runtime" */,
+				1AAA00012F00000100AAAAAA /* XCLocalSwiftPackageReference "ReactiveUIMacros" */,
 			);
 			productRefGroup = 1594198F2C147A6900C56203 /* Products */;
 			projectDirPath = "";
@@ -649,7 +638,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				150A31EB305F2D2500D14DEA /* StateTracking.md in Resources */,
+				150A31EB305F2D2500D14DEA /* CompileTimeState.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -706,13 +695,12 @@
 				157C8D702C4C5718009CD7CE /* IMFrame.swift in Sources */,
 				157C8D832C4FEEA9009CD7CE /* UIElement.swift in Sources */,
 				5A7E00032E00000000000106 /* UIElementBuilder.swift in Sources */,
+				5A7E00112E00000000000108 /* UIElement+ReactiveSetters.swift in Sources */,
 				5A7E00042E00000000000108 /* UIElement+Modifiers.swift in Sources */,
 				5A7E00052E0000000000010A /* SingleChildElement.swift in Sources */,
-				5A7E00062E0000000000010C /* StateBindable.swift in Sources */,
 				5A7E00072E0000000000010E /* UIRenderableElement.swift in Sources */,
 				5A7E00082E00000000000110 /* MultiChildElement.swift in Sources */,
 				5A7E00092E00000000000112 /* LeafElement.swift in Sources */,
-				159CB8D52CFB71EC006E74C5 /* ObservableCollection.swift in Sources */,
 				159419F42C14916C00C56203 /* MathLib.swift in Sources */,
 				159419F52C14917200C56203 /* Array.swift in Sources */,
 				15C91D3B2C1F1B9F00A2857F /* Graphics2D.swift in Sources */,
@@ -725,6 +713,7 @@
 				159419FB2C1498C800C56203 /* float2.swift in Sources */,
 				15A049E62C27149600D28009 /* Editor.swift in Sources */,
 				159CB8D32CFB71B5006E74C5 /* VList.swift in Sources */,
+				15B0C1022E10000000000002 /* ListRows.swift in Sources */,
 				15DF1C422C317E0300E8E7E6 /* Cube.swift in Sources */,
 				157C8D922C504D5C009CD7CE /* HStack.swift in Sources */,
 				15C91D3E2C1F43E100A2857F /* Math.metal in Sources */,
@@ -751,7 +740,6 @@
 				157C8D8C2C504CDB009CD7CE /* Padding.swift in Sources */,
 				159419F72C14917600C56203 /* Float.swift in Sources */,
 				157C8D9C2C5188FC009CD7CE /* Rectangle.swift in Sources */,
-				5A7E00022E00000000000002 /* State.swift in Sources */,
 				157C8D862C4FF6B3009CD7CE /* Alignment.swift in Sources */,
 				15941A012C149A1400C56203 /* int2.swift in Sources */,
 				157C8D682C4C54DB009CD7CE /* IMAxis.swift in Sources */,
@@ -825,13 +813,14 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.5;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				MTL_HEADER_SEARCH_PATHS = "";
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -884,11 +873,12 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.5;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				MTL_HEADER_SEARCH_PATHS = "";
 				SDKROOT = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -914,7 +904,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				MTLLINKER_FLAGS = "";
 				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/MetalGraphicsLib/Shaders";
@@ -946,7 +936,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				MTLLINKER_FLAGS = "";
 				MTL_HEADER_SEARCH_PATHS = "$(SRCROOT)/MetalGraphicsLib/Shaders";
@@ -980,7 +970,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
@@ -1021,7 +1011,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
 				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
@@ -1071,22 +1061,18 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		157C8D162C3BC064009CD7CE /* XCRemoteSwiftPackageReference "Runtime" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/wickwirew/Runtime.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.2.7;
-			};
+/* Begin XCLocalSwiftPackageReference section */
+		1AAA00012F00000100AAAAAA /* XCLocalSwiftPackageReference "ReactiveUIMacros" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ReactiveUIMacros;
 		};
-/* End XCRemoteSwiftPackageReference section */
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		157C8D172C3BC064009CD7CE /* Runtime */ = {
+		1AAA00022F00000100AAAAAA /* ReactiveUI */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 157C8D162C3BC064009CD7CE /* XCRemoteSwiftPackageReference "Runtime" */;
-			productName = Runtime;
+			package = 1AAA00012F00000100AAAAAA /* XCLocalSwiftPackageReference "ReactiveUIMacros" */;
+			productName = ReactiveUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

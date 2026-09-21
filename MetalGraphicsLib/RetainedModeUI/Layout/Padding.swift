@@ -5,8 +5,8 @@ public class Padding : SingleChildElement {
   public init(_ inset: @autoclosure @escaping () -> Inset, @UIElementBuilder content: @escaping () -> [UIElementNode] = { [] }) {
     super.init()
     
-    self.bind(\.inset, to: inset, layout: true)
-    self.setContent(content)
+    self.inset = inset()
+    self.setStaticContent(content)
   }
   
   public override func debugHierarchy(_ offset: String) {

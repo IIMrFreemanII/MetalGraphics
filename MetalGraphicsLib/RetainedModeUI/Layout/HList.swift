@@ -1,10 +1,26 @@
 public final class HList<T : Identifiable> : HStack {
+  // `ListRows` needs `self`, which is only available after `super.init`.
+  private var rows: ListRows<T>!
+
   public init(alignment: @autoclosure @escaping () -> VerticalAlignment = .center,
               spacing: @autoclosure @escaping () -> Float = 0,
-              items: ObservableCollection<T>,
+              items: [T],
               onCreate: @escaping (T) -> UIElement) {
     super.init(alignment: alignment(), spacing: spacing())
 
-    self.reactions.append(ListContent(self, items: items, create: onCreate))
+    self.rows = ListRows(self, create: onCreate)
+    self.applyContent(self.rows.initialElements(items))
+  }
+
+  public func setItems(_ items: [T], _ context: UIContext) -> Void {
+    self.rows.setItems(items, context)
+  }
+
+  public func insertRow(_ item: T, at index: Int, _ context: UIContext) -> Void {
+    self.rows.insertRow(item, at: index, context)
+  }
+
+  public func removeRow(_ item: T, at index: Int, _ context: UIContext) -> Void {
+    self.rows.removeRow(item, at: index, context)
   }
 }

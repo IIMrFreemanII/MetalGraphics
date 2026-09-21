@@ -7,14 +7,16 @@ public class ExpandedFrame : SingleChildElement {
   private var size: float2 = .init()
   
   public init(_ axis: @autoclosure @escaping () -> Axis, _ alignment: @autoclosure @escaping () -> Alignment = .center, @UIElementBuilder content: @escaping () -> [UIElementNode] = { [] }) {
-    self.axis = DependencyTracker.untracked(axis)
-    self.alignment = DependencyTracker.untracked(alignment)
-    
+    // These are non-optional, so they must be set before `super.init`. They used to be read
+    // through `DependencyTracker.untracked` to keep the read out of an enclosing builder's
+    // tracker; with dependencies resolved at compile time there is no tracker to hide from,
+    // and the later `bind` calls would only have assigned the same values again.
+    self.axis = axis()
+    self.alignment = alignment()
+
     super.init()
-    
-    self.bind(\.axis, to: axis, layout: true)
-    self.bind(\.alignment, to: alignment, layout: true)
-    self.setContent(content)
+
+    self.setStaticContent(content)
   }
   
   public override func getSize() -> float2 {

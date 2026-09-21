@@ -33,7 +33,7 @@ open class MultiChildElement : UIElement {
     if !self.mounted {
       self.mounted = true
       self.mount(context)
-      self.activateReactions(context)
+      self.onMount(context)
       
       for child in children {
         child.calcDepth(self.depth)
@@ -45,7 +45,7 @@ open class MultiChildElement : UIElement {
   override func handleUnmount(_ context: UIContext) {
     if self.mounted {
       self.mounted = false
-      self.deactivateReactions()
+      self.onUnmount(context)
       self.unmount(context)
       
       for child in children {
@@ -54,15 +54,14 @@ open class MultiChildElement : UIElement {
     }
   }
   
-  override func applyContent(_ elements: [UIElement], _ context: UIContext?) -> Void {
-    if let context {
-      self.replaceChildren(elements, context)
-    } else {
-      self.children = elements
-    }
+  override func applyContent(_ elements: [UIElement]) -> Void {
+    self.children = elements
   }
   
   // Unmounts children that are gone and mounts new ones, keeping shared instances as is.
+  //
+  // Membership is tested through identity sets rather than the obvious `contains(where:)`,
+  // which is quadratic. A list of n rows pays this on every shuffle and every branch swap.
   public func replaceChildren(_ elements: [UIElement], _ context: UIContext) -> Void {
     let old = self.children
     self.children = elements
@@ -70,10 +69,13 @@ open class MultiChildElement : UIElement {
 
     guard self.mounted else { return }
 
-    for child in old where !elements.contains(where: { $0 === child }) {
+    let oldIdentities = Set(old.map { ObjectIdentifier($0) })
+    let newIdentities = Set(elements.map { ObjectIdentifier($0) })
+
+    for child in old where !newIdentities.contains(ObjectIdentifier(child)) {
       child.handleUnmount(context)
     }
-    for child in elements where !old.contains(where: { $0 === child }) {
+    for child in elements where !oldIdentities.contains(ObjectIdentifier(child)) {
       child.calcDepth(self.depth)
       child.handleMount(context)
     }
@@ -94,7 +96,6 @@ open class MultiChildElement : UIElement {
   }
   
   public func setChildren(_ elements: [UIElement], _ context: UIContext) -> Void {
-    self.clearContent()
     self.replaceChildren(elements, context)
   }
   

@@ -13,10 +13,10 @@ public class HStack : MultiChildElement {
   public init(alignment: @autoclosure @escaping () -> VerticalAlignment = .center, spacing: @autoclosure @escaping () -> Float = 0, @UIElementBuilder content: @escaping () -> [UIElementNode] = { [] }) {
     super.init()
     
-    self.bind(\.alignment, to: alignment, layout: true)
-    self.bind(\.spacing, to: spacing, layout: true)
+    self.alignment = alignment()
+    self.spacing = spacing()
     
-    self.setContent(content)
+    self.setStaticContent(content)
   }
   
   public override func getSize() -> float2 {

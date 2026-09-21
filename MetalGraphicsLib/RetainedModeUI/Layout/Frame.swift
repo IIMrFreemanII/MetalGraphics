@@ -7,9 +7,9 @@ public class Frame : SingleChildElement {
   public init(_ size: @autoclosure @escaping () -> float2, _ alignment: @autoclosure @escaping () -> Alignment = .center, @UIElementBuilder content: @escaping () -> [UIElementNode] = { [] }) {
     super.init()
     
-    self.bind(\.size, to: size, layout: true)
-    self.bind(\.alignment, to: alignment, layout: true)
-    self.setContent(content)
+    self.size = size()
+    self.alignment = alignment()
+    self.setStaticContent(content)
   }
   
   public override func debugHierarchy(_ offset: String) {

@@ -12,6 +12,11 @@ public class HittableView: SingleChildElement, @MainActor Identifiable {
   }
   
   public override func unmount(_ context: UIContext) {
+    // Cleared so a remount starts neutral. `ListRows` reuses a row's element across a reorder,
+    // and an element unmounted mid-hover would otherwise come back believing it is still
+    // hovered, and never fire `onHover(true)` again until the pointer left and re-entered.
+    self.isHovered = false
+    
     context.unregisterHittableView(self)
   }
   
@@ -22,7 +27,7 @@ public class HittableView: SingleChildElement, @MainActor Identifiable {
     
     super.init()
     
-    self.setContent(content)
+    self.setStaticContent(content)
   }
   
   func handleEvents(_ result: Bool, _ input: Input) {
