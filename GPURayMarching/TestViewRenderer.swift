@@ -12,18 +12,11 @@ struct Item: Identifiable {
   }
 }
 
-class CounterDemo : SingleChildElement {
-  var timer: Timer?
-  
-  let colors: [float4] = [.red, .green, .blue]
-  var items: ObservableCollection<Item> = .init([.init(.red), .init(.green), .init(.blue)])
-  
+class ToggleDemo : SingleChildElement {
   @State var color: float4 = .blue
   @State var isLoggedIn = false
-  @State var size: Float = 100
   
   override func mount(_ context: UIContext) {
-    super.mount(context)
     
     self.setChild(
       VStack(spacing: 10) {
@@ -48,7 +41,6 @@ class CounterDemo : SingleChildElement {
   }
   
   override func unmount(_ context: UIContext) {
-    timer?.invalidate()
   }
 }
 
