@@ -11,7 +11,7 @@ private func stubsOnly(_ body: String) -> String {
   final class C: SingleChildElement {
     @State var color: float4 = .blue
 
-    @UIElementBuilder var body: [UIElementNode] {
+    @UIElementBuilder var body: [UIElement] {
   \(body)
     }
 
@@ -30,7 +30,7 @@ private func component(_ body: String) -> String {
   final class C: SingleChildElement {
     @State var color: float4 = .blue
 
-    @UIElementBuilder var body: [UIElementNode] {
+    @UIElementBuilder var body: [UIElement] {
   \(body)
     }
   }
@@ -119,7 +119,7 @@ struct DiagnosticsTests {
       final class C: SingleChildElement {
         @State var rows: [Item] = []
 
-        @UIElementBuilder var body: [UIElementNode] {
+        @UIElementBuilder var body: [UIElement] {
           VList(items: self.rows.filter { $0.visible }) { item in
             RowView(item: item)
           }
@@ -130,7 +130,7 @@ struct DiagnosticsTests {
       final class C: SingleChildElement {
         @State var rows: [Item] = []
 
-        @UIElementBuilder var body: [UIElementNode] {
+        @UIElementBuilder var body: [UIElement] {
           VList(items: self.rows.filter { $0.visible }) { item in
             RowView(item: item)
           }
@@ -206,7 +206,7 @@ struct DiagnosticsTests {
       final class C: SingleChildElement {
         @State var rows: Set<Item> = []
 
-        @UIElementBuilder var body: [UIElementNode] {
+        @UIElementBuilder var body: [UIElement] {
           VList(items: self.rows) { item in
             RowView(item: item)
           }
@@ -217,7 +217,7 @@ struct DiagnosticsTests {
       final class C: SingleChildElement {
         @State var rows: Set<Item> = []
 
-        @UIElementBuilder var body: [UIElementNode] {
+        @UIElementBuilder var body: [UIElement] {
           VList(items: self.rows) { item in
             RowView(item: item)
           }
@@ -316,114 +316,6 @@ struct DiagnosticsTests {
         DiagnosticSpec(
           message: "@Component generates 'appendRows' for the @State array 'rows'. Rename your own method, or the property.",
           line: 2, column: 13
-        )
-      ],
-      macros: ["Component": ComponentMacro.self],
-      applyFixIts: [], fixedSource: nil
-    )
-  }
-
-  // F9 is a warning, not an error: the expansion is still emitted. The suggested capture is
-  // `weak` rather than `unowned` because a handler really can outlive its component — a list row
-  // removed while the pointer is inside it is the ordinary case, not a bug — and `unowned` makes
-  // that a crash where `weak` makes it a no-op.
-  @Test("F9: a stored handler capturing self strongly")
-  func handlerRetainCycle() {
-    assertMacroExpansion(
-      """
-      @Component
-      final class C: SingleChildElement {
-        @State var color: float4 = .blue
-
-        @UIElementBuilder var body: [UIElementNode] {
-          Rectangle(self.color)
-            .onTap { _ in
-              self.color = .red
-            }
-        }
-      }
-      """,
-      expandedSource: """
-      final class C: SingleChildElement {
-        @State var color: float4 = .blue
-
-        @UIElementBuilder var body: [UIElementNode] {
-          Rectangle(self.color)
-            .onTap { _ in
-              self.color = .red
-            }
-        }
-
-          private var __context: UIContext? = nil
-
-          private var __needsRefresh: Bool = false
-
-          private var __built: Bool = false
-
-          private var __n0a: Rectangle? = nil
-
-          private var __n0b: HittableView? = nil
-
-          public override func mount(_ context: UIContext) {
-            self.__context = context
-            if !self.__built {
-              self.__built = true
-              self.setChild(self.__build(context), context)
-            } else if self.__needsRefresh {
-              self.__needsRefresh = false
-              self.__refreshAll()
-            }
-          }
-
-          public override func unmount(_ context: UIContext) {
-            self.__context = nil
-          }
-
-          private func __refreshAll() {
-            self.__update_color()
-          }
-
-          private func __build(_ context: UIContext) -> UIElement {
-            let n0a = Rectangle(self._color)
-            self.__n0a = n0a
-            let n0b = n0a.onTap { _ in
-                  self.color = .red
-                }
-            self.__n0b = n0b
-            var root: [UIElement] = []
-            if let e = self.__n0b {
-                root.append(e)
-            }
-            return root.first ?? EmptyElement()
-          }
-
-          private func __applyChildrenRoot(_ context: UIContext) {
-            var children: [UIElement] = []
-            if let e = self.__n0b {
-                children.append(e)
-            }
-            self.setChild(children.first ?? EmptyElement(), context)
-          }
-
-          private func __update_color() {
-            guard let context = self.__context else {
-              self.__needsRefresh = true
-              return
-            }
-            if let n = self.__n0a {
-                n.setColor(self._color, context)
-            }
-          }
-      }
-
-      extension C: ReactiveComponent {
-      }
-      """,
-      diagnostics: [
-        DiagnosticSpec(
-          message: "this handler is stored by the element, so capturing 'self' strongly creates a "
-            + "reference cycle. Add '[weak self]'.",
-          line: 7, column: 14, severity: .warning
         )
       ],
       macros: ["Component": ComponentMacro.self],

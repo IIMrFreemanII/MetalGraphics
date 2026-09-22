@@ -23,6 +23,7 @@ struct CodeGen {
     decls.append(lifecycleUnmount())
     decls.append(refreshAll())
     decls.append(buildRoot())
+    decls.append(contentsOf: handlerMethods())
     decls.append(contentsOf: containerAppliers())
     decls.append(contentsOf: branchMethods())
     decls.append(contentsOf: updates())
@@ -57,7 +58,10 @@ struct CodeGen {
   // MARK: - Lifecycle
 
   private func lifecycleMount() -> DeclSyntax {
-    """
+    // Re-armed on every mount, not just the first: an unmounted element had its handlers
+    // cleared, and a remounted one has to get them back.
+    let armCall = armedHandlers.isEmpty ? "" : "\n  self.\(Naming.armHandlers)()"
+    return """
     public override func mount(_ context: UIContext) {
       self.\(raw: Naming.context) = context
       if !self.__built {
@@ -66,15 +70,16 @@ struct CodeGen {
       } else if self.\(raw: Naming.needsRefresh) {
         self.\(raw: Naming.needsRefresh) = false
         self.\(raw: Naming.refreshAll)()
-      }
+      }\(raw: armCall)
     }
     """
   }
 
   private func lifecycleUnmount() -> DeclSyntax {
-    """
+    let disarmCall = armedHandlers.isEmpty ? "" : "self.\(Naming.disarmHandlers)()\n  "
+    return """
     public override func unmount(_ context: UIContext) {
-      self.\(raw: Naming.context) = nil
+      \(raw: disarmCall)self.\(raw: Naming.context) = nil
     }
     """
   }
@@ -122,14 +127,14 @@ struct CodeGen {
       switch link.kind {
       case .constructor(let call, let type):
         // Re-emit the constructor without its content closure; children are attached below
-        // through the public setChild/setChildren door. A list keeps its trailing closure,
+        // through the public setChild/replaceChildren door. A list keeps its trailing closure,
         // which is a row factory rather than content.
         lines.append("let \(link.local) = \(constructorExpr(call, stripContent: type.takesContent))")
-      case .modifier(let call, _):
+      case .modifier(let call, let spec):
         // Call the modifier itself rather than its wrapper's constructor: the modifiers are
         // public, the wrappers' initializers are not, and this preserves the chain exactly.
         let previous = element.chain[index - 1].local
-        lines.append("let \(link.local) = \(previous)\(modifierSuffix(call))")
+        lines.append("let \(link.local) = \(previous)\(modifierSuffix(call, spec))")
       }
       lines.append("self.\(link.field) = \(link.local)")
     }
@@ -156,6 +161,52 @@ struct CodeGen {
     }
   }
 
+  // MARK: - Handlers
+
+  /// `onTap`/`onHover` are assigned here rather than in `__build`, and cleared again on unmount.
+  ///
+  /// The closure captures `self` strongly and the element stores it, so while it is assigned the
+  /// component is reachable from its own tree. That is only true between mount and unmount, when
+  /// something above is holding the subtree anyway; the moment the element unmounts the closure
+  /// goes and the component can be released. This is what lets a body be written without a
+  /// capture list.
+  private func handlerMethods() -> [DeclSyntax] {
+    let armed = self.armedHandlers
+    guard !armed.isEmpty else { return [] }
+
+    let arm = armed.map { entry in
+      "self.\(entry.field)?.\(entry.handler.property) = \(entry.handler.closure.trimmedDescription)"
+    }
+    let disarm = armed.map { entry in
+      "self.\(entry.field)?.\(entry.handler.property) = nil"
+    }
+
+    return [
+      """
+      private func \(raw: Naming.armHandlers)() {
+        \(raw: arm.joined(separator: "\n  "))
+      }
+      """,
+      """
+      private func \(raw: Naming.disarmHandlers)() {
+        \(raw: disarm.joined(separator: "\n  "))
+      }
+      """,
+    ]
+  }
+
+  /// Every handler in the tree, paired with the node field that holds it. Empty for a component
+  /// with no `onTap`/`onHover`, which is what keeps the arm/disarm machinery out of its expansion.
+  private var armedHandlers: [(field: String, handler: BoundHandler)] {
+    var armed: [(field: String, handler: BoundHandler)] = []
+    forEachElement { element in
+      for link in element.chain {
+        if let handler = link.handler { armed.append((link.field, handler)) }
+      }
+    }
+    return armed
+  }
+
   // MARK: - Child lists
 
   /// One method per container, rebuilding its children from the slots. Called on first build
@@ -175,7 +226,7 @@ struct CodeGen {
           lines.append("if let owner = self.\(field) { owner.setChild(children.first ?? EmptyElement(), context) }")
         case .multi:
           // replaceChildren already diffs by identity, unmounts what went, mounts what came
-          // and sets dirtyLayout — so a branch swap needs no new runtime.
+          // and invalidates layout — so a branch swap needs no new runtime.
           lines.append("if let owner = self.\(field) { owner.replaceChildren(children, context) }")
         case .leaf:
           break
@@ -283,6 +334,9 @@ struct CodeGen {
       """)
 
       // --- the swap itself ---
+      // The arm's nodes were built just now and have never been through a mount, so this is the
+      // only place their handlers get armed.
+      let swapArmCall = armedHandlers.isEmpty ? "" : "self.\(Naming.armHandlers)()\n  "
       decls.append("""
       private func \(raw: Naming.swapBranch(branch.path))(_ context: UIContext) {
         let tag = self.\(raw: Naming.evalTag(branch.path))()
@@ -293,7 +347,7 @@ struct CodeGen {
         self.\(raw: Naming.tag(branch.path)) = tag
         self.\(raw: Naming.slot(branch.path)) = self.\(raw: Naming.enterBranch(branch.path))(tag, context)
         self.\(raw: Naming.leaveBranch(branch.path))(previous)
-        self.\(raw: Naming.applyChildren(parentPath))(context)
+        \(raw: swapArmCall)self.\(raw: Naming.applyChildren(parentPath))(context)
       }
       """)
     }
@@ -513,8 +567,15 @@ struct CodeGen {
 
   /// `.frame(width: 100, height: 100)` — everything after the receiver, verbatim apart from
   /// state reads. Closure arguments are copied byte-for-byte.
-  private func modifierSuffix(_ call: FunctionCallExprSyntax) -> String {
+  private func modifierSuffix(_ call: FunctionCallExprSyntax, _ spec: ModifierSpec) -> String {
     guard let member = call.calledExpression.as(MemberAccessExprSyntax.self) else { return "" }
+
+    // A handler's real closure is assigned in `__armHandlers`; the chain only needs something of
+    // the right arity to produce the element with.
+    if let handler = spec.handler {
+      return ".\(member.declName.baseName.text)\(handler.placeholder)"
+    }
+
     var copy = call
     var newMember = member
     newMember.base = nil

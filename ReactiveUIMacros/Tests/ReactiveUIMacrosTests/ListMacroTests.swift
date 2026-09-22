@@ -30,7 +30,7 @@ struct ListMacroTests {
       final class L: SingleChildElement {
         @State var rows: [Item] = []
 
-        @UIElementBuilder var body: [UIElementNode] {
+        @UIElementBuilder var body: [UIElement] {
           VStack {
             Rectangle(.blue)
               .frame(width: Float(self.rows.count), height: 6)
@@ -73,7 +73,7 @@ struct ListMacroTests {
           let _: any ReactiveComponent = self
         }
 
-        @UIElementBuilder var body: [UIElementNode] {
+        @UIElementBuilder var body: [UIElement] {
           VStack {
             Rectangle(.blue)
               .frame(width: Float(self.rows.count), height: 6)
@@ -339,7 +339,7 @@ struct ListMacroTests {
       final class N: SingleChildElement {
         @State var tags: [String] = []
 
-        @UIElementBuilder var body: [UIElementNode] {
+        @UIElementBuilder var body: [UIElement] {
           Rectangle(.blue)
             .frame(width: Float(self.tags.count), height: 6)
         }
@@ -371,7 +371,7 @@ struct ListMacroTests {
           let _: any ReactiveComponent = self
         }
 
-        @UIElementBuilder var body: [UIElementNode] {
+        @UIElementBuilder var body: [UIElement] {
           Rectangle(.blue)
             .frame(width: Float(self.tags.count), height: 6)
         }

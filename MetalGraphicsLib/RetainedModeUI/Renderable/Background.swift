@@ -3,12 +3,12 @@
   public var size: SIMD2<Float> = .init()
   public var color: SIMD4<Float> = .black
   
-  public init(_ color: @autoclosure @escaping () -> SIMD4<Float>, @UIElementBuilder content: @escaping () -> [UIElementNode] = { [] }) {
+  public init(_ color: SIMD4<Float>, @UIElementBuilder content: () -> [UIElement] = { [] }) {
     super.init()
     
-    self.color = color()
+    self.color = color
     
-    self.setStaticContent(content)
+    self.applyContent(content())
   }
   
   public override func mount(_ context: UIContext) {

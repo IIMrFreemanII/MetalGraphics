@@ -2,11 +2,11 @@ public final class HList<T : Identifiable> : HStack {
   // `ListRows` needs `self`, which is only available after `super.init`.
   private var rows: ListRows<T>!
 
-  public init(alignment: @autoclosure @escaping () -> VerticalAlignment = .center,
-              spacing: @autoclosure @escaping () -> Float = 0,
+  public init(alignment: VerticalAlignment = .center,
+              spacing: Float = 0,
               items: [T],
               onCreate: @escaping (T) -> UIElement) {
-    super.init(alignment: alignment(), spacing: spacing())
+    super.init(alignment: alignment, spacing: spacing)
 
     self.rows = ListRows(self, create: onCreate)
     self.applyContent(self.rows.initialElements(items))

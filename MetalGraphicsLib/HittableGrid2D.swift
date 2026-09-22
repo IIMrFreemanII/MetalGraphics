@@ -29,7 +29,7 @@ public struct HittableGridCell {
     weak var view: HittableView?
   }
 
-  private var hoveredViews: [UInt : HoveredView] = [:]
+  private var hoveredViews: [ObjectIdentifier : HoveredView] = [:]
 
   public init(position: float2, size: int2, cellSize: Float) {
     let cellCount: Int = size.x * size.y
@@ -43,10 +43,6 @@ public struct HittableGridCell {
   
   public func reset() {
     self.cells.forEach { $0.hittableViews.removeAll(keepingCapacity: true)}
-  }
-  
-  public func sortByDepth() {
-    self.cells.forEach { $0.hittableViews.sort(by: { $0.depth > $1.depth }) }
   }
   
   /// The cell under a point in centered coordinates, or nil when the point is off the grid.
@@ -92,16 +88,22 @@ public struct HittableGridCell {
 
     // `cells` holds views strongly until the next rebuild, so one unmounted earlier in this very
     // frame — by a tap handler that removed it — is still reachable here.
+    //
+    // Each cell lists its views topmost first (see `UIContext.rebuildHitGrid`). Every view under
+    // the pointer is hovered, but a tap goes only to the topmost view that handles one — the
+    // one drawn over the others — so a view underneath cannot take a click aimed at what covers it.
+    var tapHandled = false
     for view in cell.hittableViews where view.mounted {
       let result = pointInAABBoxTopLeftOrigin(point: input.mousePosition, position: view.position, size: view.size)
       if result {
         if let hoverHandler = view.onHover, !view.isHovered {
           view.isHovered = true
           hoverHandler(true, input)
-          self.hoveredViews[view.id] = HoveredView(view: view)
+          self.hoveredViews[ObjectIdentifier(view)] = HoveredView(view: view)
         }
 
-        if let tapHandler = view.onTap, input.mouseDown {
+        if !tapHandled, let tapHandler = view.onTap, input.mouseDown {
+          tapHandled = true
           tapHandler(input)
         }
       }

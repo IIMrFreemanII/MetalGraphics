@@ -2,11 +2,11 @@ public final class VList<T : Identifiable> : VStack {
   // `ListRows` needs `self`, which is only available after `super.init`.
   private var rows: ListRows<T>!
 
-  public init(alignment: @autoclosure @escaping () -> HorizontalAlignment = .center,
-              spacing: @autoclosure @escaping () -> Float = 0,
+  public init(alignment: HorizontalAlignment = .center,
+              spacing: Float = 0,
               items: [T],
               onCreate: @escaping (T) -> UIElement) {
-    super.init(alignment: alignment(), spacing: spacing())
+    super.init(alignment: alignment, spacing: spacing)
 
     self.rows = ListRows(self, create: onCreate)
     self.applyContent(self.rows.initialElements(items))

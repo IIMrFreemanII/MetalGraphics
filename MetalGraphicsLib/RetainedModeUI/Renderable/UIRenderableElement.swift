@@ -1,5 +1,3 @@
-open class UIRenderableElement : SingleChildElement, @MainActor Identifiable {
-  public var id: UInt = .random(in: .min ... .max)
-  
+open class UIRenderableElement : SingleChildElement {
   open func render(_ renderer: Graphics2D) -> Void {}
 }

@@ -23,6 +23,16 @@ struct BoundArg {
   }
 }
 
+/// A handler bound to a link: which property to assign, and the closure the user wrote.
+///
+/// Kept out of the emitted chain on purpose. The closure is assigned in `__armHandlers` and
+/// cleared in `__disarmHandlers`, so the component's strong capture of `self` only exists while
+/// the element is mounted.
+struct BoundHandler {
+  let property: String
+  let closure: ExprSyntax
+}
+
 /// One link in a modifier chain. The root link is a constructor call; the rest are modifiers
 /// applied to the previous link.
 struct ChainLink {
@@ -38,6 +48,20 @@ struct ChainLink {
   let type: String        // the Swift type of the node field
   let kind: Kind
   let bound: [BoundArg]
+  /// Set only for `.onTap`/`.onHover` links.
+  let handler: BoundHandler?
+
+  init(
+    field: String, local: String, type: String,
+    kind: Kind, bound: [BoundArg], handler: BoundHandler? = nil
+  ) {
+    self.field = field
+    self.local = local
+    self.type = type
+    self.kind = kind
+    self.bound = bound
+    self.handler = handler
+  }
 }
 
 struct ElementIR {

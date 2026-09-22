@@ -35,7 +35,7 @@ final class ListRows<T : Identifiable> {
     let ids = Set(items.map { $0.id })
     self.elementsById = self.elementsById.filter { ids.contains($0.key) }
 
-    self.stack.setChildren(elements, context)
+    self.stack.replaceChildren(elements, context)
   }
 
   func insertRow(_ item: T, at index: Int, _ context: UIContext) -> Void {

@@ -2,7 +2,6 @@ import simd
 
 open class SingleChildElement : UIElement {
   open var child: UIElement?
-  private lazy var emptyChild: UIElement = EmptyElement()
 
   open override func debugHierarchy(_ offset: String) {
     print(offset + "\(self)".split(separator: ".").last!)
@@ -21,35 +20,9 @@ open class SingleChildElement : UIElement {
     child?.calcPosition(position)
   }
   
-//  open override func render(_ renderer: Graphics2D) {
-//    self.child?.render(renderer)
-//  }
-  
-  @discardableResult
-  open override func handleHitTest(_ input: Input) -> Bool {
-    return self.child?.handleHitTest(input) ?? false
-  }
-  
-  override func handleMount(_ context: UIContext) {
-    if !self.mounted {
-      self.mounted = true
-      self.mount(context)
-      self.onMount(context)
-      
-      if let child = self.child {
-        child.calcDepth(self.depth)
-        child.handleMount(context)
-      }
-    }
-  }
-  
-  override func handleUnmount(_ context: UIContext) {
-    if self.mounted {
-      self.mounted = false
-      self.onUnmount(context)
-      self.unmount(context)
-
-      self.child?.handleUnmount(context)
+  override func forEachChild(_ body: (UIElement) -> Void) {
+    if let child = self.child {
+      body(child)
     }
   }
   
@@ -57,30 +30,19 @@ open class SingleChildElement : UIElement {
     if elements.count > 1 {
       assertionFailure("\(type(of: self)) takes a single child, got \(elements.count)")
     }
-    self.child = elements.first ?? self.emptyChild
+    self.child = elements.first ?? EmptyElement()
   }
   
   // Unmounts the previous child (if different) and mounts the new one.
-  private func replaceChild(_ element: UIElement?, _ context: UIContext) -> Void {
+  public func setChild(_ element: UIElement, _ context: UIContext) -> Void {
     let old = self.child
     guard old !== element else { return }
     self.child = element
     
     if self.mounted {
-      context.dirtyLayout = true
+      context.invalidate(.layout)
       old?.handleUnmount(context)
-      if let element {
-        element.calcDepth(self.depth)
-        element.handleMount(context)
-      }
+      element.handleMount(context)
     }
-  }
-  
-  open func setChild(_ element: UIElement, _ context: UIContext) -> Void {
-    self.replaceChild(element, context)
-  }
-  
-  open func removeChild(_ context: UIContext) -> Void {
-    self.replaceChild(nil, context)
   }
 }

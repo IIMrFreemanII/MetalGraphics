@@ -1,18 +1,18 @@
 extension UIElement {
-  public func padding(_ inset: @autoclosure @escaping () -> Inset) -> Padding {
-    Padding(inset()) {
+  public func padding(_ inset: Inset) -> Padding {
+    Padding(inset) {
       self
     }
   }
   
-  public func frame(width: @autoclosure @escaping () -> Float, height: @autoclosure @escaping () -> Float) -> Frame {
-    Frame(.init(width(), height())) {
+  public func frame(width: Float, height: Float) -> Frame {
+    Frame(.init(width, height)) {
       self
     }
   }
   
-  public func background(_ color: @autoclosure @escaping () -> float4) -> Background {
-    Background(color()) {
+  public func background(_ color: float4) -> Background {
+    Background(color) {
       self
     }
   }

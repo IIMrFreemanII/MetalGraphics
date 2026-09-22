@@ -11,7 +11,7 @@ import SwiftSyntax
 enum Arity {
   case leaf     // no children
   case single   // SingleChildElement: setChild(_:_:)
-  case multi    // MultiChildElement: setChildren(_:_:)
+  case multi    // MultiChildElement: replaceChildren(_:_:)
 }
 
 /// One constructor argument, and the setter that updates it later (nil = not reactive).
@@ -71,12 +71,38 @@ enum ArgCombine {
 /// A modifier from UIElement+Modifiers.swift. These wrap the receiver in a new element.
 /// Generated code calls the modifier itself rather than the wrapper's constructor, which keeps
 /// it to public API and preserves the declarative chain's exact semantics.
+/// A modifier whose argument is a stored callback rather than a value.
+///
+/// The closure is not emitted inline the way a value argument is. It captures `self` strongly, so
+/// leaving it on the element would make the component reach itself; instead the macro assigns it
+/// to `property` on mount and clears it on unmount. `placeholder` is what the chain is built with
+/// in the meantime — an empty closure of the right arity, since the modifier has to be called with
+/// something to produce the element at all.
+struct HandlerSpec {
+  let property: String
+  let placeholder: String
+}
+
 struct ModifierSpec {
   let name: String
   let labels: [String?]
   let produces: String
   let setter: String?
   let combine: ArgCombine
+  /// Set for `onTap`/`onHover`. Mutually exclusive with `setter`: a handler has no reactive value.
+  let handler: HandlerSpec?
+
+  init(
+    name: String, labels: [String?], produces: String,
+    setter: String?, combine: ArgCombine, handler: HandlerSpec? = nil
+  ) {
+    self.name = name
+    self.labels = labels
+    self.produces = produces
+    self.setter = setter
+    self.combine = combine
+    self.handler = handler
+  }
 }
 
 enum ElementCatalog {
@@ -138,11 +164,13 @@ enum ElementCatalog {
     // The handler is opaque: closure bodies are never dependency sites.
     "onTap": ModifierSpec(
       name: "onTap", labels: [nil],
-      produces: "HittableView", setter: nil, combine: .identity
+      produces: "HittableView", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "onTap", placeholder: "{ _ in }")
     ),
     "onHover": ModifierSpec(
       name: "onHover", labels: [nil],
-      produces: "HittableView", setter: nil, combine: .identity
+      produces: "HittableView", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "onHover", placeholder: "{ _, _ in }")
     ),
   ]
 }

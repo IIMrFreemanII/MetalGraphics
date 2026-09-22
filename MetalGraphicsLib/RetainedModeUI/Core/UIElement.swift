@@ -2,7 +2,6 @@ import simd
 
 @MainActor open class UIElement {
   public var mounted = false
-  public var depth: Int = 0
 
   public init() {}
   
@@ -18,7 +17,16 @@ import simd
   /// generated and never owned by the macro, so overriding it can never collide with `@Component`.
   open func onMount(_ context: UIContext) -> Void {}
   
-  internal func handleMount(_ context: UIContext) -> Void {}
+  // Mounts this element, then its children. The one mount flow for every element kind;
+  // containers only differ in what `forEachChild` visits.
+  internal final func handleMount(_ context: UIContext) -> Void {
+    guard !self.mounted else { return }
+    self.mounted = true
+    self.mount(context)
+    self.onMount(context)
+
+    self.forEachChild { $0.handleMount(context) }
+  }
   
   /// The element's own unmount behaviour. The mirror of `mount(_:)`, and macro-owned in the same
   /// way. To run your own code on unmount, override `onUnmount(_:)` instead.
@@ -27,14 +35,17 @@ import simd
   /// Called just before this element unmounts, before its children do.
   open func onUnmount(_ context: UIContext) -> Void {}
 
-  internal func handleUnmount(_ context: UIContext) -> Void {}
-  
-  // Sets children from a builder closure, once. Builder content used to be a reaction that
-  // re-ran when a `State` it read changed; a `@Component`'s content is now generated straight
-  // into its `__build`, so nothing here re-evaluates.
-  public func setStaticContent(_ build: () -> [UIElementNode]) -> Void {
-    self.applyContent(DynamicContent.elements(build()))
+  internal final func handleUnmount(_ context: UIContext) -> Void {
+    guard self.mounted else { return }
+    self.mounted = false
+    self.onUnmount(context)
+    self.unmount(context)
+
+    self.forEachChild { $0.handleUnmount(context) }
   }
+
+  // Visits the current children. Leaves have none; containers override this.
+  internal func forEachChild(_ body: (UIElement) -> Void) -> Void {}
 
   // Applies content at construction time, before the element is mounted.
   internal func applyContent(_ elements: [UIElement]) -> Void {
@@ -53,12 +64,5 @@ import simd
     return .init()
   }
   
-  open func calcDepth(_ parentDepth: Int) -> Void {
-    self.depth = parentDepth
-  }
   open func calcPosition(_ position: float2) -> Void {}
-//  open func render(_ renderer: Graphics2D) -> Void {}
-  open func handleHitTest(_ input: Input) -> Bool {
-    return false
-  }
 }

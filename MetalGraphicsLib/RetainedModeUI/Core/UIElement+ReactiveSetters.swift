@@ -27,54 +27,54 @@ extension Background {
 extension Frame {
   public func setSize(_ value: float2, _ context: UIContext) -> Void {
     self.size = value
-    context.invalidate(layout: true)
+    context.invalidate(.layout)
   }
 
   public func setAlignment(_ value: Alignment, _ context: UIContext) -> Void {
     self.alignment = value
-    context.invalidate(layout: true)
+    context.invalidate(.layout)
   }
 }
 
 extension Padding {
   public func setInset(_ value: Inset, _ context: UIContext) -> Void {
     self.inset = value
-    context.invalidate(layout: true)
+    context.invalidate(.layout)
   }
 }
 
 extension VStack {
   public func setSpacing(_ value: Float, _ context: UIContext) -> Void {
     self.spacing = value
-    context.invalidate(layout: true)
+    context.invalidate(.layout)
   }
 
   public func setAlignment(_ value: HorizontalAlignment, _ context: UIContext) -> Void {
     self.alignment = value
-    context.invalidate(layout: true)
+    context.invalidate(.layout)
   }
 }
 
 extension HStack {
   public func setSpacing(_ value: Float, _ context: UIContext) -> Void {
     self.spacing = value
-    context.invalidate(layout: true)
+    context.invalidate(.layout)
   }
 
   public func setAlignment(_ value: VerticalAlignment, _ context: UIContext) -> Void {
     self.alignment = value
-    context.invalidate(layout: true)
+    context.invalidate(.layout)
   }
 }
 
 extension ExpandedFrame {
   public func setAxis(_ value: Axis, _ context: UIContext) -> Void {
     self.axis = value
-    context.invalidate(layout: true)
+    context.invalidate(.layout)
   }
 
   public func setAlignment(_ value: Alignment, _ context: UIContext) -> Void {
     self.alignment = value
-    context.invalidate(layout: true)
+    context.invalidate(.layout)
   }
 }

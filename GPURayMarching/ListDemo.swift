@@ -25,15 +25,13 @@ final class RowView : SingleChildElement {
     super.init()
   }
   
-  @UIElementBuilder var body: [UIElementNode] {
+  @UIElementBuilder var body: [UIElement] {
     Rectangle(self.hovered ? .black : self.item.color)
       .frame(width: 60, height: 24)
-      .onHover { [weak self] isHovered, _ in
-        self?.hovered = isHovered
+      .onHover { isHovered, _ in
+        self.hovered = isHovered
       }
-      .onTap { [weak self] _ in
-        guard let self else { return }
-
+      .onTap { _ in
         self.onRemove(self.item.id)
       }
   }
@@ -62,21 +60,21 @@ final class ListDemo : SingleChildElement {
 
   // Buttons are inlined: their colours are constant and they own no state, so there is
   // nothing for a nested component to hold.
-  @UIElementBuilder var body: [UIElementNode] {
+  @UIElementBuilder var body: [UIElement] {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 6) {
         Rectangle(.green).frame(width: 24, height: 24)
-          .onTap { [weak self] _ in self?.append() }
+          .onTap { _ in self.append() }
         Rectangle(.blue).frame(width: 24, height: 24)
-          .onTap { [weak self] _ in self?.insertFirst() }
+          .onTap { _ in self.insertFirst() }
         Rectangle(.red).frame(width: 24, height: 24)
-          .onTap { [weak self] _ in self?.removeLast() }
+          .onTap { _ in self.removeLast() }
         Rectangle(.black).frame(width: 24, height: 24)
-          .onTap { [weak self] _ in self?.shuffle() }
+          .onTap { _ in self.shuffle() }
         Rectangle(.white).frame(width: 24, height: 24)
-          .onTap { [weak self] _ in self?.clear() }
+          .onTap { _ in self.clear() }
         Rectangle(.init(0.5, 0.5, 0.5, 1)).frame(width: 24, height: 24)
-          .onTap { [weak self] _ in self?.toggleSpacing() }
+          .onTap { _ in self.toggleSpacing() }
       }
 
       // Read inside an element argument, so only this frame's size updates.

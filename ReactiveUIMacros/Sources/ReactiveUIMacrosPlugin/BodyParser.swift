@@ -140,7 +140,7 @@ struct BodyParser {
 
   // MARK: - Elements
 
-  /// F8/F9: things that are legal Swift but wrong in a component body.
+  /// F8: things that are legal Swift but wrong in a component body.
   /// Returns false when it reported an error, so parsing stops rather than generating
   /// code the user will never want.
   private func checkExpression(_ expr: ExprSyntax) -> Bool {
@@ -177,29 +177,20 @@ struct BodyParser {
     return checker.ok
   }
 
-  /// F9: `onTap`/`onHover` handlers are stored by the element they wrap, so capturing `self`
-  /// strongly makes the component outlive its tree. A warning, not an error — it is only a
-  /// leak, and a short-lived tree may not care.
+  /// The closure a handler modifier was given, for `__armHandlers` to assign later.
   ///
-  /// The suggested capture is `weak`, not `unowned`. A handler can outlive its component — a
-  /// list row removed while the pointer is inside it is the ordinary case — and `unowned` turns
-  /// that into a crash where `weak` makes it a no-op.
-  private func checkHandlerCapture(_ call: FunctionCallExprSyntax) {
-    let closures = [call.trailingClosure].compactMap { $0 }
-      + call.arguments.compactMap { $0.expression.as(ClosureExprSyntax.self) }
+  /// It is deliberately taken out of the chain rather than emitted with it. A handler captures
+  /// `self` strongly and the element stores it, so an emitted-in-place closure would make the
+  /// component reach itself and never deallocate. Assigning on mount and clearing on unmount
+  /// confines that loop to the window where the tree is live anyway — which is what lets a body
+  /// be written without a capture list.
+  private func handlerClosure(_ call: FunctionCallExprSyntax, _ spec: ModifierSpec) -> BoundHandler? {
+    guard let handler = spec.handler else { return nil }
+    let closure = call.trailingClosure
+      ?? call.arguments.compactMap { $0.expression.as(ClosureExprSyntax.self) }.first
+    guard let closure else { return nil }
 
-    for closure in closures {
-      let captures = closure.signature?.capture?.items ?? []
-      let capturesSelf = captures.contains { $0.trimmedDescription.contains("self") }
-      guard !capturesSelf, closure.description.contains("self") else { continue }
-
-      context.warning(
-        "F9",
-        "this handler is stored by the element, so capturing 'self' strongly creates a "
-          + "reference cycle. Add '[weak self]'.",
-        at: closure
-      )
-    }
+    return BoundHandler(property: handler.property, closure: ExprSyntax(closure))
   }
 
   private func parseElement(_ expr: ExprSyntax, path: String) -> ElementIR? {
@@ -287,12 +278,11 @@ struct BodyParser {
         )
         return nil
       }
-      if spec.setter == nil { checkHandlerCapture(call) }
       chain.append(
         ChainLink(
           field: Naming.node(path, offset + 1), local: Naming.local(path, offset + 1),
           type: spec.produces, kind: .modifier(call: call, spec: spec),
-          bound: parseModifierArgs(call, spec)
+          bound: parseModifierArgs(call, spec), handler: handlerClosure(call, spec)
         )
       )
     }

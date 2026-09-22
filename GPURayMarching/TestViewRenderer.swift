@@ -18,7 +18,7 @@ final class ToggleDemo : SingleChildElement {
   @State var color: float4 = .blue
   @State var isLoggedIn: Bool = false
 
-  @UIElementBuilder var body: [UIElementNode] {
+  @UIElementBuilder var body: [UIElement] {
     VStack(spacing: 10) {
       if self.isLoggedIn {
         Rectangle(.green)
@@ -29,11 +29,11 @@ final class ToggleDemo : SingleChildElement {
       }
       Rectangle(self.color)
         .frame(width: 100, height: 100)
-        .onHover { [weak self] hovered, _ in
-          self?.color = hovered ? .black : .blue
+        .onHover { hovered, _ in
+          self.color = hovered ? .black : .blue
         }
-        .onTap { [weak self] _ in
-          self?.isLoggedIn.toggle()
+        .onTap { _ in
+          self.isLoggedIn.toggle()
         }
     }
   }
@@ -50,8 +50,9 @@ class TestViewRenderer: ViewRenderer {
     self.root.setChild(
       VStack {
         HStack {
-          ListDemo()
-//          ToggleDemo()   // swap for ToggleDemo() to see the conditional-rendering demo
+          ConditionalDemo()
+//          ListDemo()     // swap in to see the collection demo
+//          ToggleDemo()   // the minimal if/else from docs/CompileTimeState.md
           Spacer()
         }
         Spacer()
@@ -75,26 +76,11 @@ class TestViewRenderer: ViewRenderer {
     guard let graphics = self.graphics2D else {
       return
     }
-    
-//    self.root.handleHitTest(self.input)
 
-    if self.input.mouseMoved || self.input.mousePressed {
-      self.uiContext.handleHitTest(self.hittableGrid2D, self.input, graphics)
-    }
+    self.uiContext.update(root: self.root, size: self.windowSize, input: self.input, graphics: graphics)
 
-    // Lay out after event handlers so state changes they make are laid out before this frame renders.
-    if self.uiContext.dirtyLayout {
-      self.root.size = self.windowSize
-      _ = self.root.calcSize(self.windowSize)
-      self.root.calcPosition(.init())
-
-      self.uiContext.dirtyGrid = true
-      self.uiContext.dirtyLayout = false
-    }
-    
     graphics.context(in: view) { _ in
-      self.uiContext.handleRenderableViews(graphics)
-      self.uiContext.dirtyRender = false
+      self.uiContext.render(root: self.root, graphics)
 //      self.root.render(graphics)
 //      let boxSize = float2(100, 100)
 //      let box = BoundingBox2D(center: float2() - self.graphics2D!.size * 0.5 + boxSize * 0.5, size: boxSize)

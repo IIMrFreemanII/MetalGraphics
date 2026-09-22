@@ -59,6 +59,11 @@ enum Naming {
     name.prefix(1).uppercased() + name.dropFirst()
   }
 
+  /// Handler arming. `@Component` assigns every `onTap`/`onHover` closure on mount and clears
+  /// them on unmount, so the strong `self` those closures capture only exists while the tree does.
+  static let armHandlers = "__armHandlers"
+  static let disarmHandlers = "__disarmHandlers"
+
   /// The component's captured `UIContext`, and the remount replay flag.
   static let context = "__context"
   static let needsRefresh = "__needsRefresh"

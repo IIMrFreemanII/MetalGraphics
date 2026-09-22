@@ -14,7 +14,7 @@ store plus a dirty flag.
 | `@Component` | same | Member + extension macro. Reads `body`, emits one field per node, `__build`, the branch machinery, `mount`/`unmount`, one `__update_<state>` per state, and mutation methods for each `@State` array. |
 | `ElementCatalog` | `Sources/ReactiveUIMacrosPlugin/ElementCatalog.swift` | Which constructor/modifier argument feeds which property. The macro resolves *spellings*, not types. |
 | `UIElement+ReactiveSetters.swift` | `RetainedModeUI/Core/` | `setColor`, `setSize`, `setSpacing`… Each one knows whether it invalidates layout or only render. |
-| `UIElementBuilder` | `RetainedModeUI/Core/` | Now only a type-checking surface for `body`, plus the builder for hand-written trees. |
+| `UIElementBuilder` | `RetainedModeUI/Core/` | Now only a type-checking surface for `body`, plus the builder for hand-written trees. Yields elements directly. |
 | `ListRows` | `RetainedModeUI/Layout/` | A row cache keyed by `T.ID`, plus the three doors a list is driven through. Memoization, not reactivity — it is told what changed, never asked. |
 
 ## 2. What a component looks like
@@ -25,7 +25,7 @@ final class ToggleDemo: SingleChildElement {
   @State var color: float4 = .blue
   @State var isLoggedIn: Bool = false
 
-  @UIElementBuilder var body: [UIElementNode] {
+  @UIElementBuilder var body: [UIElement] {
     VStack(spacing: 10) {
       if self.isLoggedIn {
         Rectangle(.green).frame(width: 100, height: 100)
@@ -34,16 +34,17 @@ final class ToggleDemo: SingleChildElement {
       }
       Rectangle(self.color)
         .frame(width: 100, height: 100)
-        .onHover { [weak self] hovered, _ in self?.color = hovered ? .black : .red }
-        .onTap   { [weak self] _ in self?.isLoggedIn.toggle() }
+        .onHover { hovered, _ in self.color = hovered ? .black : .red }
+        .onTap   { _ in self.isLoggedIn.toggle() }
     }
   }
 }
 ```
 
 `body` is **read but never executed**. It stays in the source so the declarative form still
-type-checks, which is why every element initializer keeps its `@autoclosure @escaping`
-signature. The macro emits straight-line construction instead.
+type-checks; the macro emits straight-line construction instead. Element initializers therefore
+take plain values, and no builder signature needs `@autoclosure`: nothing is deferred, so a
+builder run hands back the elements its expressions produced, in order and built exactly once.
 
 ## 3. What gets generated
 
@@ -159,7 +160,7 @@ its own state:
 final class RowView: SingleChildElement {
   let item: DemoItem
   @State var hovered: Bool = false
-  @UIElementBuilder var body: [UIElementNode] { … }
+  @UIElementBuilder var body: [UIElement] { … }
 }
 ```
 
@@ -177,12 +178,29 @@ From the outside `RowView(item:onRemove:)` is an ordinary constructor call, opaq
 | F6 | `@Component` on a non-class, or a missing/ill-formed `body` |
 | F7 | a component declaring `mount`/`unmount` — use `onMount`/`onUnmount` |
 | F8 | writing `self._color` in a body |
-| F9 | *(warning)* a stored handler capturing `self` strongly — the fix is `[weak self]` |
 | F10 | a list's `items:` that is not a direct `@State` array reference |
 | F11 | a generated mutation method colliding with one the component declares |
 
+F9 is retired, not missing: it warned that a handler capturing `self` strongly leaks, which stopped
+being true once the macro started clearing handlers on unmount. The numbers are not reused.
+
 F3 is worth calling out: under the old tracking system it failed **silently**, binding the
 value to the wrong tracker and leaving a stale element. It is now a compile error.
+
+Handlers are written with a plain strong `self` — no capture list. The closure is not emitted
+into `__build` with the rest of the chain: the element stores it, so an inline closure would make
+the component reachable from its own tree and neither would ever be released. Instead the chain is
+built with an empty placeholder of the right arity and the real closure is assigned in
+`__armHandlers`, called at the end of `mount` and again after a branch swap enters a new arm;
+`__disarmHandlers` nils them at the start of `unmount`. The cycle therefore exists only while the
+element is mounted, which is exactly when something above it is holding the subtree anyway. Both
+methods are omitted entirely from a component with no handlers.
+
+Two consequences worth knowing. A handler that arrives after its element unmounts is a no-op,
+because the property is nil — the same outcome `[weak self]` gave, reached differently. And an
+element built *outside* a `@Component` keeps whatever handler it was constructed with, since
+`HittableView.unmount` is not involved: a hand-built tree that captures `self` strongly in a
+handler still leaks, and nothing warns about it any more.
 
 F7's replacements are not macro output. `onMount(_:)` and `onUnmount(_:)` are `open` members of
 `UIElement`, called by its mount traversal, so they are reachable from the type: Xcode offers them
@@ -192,11 +210,12 @@ mount behaviour, which is what `@Component` generates and why writing one is F7.
 
 ## 8. How it lands on screen
 
-`TestViewRenderer.draw(in:)` runs, in order:
+`TestViewRenderer.draw(in:)` calls `UIContext.update` and then `UIContext.render`, which run, in order:
 
 1. **Hit-test** — handlers fire, so generated setters run synchronously here.
-2. **Layout if `dirtyLayout`**.
-3. **Render** the flat, depth-sorted renderable list.
+2. **Layout if `.layout` is pending** — setters and child changes call `invalidate(.layout)`.
+3. **Render** the registered renderables in paint order: tree pre-order, rebuilt only when
+   the tree or its layout changed.
 
 That order matters: laying out before hit-testing would draw an element mounted by `onTap` once
 before it had a position, and the UI would blink for one frame.

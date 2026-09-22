@@ -82,6 +82,7 @@
 		15A049E62C27149600D28009 /* Editor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049E52C27149600D28009 /* Editor.swift */; };
 		15A049E82C27163400D28009 /* Global.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049E72C27163400D28009 /* Global.swift */; };
 		15A1B2C42C147B0E00C56203 /* ListDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A1B2C32C147B0E00C56203 /* ListDemo.swift */; };
+		15A1B2C62C147B0E00C56203 /* ConditionalDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A1B2C52C147B0E00C56203 /* ConditionalDemo.swift */; };
 		15B5F055300AC32C00CFE193 /* SparseSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B5F054300AC32C00CFE193 /* SparseSet.swift */; };
 		15C91D362C1F1A1500A2857F /* Circle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D352C1F1A1500A2857F /* Circle.swift */; };
 		15C91D392C1F1B1B00A2857F /* Square.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D382C1F1B1B00A2857F /* Square.swift */; };
@@ -207,6 +208,7 @@
 		15A049E52C27149600D28009 /* Editor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Editor.swift; sourceTree = "<group>"; };
 		15A049E72C27163400D28009 /* Global.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Global.swift; sourceTree = "<group>"; };
 		15A1B2C32C147B0E00C56203 /* ListDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListDemo.swift; sourceTree = "<group>"; };
+		15A1B2C52C147B0E00C56203 /* ConditionalDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConditionalDemo.swift; sourceTree = "<group>"; };
 		15B5F054300AC32C00CFE193 /* SparseSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparseSet.swift; sourceTree = "<group>"; };
 		15C91D322C1EF88B00A2857F /* SDF.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = SDF.metal; sourceTree = "<group>"; };
 		15C91D352C1F1A1500A2857F /* Circle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Circle.swift; sourceTree = "<group>"; };
@@ -321,6 +323,7 @@
 				159419A62C147B0E00C56203 /* GPURayMarchingApp.swift */,
 				159419A82C147B0E00C56203 /* ContentView.swift */,
 				15A1B2C32C147B0E00C56203 /* ListDemo.swift */,
+				15A1B2C52C147B0E00C56203 /* ConditionalDemo.swift */,
 				159419AA2C147B0F00C56203 /* Assets.xcassets */,
 				159419AF2C147B0F00C56203 /* GPURayMarching.entitlements */,
 				159419AC2C147B0F00C56203 /* Preview Content */,
@@ -651,6 +654,7 @@
 			files = (
 				159419A92C147B0E00C56203 /* ContentView.swift in Sources */,
 				15A1B2C42C147B0E00C56203 /* ListDemo.swift in Sources */,
+				15A1B2C62C147B0E00C56203 /* ConditionalDemo.swift in Sources */,
 				15941A0D2C149DE300C56203 /* TestViewRenderer.swift in Sources */,
 				159419A72C147B0E00C56203 /* GPURayMarchingApp.swift in Sources */,
 				15941A1A2C15DD9200C56203 /* Shaders.metal in Sources */,

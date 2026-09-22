@@ -6,7 +6,6 @@ import SwiftUI
   public var metalView: MTKView!
   public var input: Input!
   public var graphics2D: Graphics2D?
-  public var hittableGrid2D: HittableGrid2D = .init(position: float2(), size: int2(10, 10), cellSize: Float(50))
   public let uiContext: UIContext = .init()
   @Published public var windowSize = float2()
   @Published public var mousePosition = float2()
@@ -118,25 +117,13 @@ extension ViewRenderer: MTKViewDelegate {
     }
     self.input.windowSize = windowSize
 
-    self.resizeHittableGrid(for: windowSize)
+    self.uiContext.resizeHitGrid(for: windowSize)
     self.resizeRenderGrid(for: windowSize)
   }
 
-  /// Both grids cover the window in cells of a fixed size, so a new window size means a new
-  /// cell count. Split out of `mtkView(_:drawableSizeWillChange:)` because the render grid
-  /// also has to be sized once more after `start()`, when `graphics2D` first exists.
-  func resizeHittableGrid(for windowSize: float2) {
-    let newGridSize = int2(floor(windowSize / hittableGrid2D.cellSize)) &+ 1
-    guard newGridSize.x > 0, newGridSize.y > 0, newGridSize != hittableGrid2D.cellCount else {
-      return
-    }
-
-    self.hittableGrid2D = .init(
-      position: hittableGrid2D.position, size: newGridSize, cellSize: hittableGrid2D.cellSize
-    )
-    self.uiContext.dirtyGrid = true
-  }
-
+  /// The render grid covers the window in cells of a fixed size, so a new window size means a
+  /// new cell count. Split out of `mtkView(_:drawableSizeWillChange:)` because it also has to be
+  /// sized once more after `start()`, when `graphics2D` first exists.
   func resizeRenderGrid(for windowSize: float2) {
     guard let graphics2D = self.graphics2D else { return }
 

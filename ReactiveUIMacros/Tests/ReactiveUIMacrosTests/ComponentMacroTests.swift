@@ -17,7 +17,7 @@ struct ComponentMacroTests {
         @State var color: float4 = .blue
         @State var isLoggedIn: Bool = false
 
-        @UIElementBuilder var body: [UIElementNode] {
+        @UIElementBuilder var body: [UIElement] {
           VStack(spacing: 10) {
             if self.isLoggedIn {
               Rectangle(.green)
@@ -28,7 +28,7 @@ struct ComponentMacroTests {
             }
             Rectangle(self.color)
               .frame(width: 100, height: 100)
-              .onTap { [weak self] _ in
+              .onTap { _ in
                 self.isLoggedIn.toggle()
               }
           }
@@ -40,7 +40,7 @@ struct ComponentMacroTests {
         @State var color: float4 = .blue
         @State var isLoggedIn: Bool = false
 
-        @UIElementBuilder var body: [UIElementNode] {
+        @UIElementBuilder var body: [UIElement] {
           VStack(spacing: 10) {
             if self.isLoggedIn {
               Rectangle(.green)
@@ -51,7 +51,7 @@ struct ComponentMacroTests {
             }
             Rectangle(self.color)
               .frame(width: 100, height: 100)
-              .onTap { [weak self] _ in
+              .onTap { _ in
                 self.isLoggedIn.toggle()
               }
           }
@@ -92,9 +92,11 @@ struct ComponentMacroTests {
               self.__needsRefresh = false
               self.__refreshAll()
             }
+            self.__armHandlers()
           }
 
           public override func unmount(_ context: UIContext) {
+            self.__disarmHandlers()
             self.__context = nil
           }
 
@@ -112,9 +114,8 @@ struct ComponentMacroTests {
             self.__n0_1a = n0_1a
             let n0_1b = n0_1a.frame(width: 100, height: 100)
             self.__n0_1b = n0_1b
-            let n0_1c = n0_1b.onTap { [weak self] _ in
-                    self.isLoggedIn.toggle()
-                  }
+            let n0_1c = n0_1b.onTap { _ in
+            }
             self.__n0_1c = n0_1c
             self.__applyChildren0(context)
             var root: [UIElement] = []
@@ -122,6 +123,16 @@ struct ComponentMacroTests {
                 root.append(e)
             }
             return root.first ?? EmptyElement()
+          }
+
+          private func __armHandlers() {
+            self.__n0_1c?.onTap = { _ in
+                    self.isLoggedIn.toggle()
+                  }
+          }
+
+          private func __disarmHandlers() {
+            self.__n0_1c?.onTap = nil
           }
 
           private func __applyChildrenRoot(_ context: UIContext) {
@@ -196,6 +207,7 @@ struct ComponentMacroTests {
             self.__tag0_0 = tag
             self.__slot0_0 = self.__enter0_0(tag, context)
             self.__leave0_0(previous)
+            self.__armHandlers()
             self.__applyChildren0(context)
           }
 
@@ -238,7 +250,7 @@ struct ComponentMacroTests {
         @State var a: float4 = .red
         @State var b: float4 = .blue
 
-        @UIElementBuilder var body: [UIElementNode] {
+        @UIElementBuilder var body: [UIElement] {
           Rectangle(self.isOn ? self.a : self.b)
         }
       }
@@ -249,7 +261,7 @@ struct ComponentMacroTests {
         @State var a: float4 = .red
         @State var b: float4 = .blue
 
-        @UIElementBuilder var body: [UIElementNode] {
+        @UIElementBuilder var body: [UIElement] {
           Rectangle(self.isOn ? self.a : self.b)
         }
 
@@ -349,7 +361,7 @@ struct ComponentMacroTests {
         @State var w: Float = 10
         @State var c: float4 = .red
 
-        @UIElementBuilder var body: [UIElementNode] {
+        @UIElementBuilder var body: [UIElement] {
           Rectangle(self.c)
             .frame(width: self.w, height: 100)
         }
@@ -360,7 +372,7 @@ struct ComponentMacroTests {
         @State var w: Float = 10
         @State var c: float4 = .red
 
-        @UIElementBuilder var body: [UIElementNode] {
+        @UIElementBuilder var body: [UIElement] {
           Rectangle(self.c)
             .frame(width: self.w, height: 100)
         }
@@ -432,6 +444,121 @@ struct ComponentMacroTests {
             }
             if let n = self.__n0a {
                 n.setColor(self._c, context)
+            }
+          }
+      }
+
+      extension C: ReactiveComponent {
+      }
+      """,
+      macros: ["Component": ComponentMacro.self]
+    )
+  }
+
+  // A handler is the one thing in a body that is *not* emitted with the chain. The closure
+  // captures `self` strongly and the element stores it, so emitting it in `__build` would leave
+  // the component reachable from its own tree for good. Instead the chain gets a placeholder of
+  // the right arity and the real closure is assigned on mount, cleared on unmount — which is what
+  // lets the body be written without `[weak self]`.
+  //
+  // What this pins: the placeholder in `__build`, the closure appearing exactly once (in
+  // `__armHandlers`), the nil-out in `__disarmHandlers`, and both call sites on the lifecycle.
+  @Test("a handler is armed on mount and cleared on unmount, not emitted into the chain")
+  func handlerArming() {
+    assertMacroExpansion(
+      """
+      @Component
+      final class C: SingleChildElement {
+        @State var color: float4 = .blue
+
+        @UIElementBuilder var body: [UIElement] {
+          Rectangle(self.color)
+            .onTap { _ in
+              self.color = .red
+            }
+        }
+      }
+      """,
+      expandedSource: """
+      final class C: SingleChildElement {
+        @State var color: float4 = .blue
+
+        @UIElementBuilder var body: [UIElement] {
+          Rectangle(self.color)
+            .onTap { _ in
+              self.color = .red
+            }
+        }
+
+          private var __context: UIContext? = nil
+
+          private var __needsRefresh: Bool = false
+
+          private var __built: Bool = false
+
+          private var __n0a: Rectangle? = nil
+
+          private var __n0b: HittableView? = nil
+
+          public override func mount(_ context: UIContext) {
+            self.__context = context
+            if !self.__built {
+              self.__built = true
+              self.setChild(self.__build(context), context)
+            } else if self.__needsRefresh {
+              self.__needsRefresh = false
+              self.__refreshAll()
+            }
+            self.__armHandlers()
+          }
+
+          public override func unmount(_ context: UIContext) {
+            self.__disarmHandlers()
+            self.__context = nil
+          }
+
+          private func __refreshAll() {
+            self.__update_color()
+          }
+
+          private func __build(_ context: UIContext) -> UIElement {
+            let n0a = Rectangle(self._color)
+            self.__n0a = n0a
+            let n0b = n0a.onTap { _ in
+            }
+            self.__n0b = n0b
+            var root: [UIElement] = []
+            if let e = self.__n0b {
+                root.append(e)
+            }
+            return root.first ?? EmptyElement()
+          }
+
+          private func __armHandlers() {
+            self.__n0b?.onTap = { _ in
+                  self.color = .red
+                }
+          }
+
+          private func __disarmHandlers() {
+            self.__n0b?.onTap = nil
+          }
+
+          private func __applyChildrenRoot(_ context: UIContext) {
+            var children: [UIElement] = []
+            if let e = self.__n0b {
+                children.append(e)
+            }
+            self.setChild(children.first ?? EmptyElement(), context)
+          }
+
+          private func __update_color() {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            if let n = self.__n0a {
+                n.setColor(self._color, context)
             }
           }
       }
