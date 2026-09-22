@@ -78,3 +78,16 @@ extension ExpandedFrame {
     context.invalidate(.layout)
   }
 }
+
+extension Text {
+  public func setText(_ value: String, _ context: UIContext) -> Void {
+    self.text = value
+    context.invalidate(.layout)
+  }
+
+  // The font and its size change the measured size, so any style change re-lays out.
+  public func setStyle(_ value: TextStyle, _ context: UIContext) -> Void {
+    self.style = value
+    context.invalidate(.layout)
+  }
+}

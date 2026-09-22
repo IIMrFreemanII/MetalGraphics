@@ -12,6 +12,7 @@ float4 select(float4 a, float4 b, bool t);
 float dot2(float2 v);
 float dot2(float3 v);
 float ndot(float2 a, float2 b);
+float cross2d(float2 a, float2 b);
 
 float remap(float value, float2 inputMinMax, float2 outputMinMax);
 float2 remap(float2 value, float2 inputMinMax, float2 outputMinMax);

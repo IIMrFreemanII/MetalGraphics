@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7E57A0012F00000000000101 /* SDFFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000001 /* SDFFont.swift */; };
+		7E57A0012F00000000000102 /* TextLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000002 /* TextLayout.swift */; };
+		7E57A0012F00000000000103 /* Text.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000003 /* Text.swift */; };
+		7E57A0012F00000000000104 /* GlyphSDF.metal in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000004 /* GlyphSDF.metal */; };
 		1AAA00042F00000100AAAAAA /* ReactiveUI in Frameworks */ = {isa = PBXBuildFile; productRef = 1AAA00022F00000100AAAAAA /* ReactiveUI */; };
 		150A31EB305F2D2500D14DEA /* CompileTimeState.md in Resources */ = {isa = PBXBuildFile; fileRef = 150A31E9305F2D2500D14DEA /* CompileTimeState.md */; };
 		1541F3E42D00F91500FE4873 /* UIContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1541F3E32D00F91000FE4873 /* UIContext.swift */; };
@@ -83,6 +87,10 @@
 		15A049E82C27163400D28009 /* Global.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A049E72C27163400D28009 /* Global.swift */; };
 		15A1B2C42C147B0E00C56203 /* ListDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A1B2C32C147B0E00C56203 /* ListDemo.swift */; };
 		15A1B2C62C147B0E00C56203 /* ConditionalDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A1B2C52C147B0E00C56203 /* ConditionalDemo.swift */; };
+		7E57A0012F00000000000105 /* TextDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000005 /* TextDemo.swift */; };
+		7E57A0012F00000000000106 /* ToggleDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000006 /* ToggleDemo.swift */; };
+		7E57A0012F00000000000107 /* Demos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000007 /* Demos.swift */; };
+		7E57A0012F00000000000108 /* LayoutDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000008 /* LayoutDemo.swift */; };
 		15B5F055300AC32C00CFE193 /* SparseSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B5F054300AC32C00CFE193 /* SparseSet.swift */; };
 		15C91D362C1F1A1500A2857F /* Circle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D352C1F1A1500A2857F /* Circle.swift */; };
 		15C91D392C1F1B1B00A2857F /* Square.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15C91D382C1F1B1B00A2857F /* Square.swift */; };
@@ -131,6 +139,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		7E57A0012F00000000000001 /* SDFFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDFFont.swift; sourceTree = "<group>"; };
+		7E57A0012F00000000000002 /* TextLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextLayout.swift; sourceTree = "<group>"; };
+		7E57A0012F00000000000003 /* Text.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Text.swift; sourceTree = "<group>"; };
+		7E57A0012F00000000000004 /* GlyphSDF.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = GlyphSDF.metal; sourceTree = "<group>"; };
 		150A31E9305F2D2500D14DEA /* CompileTimeState.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CompileTimeState.md; sourceTree = "<group>"; };
 		1541F3E32D00F91000FE4873 /* UIContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIContext.swift; sourceTree = "<group>"; };
 		157C8D612C484E33009CD7CE /* IMView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IMView.swift; sourceTree = "<group>"; };
@@ -209,6 +221,10 @@
 		15A049E72C27163400D28009 /* Global.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Global.swift; sourceTree = "<group>"; };
 		15A1B2C32C147B0E00C56203 /* ListDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListDemo.swift; sourceTree = "<group>"; };
 		15A1B2C52C147B0E00C56203 /* ConditionalDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConditionalDemo.swift; sourceTree = "<group>"; };
+		7E57A0012F00000000000005 /* TextDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextDemo.swift; sourceTree = "<group>"; };
+		7E57A0012F00000000000006 /* ToggleDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToggleDemo.swift; sourceTree = "<group>"; };
+		7E57A0012F00000000000007 /* Demos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Demos.swift; sourceTree = "<group>"; };
+		7E57A0012F00000000000008 /* LayoutDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutDemo.swift; sourceTree = "<group>"; };
 		15B5F054300AC32C00CFE193 /* SparseSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparseSet.swift; sourceTree = "<group>"; };
 		15C91D322C1EF88B00A2857F /* SDF.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = SDF.metal; sourceTree = "<group>"; };
 		15C91D352C1F1A1500A2857F /* Circle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Circle.swift; sourceTree = "<group>"; };
@@ -252,6 +268,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		7E57A0012F00000000000010 /* Text */ = {
+			isa = PBXGroup;
+			children = (
+				7E57A0012F00000000000001 /* SDFFont.swift */,
+				7E57A0012F00000000000002 /* TextLayout.swift */,
+			);
+			path = Text;
+			sourceTree = "<group>";
+		};
 		150A31EA305F2D2500D14DEA /* docs */ = {
 			isa = PBXGroup;
 			children = (
@@ -324,6 +349,10 @@
 				159419A82C147B0E00C56203 /* ContentView.swift */,
 				15A1B2C32C147B0E00C56203 /* ListDemo.swift */,
 				15A1B2C52C147B0E00C56203 /* ConditionalDemo.swift */,
+				7E57A0012F00000000000005 /* TextDemo.swift */,
+				7E57A0012F00000000000006 /* ToggleDemo.swift */,
+				7E57A0012F00000000000007 /* Demos.swift */,
+				7E57A0012F00000000000008 /* LayoutDemo.swift */,
 				159419AA2C147B0F00C56203 /* Assets.xcassets */,
 				159419AF2C147B0F00C56203 /* GPURayMarching.entitlements */,
 				159419AC2C147B0F00C56203 /* Preview Content */,
@@ -451,6 +480,7 @@
 				15A049DD2C24B21800D28009 /* Utils.metal */,
 				15A049DF2C24B22500D28009 /* Utils.h */,
 				15C91D3C2C1F350200A2857F /* Shaders.metal */,
+				7E57A0012F00000000000004 /* GlyphSDF.metal */,
 			);
 			path = Shaders;
 			sourceTree = "<group>";
@@ -459,6 +489,7 @@
 			isa = PBXGroup;
 			children = (
 				15C91D372C1F1ADA00A2857F /* Shapes2D */,
+				7E57A0012F00000000000010 /* Text */,
 				15C91D3A2C1F1B9F00A2857F /* Graphics2D.swift */,
 			);
 			path = 2D;
@@ -520,6 +551,7 @@
 			children = (
 				5A7E00072E0000000000000E /* UIRenderableElement.swift */,
 				157C8D9B2C5188FC009CD7CE /* Rectangle.swift */,
+				7E57A0012F00000000000003 /* Text.swift */,
 				157C8D8D2C504CF7009CD7CE /* Background.swift */,
 			);
 			path = Renderable;
@@ -655,6 +687,10 @@
 				159419A92C147B0E00C56203 /* ContentView.swift in Sources */,
 				15A1B2C42C147B0E00C56203 /* ListDemo.swift in Sources */,
 				15A1B2C62C147B0E00C56203 /* ConditionalDemo.swift in Sources */,
+				7E57A0012F00000000000105 /* TextDemo.swift in Sources */,
+				7E57A0012F00000000000106 /* ToggleDemo.swift in Sources */,
+				7E57A0012F00000000000107 /* Demos.swift in Sources */,
+				7E57A0012F00000000000108 /* LayoutDemo.swift in Sources */,
 				15941A0D2C149DE300C56203 /* TestViewRenderer.swift in Sources */,
 				159419A72C147B0E00C56203 /* GPURayMarchingApp.swift in Sources */,
 				15941A1A2C15DD9200C56203 /* Shaders.metal in Sources */,
@@ -671,6 +707,10 @@
 				159419EE2C1490B700C56203 /* ViewRenderer.swift in Sources */,
 				157C8D782C4E9501009CD7CE /* NumberField.swift in Sources */,
 				15C91D3D2C1F350200A2857F /* Shaders.metal in Sources */,
+				7E57A0012F00000000000101 /* SDFFont.swift in Sources */,
+				7E57A0012F00000000000102 /* TextLayout.swift in Sources */,
+				7E57A0012F00000000000103 /* Text.swift in Sources */,
+				7E57A0012F00000000000104 /* GlyphSDF.metal in Sources */,
 				159419F92C14917A00C56203 /* String.swift in Sources */,
 				15A049E82C27163400D28009 /* Global.swift in Sources */,
 				15A049DE2C24B21800D28009 /* Utils.metal in Sources */,

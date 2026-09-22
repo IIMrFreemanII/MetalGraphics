@@ -8,7 +8,7 @@ public struct Number2Field<T: SIMDScalar> : View {
   
   public var body: some View {
     SwiftUI.VStack(alignment: .leading, spacing: 4) {
-      Text(label)
+      SwiftUI.Text(label)
         .font(.title3)
       SwiftUI.HStack {
         NumberField(label: "X", value: $value.x)

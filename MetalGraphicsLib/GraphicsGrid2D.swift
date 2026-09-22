@@ -4,6 +4,7 @@ enum ShapeType2D: Int32 {
   case Circle
   case Square
   case Line
+  case Glyph
 }
 
 struct Shape {
@@ -130,10 +131,22 @@ struct GridArgBuffer {
   }
 
   public func mapShapeBoundingBoxToGrid(_ box: BoundingBox2D, _ shape: Shape) {
+    // `StepSequence` never terminates on NaN or infinite bounds.
+    guard
+      box.center.x.isFinite, box.center.y.isFinite, box.size.x.isFinite, box.size.y.isFinite
+    else {
+      return
+    }
+
     let gridTopLeft = self.bounds.topLeft
     let gridBottomRight = self.bounds.bottomRight
-    let boxTopLeft = box.topLeft
-    let boxBottomRight = box.bottomRight
+    // Only the part inside the grid can land in a cell. Clamping also keeps a huge box from
+    // stepping in increments too small to change its float coordinate.
+    let boxTopLeft = float2(max(box.topLeft.x, gridTopLeft.x), min(box.topLeft.y, gridTopLeft.y))
+    let boxBottomRight = float2(min(box.bottomRight.x, gridBottomRight.x), max(box.bottomRight.y, gridBottomRight.y))
+    guard boxTopLeft.x <= boxBottomRight.x, boxBottomRight.y <= boxTopLeft.y else {
+      return
+    }
 
     var prevY = Int(-1)
     for y in StepSequence(from: boxBottomRight.y, to: boxTopLeft.y, step: self.cellSize) {

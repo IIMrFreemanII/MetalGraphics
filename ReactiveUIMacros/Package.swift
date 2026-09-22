@@ -10,7 +10,10 @@ let package = Package(
     .library(name: "ReactiveUI", targets: ["ReactiveUI"]),
   ],
   dependencies: [
-    .package(url: "https://github.com/swiftlang/swift-syntax.git", "603.0.0" ..< "605.0.0"),
+    // Pinned to the newest release that has a prebuilt for the current toolchain (Swift 6.4,
+    // Xcode 27 beta); 603/604 have none, so they compile from source: ~3.5 min per clean
+    // Release build. Bump once download.swift.org/prebuilts/swift-syntax/<ver>/ has one.
+    .package(url: "https://github.com/swiftlang/swift-syntax.git", exact: "602.0.0"),
   ],
   targets: [
     // The compiler plugin. Builds for the host, never linked into the app.

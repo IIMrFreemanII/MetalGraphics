@@ -24,7 +24,7 @@ import SwiftUI
   
   public var navigationView: some View {
     List {
-      Text("Navigation")
+      SwiftUI.Text("Navigation")
         .font(.title)
     }
   }
@@ -32,14 +32,14 @@ import SwiftUI
   public var inspectorView: some View {
     SwiftUI.HStack(spacing: 0) {
       SwiftUI.VStack(alignment: .leading) {
-        Text("Inspector")
+        SwiftUI.Text("Inspector")
           .font(.title)
         Divider()
-        Text("Window size: \(String(describing: self.windowSize).split(separator: ">").last!)")
+        SwiftUI.Text("Window size: \(String(describing: self.windowSize).split(separator: ">").last!)")
         Divider()
         Number2Field(label: "Position:", value: Binding(get: {self.temp}, set: { self.temp = $0 }))
         Divider()
-        Text("Mouse position: \(String(describing: self.mousePosition).split(separator: ">").last!)")
+        SwiftUI.Text("Mouse position: \(String(describing: self.mousePosition).split(separator: ">").last!)")
         SwiftUI.Spacer()
       }
       SwiftUI.Spacer()

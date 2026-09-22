@@ -9,6 +9,9 @@ private struct ShapeArgBuffer {
 
   var lines: UInt64 = 0
   var linesCount: Int32 = 0
+
+  var glyphs: UInt64 = 0
+  var glyphsCount: Int32 = 0
 }
 
 public struct DebugData {
@@ -52,6 +55,7 @@ public struct SceneData {
     self.circleBuffer = self.device.makeBuffer(length: MemoryLayout<Circle>.stride * 1)
     self.squareBuffer = self.device.makeBuffer(length: MemoryLayout<Square>.stride * 1)
     self.lineBuffer = self.device.makeBuffer(length: MemoryLayout<Line>.stride * 1)
+    self.glyphBuffer = self.device.makeBuffer(length: MemoryLayout<Glyph>.stride * 1)
 
     do {
       guard let kernel = self.library.makeFunction(name: "compute2D")
@@ -83,13 +87,22 @@ public struct SceneData {
   private var lineBuffer: MTLBuffer!
   private var lineBufferCount: Int = 0
 
+  private var glyphs: [Glyph] = []
+  private var glyphBuffer: MTLBuffer!
+  private var glyphBufferCount: Int = 0
+
   public var sceneData = SceneData()
+  /// Drawable pixels per point, the ratio `compute2D` maps pixels to points with.
+  private(set) var pixelsPerPoint: Float = 1
+  // Reported once, so a persistent GPU error doesn't flood the console every frame.
+  private var reportedFrameError = false
 
   func beginFrame() {
     self.depth = 0
     self.circles.removeAll(keepingCapacity: true)
     self.squares.removeAll(keepingCapacity: true)
     self.lines.removeAll(keepingCapacity: true)
+    self.glyphs.removeAll(keepingCapacity: true)
   }
 
   func endFrame() {
@@ -108,6 +121,9 @@ public struct SceneData {
     }
     for (i, item) in self.lines.enumerated() {
       self.grid.mapShapeBoundingBoxToGrid(item.bounds, Shape(index: Int32(i), shapeType: ShapeType2D.Line.rawValue))
+    }
+    for (i, item) in self.glyphs.enumerated() {
+      self.grid.mapShapeBoundingBoxToGrid(item.bounds, Shape(index: Int32(i), shapeType: ShapeType2D.Glyph.rawValue))
     }
 
     self.grid.updateBuffers()
@@ -142,6 +158,16 @@ public struct SceneData {
       self.lineBuffer.contents().copyMemory(from: &self.lines, byteCount: self.lines.byteCount)
     }
 
+    do {
+      if self.glyphBufferCount < self.glyphs.count {
+        self.glyphBufferCount += self.glyphs.count + 10
+        self.glyphBuffer = self.device.makeBuffer(length: MemoryLayout<Glyph>.stride * self.glyphBufferCount)
+        self.glyphBuffer.label = "Glyph buffer"
+      }
+
+      self.glyphBuffer.contents().copyMemory(from: &self.glyphs, byteCount: self.glyphs.byteCount)
+    }
+
     let shapeArgPointer = self.shapeArgBuffer.contents().bindMemory(to: ShapeArgBuffer.self, capacity: 1)
     shapeArgPointer.pointee.circles = self.circleBuffer.gpuAddress
     shapeArgPointer.pointee.circlesCount = Int32(self.circles.count)
@@ -149,6 +175,8 @@ public struct SceneData {
     shapeArgPointer.pointee.squaresCount = Int32(self.squares.count)
     shapeArgPointer.pointee.lines = self.lineBuffer.gpuAddress
     shapeArgPointer.pointee.linesCount = Int32(self.lines.count)
+    shapeArgPointer.pointee.glyphs = self.glyphBuffer.gpuAddress
+    shapeArgPointer.pointee.glyphsCount = Int32(self.glyphs.count)
 
     self.renderer.input.endFrame()
   }
@@ -156,17 +184,24 @@ public struct SceneData {
   func drawData(at view: MTKView) {
     guard
       let commandBuffer = self.commandQueue.makeCommandBuffer(),
-      let drawable = view.currentDrawable,
-      let commandEncoder = commandBuffer.makeComputeCommandEncoder()
+      let drawable = view.currentDrawable
     else {
       return
     }
+    // Glyphs first laid out this frame are baked before `compute2D` samples the atlas.
+    FontManager.shared.encodePendingBakes(into: commandBuffer)
+    guard let commandEncoder = commandBuffer.makeComputeCommandEncoder() else {
+      // the bakes are already dequeued, so they still have to run
+      commandBuffer.commit()
+      return
+    }
 
-    commandEncoder.useResources([self.grid.cellBuffer, self.grid.shapeBuffer, self.circleBuffer, self.squareBuffer, self.lineBuffer], usage: .read)
+    commandEncoder.useResources([self.grid.cellBuffer, self.grid.shapeBuffer, self.circleBuffer, self.squareBuffer, self.lineBuffer, self.glyphBuffer], usage: .read)
 
     commandEncoder.setComputePipelineState(self.pipelineState)
     let texture = drawable.texture
     commandEncoder.setTexture(texture, index: 0)
+    commandEncoder.setTexture(FontManager.shared.atlasTexture, index: 1)
 
     self.sceneData.windowSize = SIMD2<Int32>(Int32(self.renderer.windowSize.x), Int32(self.renderer.windowSize.y))
     self.sceneData.time = self.renderer.time
@@ -197,6 +232,11 @@ public struct SceneData {
 
     commandBuffer.commit()
     commandBuffer.waitUntilCompleted()
+
+    if commandBuffer.status == .error, !self.reportedFrameError {
+      self.reportedFrameError = true
+      print("2D frame failed on the GPU: \(commandBuffer.error.map(String.init(describing:)) ?? "unknown error")")
+    }
   }
 
   func getDepth(of shape: Shape) -> Float {
@@ -207,6 +247,8 @@ public struct SceneData {
       self.squares[Int(shape.index)].depth
     case .Line:
       self.lines[Int(shape.index)].depth
+    case .Glyph:
+      self.glyphs[Int(shape.index)].depth
     default:
       fatalError("Unsupported Shape: \(shape)")
     }
@@ -214,6 +256,9 @@ public struct SceneData {
 
   public func context(in view: MTKView, _ cb: (Rect) -> Void) {
     let windowRect = Rect(position: float2(), size: self.renderer.windowSize)
+    if self.renderer.windowSize.x > 0, view.drawableSize.width > 0 {
+      self.pixelsPerPoint = Float(view.drawableSize.width) / self.renderer.windowSize.x
+    }
 
     self.beginFrame()
     cb(windowRect)
@@ -240,6 +285,49 @@ public struct SceneData {
     var temp = line
     temp.depth = self.depth
     self.lines.append(temp)
+    self.depth += 1
+  }
+
+  /// Draws `text` with its top left corner at `position`, and returns the size it occupies.
+  /// All of its glyphs share one depth, so the text as a whole sits above earlier draws.
+  @discardableResult
+  public func draw(text: String, at position: float2, style: TextStyle = TextStyle(), maxSize: float2? = nil) -> float2 {
+    let layout = layoutText(text, style: style, maxSize: maxSize)
+    self.draw(textLayout: layout, at: position, color: style.color)
+
+    return layout.size
+  }
+
+  /// Draws a layout made by `layoutText` with its top left corner at `position`.
+  public func draw(textLayout layout: TextLayout, at position: float2, color: float4) {
+    let fontSize = layout.fontSize
+    // Baselines land between two rows of pixel samples, so a flat glyph edge covers whole rows
+    // instead of blurring across two. `compute2D` samples pixel `gid` at
+    // `(gid - drawableSize / 2) / pixelsPerPoint`.
+    let halfWindow = self.size.y * 0.5
+    let snapToPixelEdge = { (y: Float) -> Float in
+      (((y + halfWindow) * self.pixelsPerPoint).rounded(.down) + 0.5) / self.pixelsPerPoint - halfWindow
+    }
+
+    for line in layout.lines {
+      let baseline = snapToPixelEdge(position.y + line.baseline)
+      for glyph in line.glyphs {
+        let metrics = glyph.metrics
+        let topLeft = float2(
+          position.x + glyph.origin.x + metrics.boundsMin.x * fontSize,
+          baseline - glyph.origin.y - metrics.boundsMax.y * fontSize
+        )
+        self.glyphs.append(Glyph(
+          position: topLeft,
+          size: (metrics.boundsMax - metrics.boundsMin) * fontSize,
+          uvMin: metrics.uvMin,
+          uvMax: metrics.uvMax,
+          color: color,
+          depth: self.depth,
+          fontSize: fontSize
+        ))
+      }
+    }
     self.depth += 1
   }
 }

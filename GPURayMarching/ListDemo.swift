@@ -3,6 +3,7 @@ import ReactiveUI
 
 struct DemoItem : Identifiable {
   let id = UUID()
+  let name: String
   let color: float4
 }
 
@@ -25,9 +26,14 @@ final class RowView : SingleChildElement {
     super.init()
   }
   
+  private static let labelStyle = TextStyle(color: .white, fontSize: 12)
+
+  // The label is a reactive argument too: hovering swaps it for the action a tap takes, and the
+  // hover survives a shuffle because the row keeps its element.
   @UIElementBuilder var body: [UIElement] {
-    Rectangle(self.hovered ? .black : self.item.color)
-      .frame(width: 60, height: 24)
+    Text(self.hovered ? "remove" : self.item.name, style: Self.labelStyle)
+      .frame(width: 80, height: 24)
+      .background(self.hovered ? .black : self.item.color)
       .onHover { isHovered, _ in
         self.hovered = isHovered
       }
@@ -40,22 +46,26 @@ final class RowView : SingleChildElement {
 // Shows how state reaches the screen: one @State array drives both lists, rows keep their own
 // state across a shuffle, and values read inside element arguments update without a rebuild.
 //
-// Buttons, left to right: green appends, blue inserts at the front, red removes the last row,
-// black shuffles (same items, new order), white clears, grey toggles the spacing.
+// A shuffle keeps the same items in a new order; tapping a row removes it.
 @Component
 final class ListDemo : SingleChildElement {
-  private static let palette: [float4] = [
-    .red, .green, .blue,
-    .init(1, 0.8, 0.2, 1),    // amber
-    .init(0.6, 0.3, 0.9, 1),  // purple
-    .init(0.2, 0.8, 0.8, 1),  // teal
+  private static let palette: [(name: String, color: float4)] = [
+    ("red", .red),
+    ("green", .init(0.1, 0.6, 0.2, 1)),
+    ("blue", .blue),
+    ("amber", .init(0.85, 0.6, 0.1, 1)),
+    ("purple", .init(0.6, 0.3, 0.9, 1)),
+    ("teal", .init(0.1, 0.6, 0.6, 1)),
   ]
+  private static let buttonStyle = TextStyle(color: .white, fontSize: 13)
+  private static let buttonInset = Inset(vertical: 4, horizontal: 8)
+  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
 
   @State var spacing: Float = 6
   @State var items: [DemoItem] = [
-    .init(color: .red),
-    .init(color: .green),
-    .init(color: .blue),
+    ListDemo.makeItem(0),
+    ListDemo.makeItem(1),
+    ListDemo.makeItem(2),
   ]
 
   // Buttons are inlined: their colours are constant and they own no state, so there is
@@ -63,19 +73,33 @@ final class ListDemo : SingleChildElement {
   @UIElementBuilder var body: [UIElement] {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 6) {
-        Rectangle(.green).frame(width: 24, height: 24)
+        Text("Append", style: Self.buttonStyle)
+          .padding(Self.buttonInset)
+          .background(Self.buttonColor)
           .onTap { _ in self.append() }
-        Rectangle(.blue).frame(width: 24, height: 24)
+        Text("Insert first", style: Self.buttonStyle)
+          .padding(Self.buttonInset)
+          .background(Self.buttonColor)
           .onTap { _ in self.insertFirst() }
-        Rectangle(.red).frame(width: 24, height: 24)
+        Text("Remove last", style: Self.buttonStyle)
+          .padding(Self.buttonInset)
+          .background(Self.buttonColor)
           .onTap { _ in self.removeLast() }
-        Rectangle(.black).frame(width: 24, height: 24)
+        Text("Shuffle", style: Self.buttonStyle)
+          .padding(Self.buttonInset)
+          .background(Self.buttonColor)
           .onTap { _ in self.shuffle() }
-        Rectangle(.white).frame(width: 24, height: 24)
+        Text("Clear", style: Self.buttonStyle)
+          .padding(Self.buttonInset)
+          .background(Self.buttonColor)
           .onTap { _ in self.clear() }
-        Rectangle(.init(0.5, 0.5, 0.5, 1)).frame(width: 24, height: 24)
+        Text("Spacing", style: Self.buttonStyle)
+          .padding(Self.buttonInset)
+          .background(Self.buttonColor)
           .onTap { _ in self.toggleSpacing() }
       }
+
+      Text("\(self.items.count) items, spacing \(Int(self.spacing))")
 
       // Read inside an element argument, so only this frame's size updates.
       Rectangle(.blue)
@@ -91,7 +115,7 @@ final class ListDemo : SingleChildElement {
 
       // Read in a condition, so emptying the collection swaps this branch in.
       if self.items.isEmpty {
-        Rectangle(.green).frame(width: 60, height: 60)
+        Text("No items. Press Append.", style: TextStyle(color: .init(0.45, 0.45, 0.45, 1), fontSize: 14))
       }
     }
   }
@@ -103,15 +127,21 @@ final class ListDemo : SingleChildElement {
   // an append becomes one `insertChild` in each list, where a plain `self.items = …` would
   // have to rebuild every row.
 
+  private static func makeItem(_ paletteIndex: Int) -> DemoItem {
+    let entry = Self.palette[paletteIndex % Self.palette.count]
+    return DemoItem(name: entry.name, color: entry.color)
+  }
+
   func append() {
-    self.items.append(.init(color: Self.palette.randomElement() ?? .red))
+    self.items.append(Self.makeItem(Int.random(in: 0..<Self.palette.count)))
   }
 
   func insertFirst() {
-    self.items.insert(.init(color: Self.palette.randomElement() ?? .red), at: 0)
+    self.items.insert(Self.makeItem(Int.random(in: 0..<Self.palette.count)), at: 0)
   }
 
   func removeLast() {
+    guard !self.items.isEmpty else { return }
     self.items.removeLast()
   }
 

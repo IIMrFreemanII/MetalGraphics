@@ -27,15 +27,9 @@ public class ExpandedFrame : SingleChildElement {
   
   public override func calcSize(_ availableSize: float2) -> float2 {
     let contentSize = child?.calcSize(availableSize) ?? availableSize
-    var size = float2()
-    
-    if axis.horizontal == 1, axis.vertical == 1 {
-      size = availableSize
-    } else {
-      size += availableSize * axis.size
-      size += contentSize * axis.inverted
-    }
-    
+    // the offered size along the expanded axes, the content's size along the others
+    let size = availableSize * axis.size + contentSize * (1 - axis.size)
+
     self.size = size
     
     return size

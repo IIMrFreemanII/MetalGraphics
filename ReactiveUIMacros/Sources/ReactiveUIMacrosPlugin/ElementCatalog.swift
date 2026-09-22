@@ -144,6 +144,11 @@ enum ElementCatalog {
              ArgSpec("items", "setItems"), ArgSpec("onCreate", nil)],
       arity: .leaf, takesContent: false, genericOverItemsOf: "items"
     ),
+    "Text": TypeSpec(
+      name: "Text",
+      args: [ArgSpec(nil, "setText"), ArgSpec("style", "setStyle")],
+      arity: .leaf
+    ),
     "Spacer": TypeSpec(name: "Spacer", args: [], arity: .leaf),
     "EmptyElement": TypeSpec(name: "EmptyElement", args: [], arity: .leaf),
   ]
