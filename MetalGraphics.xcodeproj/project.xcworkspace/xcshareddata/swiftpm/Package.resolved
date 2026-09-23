@@ -1,13 +1,13 @@
 {
-  "originHash" : "5328906535f4952f04c3661500cdbdb546a4e62c9e49f530edde11b68256527b",
+  "originHash" : "49dbc53789cd7c41dd6957a454a2c1473a33c00e556d19f0f750f4b8e87577fc",
   "pins" : [
     {
-      "identity" : "runtime",
+      "identity" : "swift-syntax",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/wickwirew/Runtime.git",
+      "location" : "https://github.com/swiftlang/swift-syntax.git",
       "state" : {
-        "revision" : "b90e9ab1c66a964a9edf32fe38ea2774c0e5821b",
-        "version" : "2.2.7"
+        "revision" : "4799286537280063c85a32f09884cfbca301b1a1",
+        "version" : "602.0.0"
       }
     }
   ],

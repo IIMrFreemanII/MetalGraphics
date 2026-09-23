@@ -6,15 +6,14 @@ public class ExpandedFrame : SingleChildElement {
   
   private var size: float2 = .init()
   
-  public init(_ axis: @autoclosure @escaping () -> Axis, _ alignment: @autoclosure @escaping () -> Alignment = .center, @UIElementBuilder content: @escaping () -> [UIElementNode] = { [] }) {
-    self.axis = DependencyTracker.untracked(axis)
-    self.alignment = DependencyTracker.untracked(alignment)
-    
+  public init(_ axis: Axis, _ alignment: Alignment = .center, @UIElementBuilder content: () -> [UIElement] = { [] }) {
+    // These are non-optional stored properties, so they must be set before `super.init`.
+    self.axis = axis
+    self.alignment = alignment
+
     super.init()
-    
-    self.bind(\.axis, to: axis, layout: true)
-    self.bind(\.alignment, to: alignment, layout: true)
-    self.setContent(content)
+
+    self.applyContent(content())
   }
   
   public override func getSize() -> float2 {
@@ -28,15 +27,9 @@ public class ExpandedFrame : SingleChildElement {
   
   public override func calcSize(_ availableSize: float2) -> float2 {
     let contentSize = child?.calcSize(availableSize) ?? availableSize
-    var size = float2()
-    
-    if axis.horizontal == 1, axis.vertical == 1 {
-      size = availableSize
-    } else {
-      size += availableSize * axis.size
-      size += contentSize * axis.inverted
-    }
-    
+    // the offered size along the expanded axes, the content's size along the others
+    let size = availableSize * axis.size + contentSize * (1 - axis.size)
+
     self.size = size
     
     return size
@@ -48,7 +41,7 @@ public class ExpandedFrame : SingleChildElement {
       let availableSize = max(self.size - childSize, float2())
       let offset = lerp(min: float2(), max: availableSize, t: self.alignment.offset)
       
-      child.calcPosition(position + offset)
+      self.place(child, at: position + offset, in: position)
     }
   }
 }

@@ -35,8 +35,8 @@ public struct NumberField<T : SIMDScalar> : View {
   public var body: some View {
     SwiftUI.VStack(spacing: 0) {
       SwiftUI.HStack(spacing: 0) {
-        Text(self.label)
-        Text(" ")
+        SwiftUI.Text(self.label)
+        SwiftUI.Text(" ")
         TextField("", text: $text, onEditingChanged: { _ in validateNumber() })
           .textFieldStyle(.roundedBorder)
           .background(RoundedRectangle(cornerRadius: 5)

@@ -10,13 +10,13 @@ public class HStack : MultiChildElement {
     .init(contentWidth, maxHeight)
   }
   
-  public init(alignment: @autoclosure @escaping () -> VerticalAlignment = .center, spacing: @autoclosure @escaping () -> Float = 0, @UIElementBuilder content: @escaping () -> [UIElementNode] = { [] }) {
+  public init(alignment: VerticalAlignment = .center, spacing: Float = 0, @UIElementBuilder content: () -> [UIElement] = { [] }) {
     super.init()
     
-    self.bind(\.alignment, to: alignment, layout: true)
-    self.bind(\.spacing, to: spacing, layout: true)
+    self.alignment = alignment
+    self.spacing = spacing
     
-    self.setContent(content)
+    self.applyContent(content())
   }
   
   public override func getSize() -> float2 {
@@ -41,7 +41,7 @@ public class HStack : MultiChildElement {
       self.maxHeight = maxHeight
     }
     
-    for child in self.children {
+    for child in self.children where !child.isLeaving {
       let childSize = child.calcSize(availableSize)
       contentWidth += childSize.x + spacing
       maxHeight = max(maxHeight, childSize.y)
@@ -66,7 +66,7 @@ public class HStack : MultiChildElement {
   public override func calcPosition(_ position: float2) {
     var xOffset = position.x
     
-    for child in self.children {
+    for child in self.children where !child.isLeaving {
       if child is Spacer {
         xOffset += self.spacerSize
         continue
@@ -78,7 +78,8 @@ public class HStack : MultiChildElement {
       let result = SIMD2<Float>(xOffset, yOffset)
       xOffset += childSize.x + self.spacing
       
-      child.calcPosition(result)
+      self.place(child, at: result, in: position)
     }
+    self.placeLeaving(in: position)
   }
 }

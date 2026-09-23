@@ -1,59 +1,37 @@
-public class HittableView: SingleChildElement, @MainActor Identifiable {
-  public var id: UInt
+public class HittableView: SingleChildElement {
   public var position: SIMD2<Float> = .init()
   public var size: SIMD2<Float> = .init()
   public var isHovered: Bool = false
   
-  let onTap: ((Input) -> Void)?
-  let onHover: ((Bool, Input) -> Void)?
+  /// Settable, and cleared while unmounted.
+  ///
+  /// A handler written in a `@Component` body captures `self` strongly, so the component reaches
+  /// itself through the element that stores it. `@Component` breaks that loop by arming these on
+  /// mount and clearing them on unmount, which is why they are `var` rather than the `let` the
+  /// initializer would suggest. An element built by hand keeps whatever it was constructed with.
+  public var onTap: ((Input) -> Void)?
+  public var onHover: ((Bool, Input) -> Void)?
   
   public override func mount(_ context: UIContext) {
     context.registerHittableView(self)
   }
   
   public override func unmount(_ context: UIContext) {
+    // Cleared so a remount starts neutral. `ListRows` reuses a row's element across a reorder,
+    // and an element unmounted mid-hover would otherwise come back believing it is still
+    // hovered, and never fire `onHover(true)` again until the pointer left and re-entered.
+    self.isHovered = false
+    
     context.unregisterHittableView(self)
   }
   
-  init(onTap: ((Input) -> Void)? = nil, onHover: ((Bool, Input) -> Void)? = nil, @UIElementBuilder content: @escaping () -> [UIElementNode]) {
+  init(onTap: ((Input) -> Void)? = nil, onHover: ((Bool, Input) -> Void)? = nil, @UIElementBuilder content: () -> [UIElement]) {
     self.onTap = onTap
     self.onHover = onHover
-    self.id = .random(in: .min ... .max)
     
     super.init()
     
-    self.setContent(content)
-  }
-  
-  func handleEvents(_ result: Bool, _ input: Input) {
-    if result && !self.isHovered {
-      self.isHovered = true
-      self.onHover?(self.isHovered, input)
-    } else if !result && self.isHovered {
-      self.isHovered = false
-      self.onHover?(self.isHovered, input)
-    }
-    if result && input.mouseDown {
-      self.onTap?(input)
-    }
-  }
-  
-  @discardableResult
-  public override func handleHitTest(_ input: Input) -> Bool {
-    let childResult = self.child?.handleHitTest(input) ?? false
-    
-    if childResult {
-      self.handleEvents(true, input)
-      return true
-    }
-    
-    // test hit
-    // origin -> top left
-    let newPosition = self.position
-    let result = pointInAABBoxTopLeftOrigin(point: input.mousePosition, position: newPosition, size: self.size)
-    self.handleEvents(result, input)
-
-    return result
+    self.applyContent(content())
   }
   
   public override func getSize() -> float2 {
@@ -71,9 +49,5 @@ public class HittableView: SingleChildElement, @MainActor Identifiable {
     self.position = position
     
     child?.calcPosition(position)
-  }
-  
-  public override func calcDepth(_ parentDepth: Int) {
-    self.depth = parentDepth + 1
   }
 }

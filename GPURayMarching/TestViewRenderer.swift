@@ -1,69 +1,17 @@
 import MetalGraphicsLib
 import MetalKit
 import Combine
-
-struct Item: Identifiable {
-  var id: Int
-  var color: float4
-  
-  init(_ color: float4) {
-    self.id = Int.random(in: Int.min...Int.max)
-    self.color = color
-  }
-}
-
-class ToggleDemo : SingleChildElement {
-  @State var color: float4 = .blue
-  @State var isLoggedIn = false
-  
-  override func mount(_ context: UIContext) {
-    
-    self.setChild(
-      VStack(spacing: 10) {
-        if self.isLoggedIn {
-          Rectangle(.green)
-            .frame(width: 100, height: 100)
-        } else {
-          Rectangle(.red)
-            .frame(width: 100, height: 100)
-        }
-        Rectangle(self.color)
-          .frame(width: 100, height: 100)
-          .onHover { hovered, _ in
-            self.color = hovered ? .black : .red
-          }
-          .onTap { _ in
-            self.isLoggedIn.toggle()
-          }
-      },
-      context
-    )
-  }
-  
-  override func unmount(_ context: UIContext) {
-  }
-}
+import ReactiveUI
 
 class TestViewRenderer: ViewRenderer {
   let root = Frame(float2())
-  
+
   override func start() {
     self.graphics2D = Graphics2D(renderer: self)
     
     self.root.mounted = true
     
-    self.root.setChild(
-      VStack {
-        HStack {
-          CounterDemo()
-//          ListDemo()   // swap for Counter() to see the conditional-rendering demo
-          Spacer()
-        }
-        Spacer()
-      },
-      self.uiContext
-    )
-    //    }
+    self.root.setChild(Demos(), self.uiContext)
   }
   
   //  override func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
@@ -80,26 +28,22 @@ class TestViewRenderer: ViewRenderer {
     guard let graphics = self.graphics2D else {
       return
     }
-    
-//    self.root.handleHitTest(self.input)
 
-    if self.input.mouseMoved || self.input.mousePressed {
-      self.uiContext.handleHitTest(self.hittableGrid2D, self.input, graphics)
+    self.uiContext.update(root: self.root, size: self.windowSize, input: self.input, graphics: graphics)
+
+    // Nothing changed since the last frame, so there is nothing new to present: the layer keeps
+    // showing the last drawable. A running animation keeps `needsRender` set every frame.
+    //
+    // The input's per-frame state (clicks, deltas, keys) is normally reset at the end of the
+    // drawn frame; a skipped frame has to reset it too, or a click would still read as pressed
+    // on every frame after it.
+    guard self.uiContext.needsRender else {
+      self.input.endFrame()
+      return
     }
 
-    // Lay out after event handlers so state changes they make are laid out before this frame renders.
-    if self.uiContext.dirtyLayout {
-      self.root.size = self.windowSize
-      _ = self.root.calcSize(self.windowSize)
-      self.root.calcPosition(.init())
-
-      self.uiContext.dirtyGrid = true
-      self.uiContext.dirtyLayout = false
-    }
-    
     graphics.context(in: view) { _ in
-      self.uiContext.handleRenderableViews(graphics)
-      self.uiContext.dirtyRender = false
+      self.uiContext.render(root: self.root, graphics)
 //      self.root.render(graphics)
 //      let boxSize = float2(100, 100)
 //      let box = BoundingBox2D(center: float2() - self.graphics2D!.size * 0.5 + boxSize * 0.5, size: boxSize)

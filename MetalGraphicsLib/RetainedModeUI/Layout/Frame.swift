@@ -4,12 +4,12 @@ public class Frame : SingleChildElement {
   public var size: float2 = .init()
   public var alignment: Alignment = .center
   
-  public init(_ size: @autoclosure @escaping () -> float2, _ alignment: @autoclosure @escaping () -> Alignment = .center, @UIElementBuilder content: @escaping () -> [UIElementNode] = { [] }) {
+  public init(_ size: float2, _ alignment: Alignment = .center, @UIElementBuilder content: () -> [UIElement] = { [] }) {
     super.init()
     
-    self.bind(\.size, to: size, layout: true)
-    self.bind(\.alignment, to: alignment, layout: true)
-    self.setContent(content)
+    self.size = size
+    self.alignment = alignment
+    self.applyContent(content())
   }
   
   public override func debugHierarchy(_ offset: String) {
@@ -35,7 +35,7 @@ public class Frame : SingleChildElement {
       let availableSize = max(self.size - childSize, float2())
       let offset = lerp(min: float2(), max: availableSize, t: self.alignment.offset)
       
-      child.calcPosition(position + offset)
+      self.place(child, at: position + offset, in: position)
     }
   }
 }

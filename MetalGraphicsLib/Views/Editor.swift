@@ -135,7 +135,7 @@ public struct Editor: View {
     .toolbar {
       ToolbarItem {
         Button(action: {
-          withAnimation {
+          SwiftUI.withAnimation {
             self.showDetails.toggle()
           }
         }) {

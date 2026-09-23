@@ -1,108 +1,181 @@
 import MetalGraphicsLib
+import ReactiveUI
 
 struct DemoItem : Identifiable {
   let id = UUID()
+  let name: String
   let color: float4
 }
 
-// Shows how state reaches the screen: collection changes drive both lists, rows keep their own
+// One row, as its own component.
+//
+// Rows cannot be inlined into `onCreate`: a row owns state (`hovered`) and state needs an owner
+// the macro can generate against. Extracting it into a nested `@Component` is the sanctioned
+// factoring — from `ListDemo`'s side `RowView(item:onRemove:)` is just a constructor call, and
+// `RowView` resolves its own reactivity at compile time.
+@Component
+final class RowView : SingleChildElement {
+  let item: DemoItem
+  let onRemove: (DemoItem.ID) -> Void
+
+  @State var hovered: Bool = false
+
+  init(item: DemoItem, onRemove: @escaping (DemoItem.ID) -> Void) {
+    self.item = item
+    self.onRemove = onRemove
+    super.init()
+  }
+  
+  private static let labelFont = TextFont.system(size: 12)
+
+  // The label is a reactive argument too: hovering swaps it for the action a tap takes, and the
+  // hover survives a shuffle because the row keeps its element.
+  @UIElementBuilder var body: [UIElement] {
+    Text(self.hovered ? "remove" : self.item.name)
+      .font(Self.labelFont)
+      .foregroundColor(.white)
+      .frame(width: 80, height: 24)
+      .background(self.hovered ? .black : self.item.color)
+      .onHover { isHovered, _ in
+        self.hovered = isHovered
+      }
+      .onTap { _ in
+        self.onRemove(self.item.id)
+      }
+  }
+}
+
+// Shows how state reaches the screen: one @State array drives both lists, rows keep their own
 // state across a shuffle, and values read inside element arguments update without a rebuild.
 //
-// Buttons, left to right: green appends, blue inserts at the front, red removes the last row,
-// black shuffles (same items, new order), white clears, grey toggles the spacing.
+// A shuffle keeps the same items in a new order; tapping a row removes it.
+@Component
 final class ListDemo : SingleChildElement {
-  private static let palette: [float4] = [
-    .red, .green, .blue,
-    .init(1, 0.8, 0.2, 1),    // amber
-    .init(0.6, 0.3, 0.9, 1),  // purple
-    .init(0.2, 0.8, 0.8, 1),  // teal
+  private static let palette: [(name: String, color: float4)] = [
+    ("red", .red),
+    ("green", .init(0.1, 0.6, 0.2, 1)),
+    ("blue", .blue),
+    ("amber", .init(0.85, 0.6, 0.1, 1)),
+    ("purple", .init(0.6, 0.3, 0.9, 1)),
+    ("teal", .init(0.1, 0.6, 0.6, 1)),
+  ]
+  private static let buttonFont = TextFont.system(size: 13)
+  private static let buttonInset = Inset(vertical: 4, horizontal: 8)
+  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
+
+  @State var spacing: Float = 6
+  @State var items: [DemoItem] = [
+    ListDemo.makeItem(0),
+    ListDemo.makeItem(1),
+    ListDemo.makeItem(2),
   ]
 
-  @State private var spacing: Float = 6
-  private let items = ObservableCollection<DemoItem>([
-    .init(color: .red),
-    .init(color: .green),
-    .init(color: .blue),
-  ])
+  // Buttons are inlined: their colours are constant and they own no state, so there is
+  // nothing for a nested component to hold.
+  @UIElementBuilder var body: [UIElement] {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(spacing: 6) {
+        Text("Append")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
+          .padding(Self.buttonInset)
+          .background(Self.buttonColor)
+          .onTap { _ in self.append() }
+        Text("Insert first")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
+          .padding(Self.buttonInset)
+          .background(Self.buttonColor)
+          .onTap { _ in self.insertFirst() }
+        Text("Remove last")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
+          .padding(Self.buttonInset)
+          .background(Self.buttonColor)
+          .onTap { _ in self.removeLast() }
+        Text("Shuffle")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
+          .padding(Self.buttonInset)
+          .background(Self.buttonColor)
+          .onTap { _ in self.shuffle() }
+        Text("Clear")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
+          .padding(Self.buttonInset)
+          .background(Self.buttonColor)
+          .onTap { _ in self.clear() }
+        Text("Spacing")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
+          .padding(Self.buttonInset)
+          .background(Self.buttonColor)
+          .onTap { _ in self.toggleSpacing() }
+      }
 
-  override func mount(_ context: UIContext) {
-    super.mount(context)
+      Text("\(self.items.count) items, spacing \(Int(self.spacing))")
 
-    self.setChild(
-      VStack(alignment: .leading, spacing: 12) {
-        HStack(spacing: 6) {
-          self.button(.green) { self.append() }
-          self.button(.blue) { self.insertFirst() }
-          self.button(.red) { self.removeLast() }
-          self.button(.black) { self.shuffle() }
-          self.button(.white) { self.clear() }
-          self.button(.init(0.5, 0.5, 0.5, 1)) { self.toggleSpacing() }
-        }
+      // Read inside an element argument, so only this frame's size updates.
+      Rectangle(.blue)
+        .frame(width: Float(self.items.count) * 24, height: 6)
 
-        // Width is read inside an element argument, so only this frame updates; the
-        // surrounding builder never re-runs.
-        Rectangle(.blue)
-          .frame(width: Float(self.items.collection.count) * 24, height: 6)
+      // Two lists over one collection; both follow every change.
+      VList(spacing: self.spacing, items: self.items) { item in
+        RowView(item: item, onRemove: { id in self.remove(id) })
+      }
+//      HList(spacing: self.spacing, items: self.items) { item in
+//        RowView(item: item, onRemove: { id in self.remove(id) })
+//      }
 
-        // Two lists over one collection; both follow every change.
-        VList(spacing: self.spacing, items: self.items) { item in
-          self.row(item)
-        }
-        HList(spacing: self.spacing, items: self.items) { item in
-          self.row(item)
-        }
-
-        // Read in the builder body, so emptying the collection re-runs the builder.
-        if self.items.collection.isEmpty {
-          Rectangle(.green).frame(width: 60, height: 60)
-        }
-      },
-      context
-    )
+      // Read in a condition, so emptying the collection swaps this branch in.
+      if self.items.isEmpty {
+        Text("No items. Press Append.")
+          .font(.system(size: 14))
+          .foregroundColor(.init(0.45, 0.45, 0.45, 1))
+      }
+    }
   }
 
   // MARK: - Actions
 
+  // `appendItems` / `insertItems` / `removeItems` / `replaceItems` are generated by
+  // @Component from `@State var items`. They exist so the call site can name the operation:
+  // an append becomes one `insertChild` in each list, where a plain `self.items = …` would
+  // have to rebuild every row.
+
+  private static func makeItem(_ paletteIndex: Int) -> DemoItem {
+    let entry = Self.palette[paletteIndex % Self.palette.count]
+    return DemoItem(name: entry.name, color: entry.color)
+  }
+
   func append() {
-    self.items.append(.init(color: Self.palette.randomElement() ?? .red))
+    self.items.append(Self.makeItem(Int.random(in: 0..<Self.palette.count)))
   }
 
   func insertFirst() {
-    self.items.insert(.init(color: Self.palette.randomElement() ?? .red), at: 0)
+    self.items.insert(Self.makeItem(Int.random(in: 0..<Self.palette.count)), at: 0)
   }
 
   func removeLast() {
-    self.items.remove(at: self.items.items.count - 1)
+    guard !self.items.isEmpty else { return }
+    self.items.removeLast()
   }
 
-  // Same items in a new order: every row keeps its element, and with it its hover state.
+  func remove(_ id: DemoItem.ID) {
+    self.items.removeAll(where: { $0.id == id })
+  }
+
+  // A reorder is not an incremental operation, so this takes the full-rebuild path \u{2014} and
+  // every row still keeps its element, and with it its own state, through `elementsById`.
   func shuffle() {
-    self.items.replaceAll(self.items.items.shuffled())
+    self.items = self.items.shuffled()
   }
 
   func clear() {
-    self.items.replaceAll([])
+    self.items.removeAll(keepingCapacity: true)
   }
 
   func toggleSpacing() {
     self.spacing = self.spacing == 6 ? 20 : 6
-  }
-
-  // MARK: - Pieces
-
-  private func button(_ color: float4, _ action: @escaping () -> Void) -> UIElement {
-    Rectangle(color)
-      .frame(width: 24, height: 24)
-      .onTap { _ in action() }
-  }
-
-  private func row(_ item: DemoItem) -> UIElement {
-    // State per row, owned by the row's element; it survives shuffles and remounts.
-    let hovered = State(false)
-
-    return Rectangle(hovered.wrappedValue ? .black : item.color)
-      .frame(width: 60, height: 24)
-      .onHover { isHovered, _ in hovered.value = isHovered }
-      .onTap { _ in self.items.remove(with: item.id) }
   }
 }

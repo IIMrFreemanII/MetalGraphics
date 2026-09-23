@@ -16,6 +16,7 @@ float4 select(float4 a, float4 b, bool t) {
 float dot2(float2 v ) { return dot(v,v); }
 float dot2(float3 v ) { return dot(v,v); }
 float ndot(float2 a, float2 b ) { return a.x*b.x - a.y*b.y; }
+float cross2d(float2 a, float2 b ) { return a.x*b.y - a.y*b.x; }
 
 float remap(float value, float2 inputMinMax, float2 outputMinMax) {
   return outputMinMax.x + (outputMinMax.y - outputMinMax.x) * ((value - inputMinMax.x) / (inputMinMax.y - inputMinMax.x));
