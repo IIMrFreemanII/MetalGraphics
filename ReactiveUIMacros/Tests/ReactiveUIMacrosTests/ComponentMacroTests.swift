@@ -577,4 +577,252 @@ struct ComponentMacroTests {
       macros: ["Component": ComponentMacro.self]
     )
   }
+
+
+  // An `else if` is a branch inside the else arm of another, in the same container. When the
+  // inner one swaps on its own, the outer one's slot must be re-read before the container is
+  // re-applied, or the old arm comes back.
+  @Test("else if: a nested swap re-reads the enclosing branch's slot")
+  func elseIfChain() {
+    assertMacroExpansion(
+      """
+      @Component
+      final class Phases: SingleChildElement {
+        @State var phase: Int = 0
+
+        @UIElementBuilder var body: [UIElement] {
+          VStack {
+            if self.phase == 0 {
+              Rectangle(.red)
+            } else if self.phase == 1 {
+              Rectangle(.green)
+            } else {
+              Rectangle(.blue)
+            }
+          }
+        }
+      }
+      """,
+      expandedSource: """
+      final class Phases: SingleChildElement {
+        @State var phase: Int = 0
+
+        @UIElementBuilder var body: [UIElement] {
+          VStack {
+            if self.phase == 0 {
+              Rectangle(.red)
+            } else if self.phase == 1 {
+              Rectangle(.green)
+            } else {
+              Rectangle(.blue)
+            }
+          }
+        }
+
+          private var __context: UIContext? = nil
+
+          private var __needsRefresh: Bool = false
+
+          private var __built: Bool = false
+
+          private var __n0a: VStack? = nil
+
+          private var __n0_0_0_0a: Rectangle? = nil
+
+          private var __n0_0_1_0_0_0a: Rectangle? = nil
+
+          private var __n0_0_1_0_1_0a: Rectangle? = nil
+
+          private var __tag0_0: Int = -1
+
+          private var __slot0_0: [UIElement] = []
+
+          private var __tag0_0_1_0: Int = -1
+
+          private var __slot0_0_1_0: [UIElement] = []
+
+          public override func mount(_ context: UIContext) {
+            self.__context = context
+            if !self.__built {
+              self.__built = true
+              self.setChild(self.__build(context), context)
+            } else if self.__needsRefresh {
+              self.__needsRefresh = false
+              self.__refreshAll()
+            }
+          }
+
+          public override func unmount(_ context: UIContext) {
+            self.__context = nil
+          }
+
+          private func __refreshAll() {
+            self.__update_phase(false)
+          }
+
+          private func __build(_ context: UIContext) -> UIElement {
+            let n0a = VStack ()
+            self.__n0a = n0a
+            self.__tag0_0 = self.__evalTag0_0()
+            self.__slot0_0 = self.__enter0_0(self.__tag0_0, context)
+            self.__applyChildren0(context, animation: nil)
+            var root: [UIElement] = []
+            if let e = self.__n0a {
+                root.append(e)
+            }
+            return root.first ?? EmptyElement()
+          }
+
+          private func __applyChildrenRoot(_ context: UIContext, animation: UIAnimation?) {
+            var children: [UIElement] = []
+            if let e = self.__n0a {
+                children.append(e)
+            }
+            self.setChild(children.first ?? EmptyElement(), context, animation: animation)
+          }
+
+          private func __applyChildren0(_ context: UIContext, animation: UIAnimation?) {
+            var children: [UIElement] = []
+            children.append(contentsOf: self.__slot0_0)
+            if let owner = self.__n0a {
+                owner.replaceChildren(children, context, animation: animation)
+            }
+          }
+
+          private func __evalTag0_0() -> Int {
+            (self._phase == 0) ? 0 : 1
+          }
+
+          private func __enter0_0(_ tag: Int, _ context: UIContext) -> [UIElement] {
+            switch tag {
+            case 0:
+              let n0_0_0_0a = Rectangle(.red)
+              self.__n0_0_0_0a = n0_0_0_0a
+              var elements: [UIElement] = []
+              if let e = self.__n0_0_0_0a {
+                  elements.append(e)
+              }
+              return elements
+            case 1:
+              self.__tag0_0_1_0 = self.__evalTag0_0_1_0()
+              self.__slot0_0_1_0 = self.__enter0_0_1_0(self.__tag0_0_1_0, context)
+              var elements: [UIElement] = []
+              elements.append(contentsOf: self.__slot0_0_1_0)
+              return elements
+            default:
+              return []
+            }
+          }
+
+          private func __leave0_0(_ tag: Int) {
+            switch tag {
+            case 0:
+              self.__n0_0_0_0a = nil
+            case 1:
+              self.__tag0_0_1_0 = -1
+              self.__slot0_0_1_0 = []
+              self.__n0_0_1_0_0_0a = nil
+              self.__n0_0_1_0_1_0a = nil
+            default:
+              break
+            }
+          }
+
+          private func __recollect0_0() -> [UIElement] {
+            switch self.__tag0_0 {
+            case 0:
+              var elements: [UIElement] = []
+              if let e = self.__n0_0_0_0a {
+                  elements.append(e)
+              }
+              return elements
+            case 1:
+              var elements: [UIElement] = []
+              elements.append(contentsOf: self.__slot0_0_1_0)
+              return elements
+            default:
+              return []
+            }
+          }
+
+          private func __swap0_0(_ context: UIContext, animation: UIAnimation?) {
+            let tag = self.__evalTag0_0()
+            guard tag != self.__tag0_0 else {
+              return
+            }
+            let previous = self.__tag0_0
+            self.__tag0_0 = tag
+            self.__slot0_0 = self.__enter0_0(tag, context)
+            self.__leave0_0(previous)
+            self.__applyChildren0(context, animation: animation)
+          }
+
+          private func __evalTag0_0_1_0() -> Int {
+            (self._phase == 1) ? 0 : 1
+          }
+
+          private func __enter0_0_1_0(_ tag: Int, _ context: UIContext) -> [UIElement] {
+            switch tag {
+            case 0:
+              let n0_0_1_0_0_0a = Rectangle(.green)
+              self.__n0_0_1_0_0_0a = n0_0_1_0_0_0a
+              var elements: [UIElement] = []
+              if let e = self.__n0_0_1_0_0_0a {
+                  elements.append(e)
+              }
+              return elements
+            case 1:
+              let n0_0_1_0_1_0a = Rectangle(.blue)
+              self.__n0_0_1_0_1_0a = n0_0_1_0_1_0a
+              var elements: [UIElement] = []
+              if let e = self.__n0_0_1_0_1_0a {
+                  elements.append(e)
+              }
+              return elements
+            default:
+              return []
+            }
+          }
+
+          private func __leave0_0_1_0(_ tag: Int) {
+            switch tag {
+            case 0:
+              self.__n0_0_1_0_0_0a = nil
+            case 1:
+              self.__n0_0_1_0_1_0a = nil
+            default:
+              break
+            }
+          }
+
+          private func __swap0_0_1_0(_ context: UIContext, animation: UIAnimation?) {
+            let tag = self.__evalTag0_0_1_0()
+            guard tag != self.__tag0_0_1_0 else {
+              return
+            }
+            let previous = self.__tag0_0_1_0
+            self.__tag0_0_1_0 = tag
+            self.__slot0_0_1_0 = self.__enter0_0_1_0(tag, context)
+            self.__leave0_0_1_0(previous)
+            self.__slot0_0 = self.__recollect0_0()
+            self.__applyChildren0(context, animation: animation)
+          }
+
+          private func __update_phase(_ animated: Bool = true) {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            let transaction = animated ? UITransaction.animation : nil
+            self.__swap0_0(context, animation: transaction)
+            self.__swap0_0_1_0(context, animation: transaction)
+          }
+      }
+
+      extension Phases: ReactiveComponent {
+      }
+      """,
+      macros: ["Component": ComponentMacro.self]
+    )
+  }
 }

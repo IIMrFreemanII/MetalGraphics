@@ -18,9 +18,9 @@
     "semantic_hash": "9deb2ada1cc834bbebf8bbad9c8978a1"
   },
   "GPURayMarching/ConditionalDemo.swift": {
-    "mtime": 1790116476.6583064,
-    "seen": 1790116738.724235,
-    "ast_hash": "c49bbdf816bb6a9896e62b960664bc3a",
+    "mtime": 1790198783.3182983,
+    "seen": 1790198977.696503,
+    "ast_hash": "ff67428b2e241616700a7bc7b43b8358",
     "semantic_hash": ""
   },
   "GPURayMarching/ContentView.swift": {
@@ -36,9 +36,9 @@
     "semantic_hash": "4859bfdd180455a28840e65d2da1900c"
   },
   "GPURayMarching/ListDemo.swift": {
-    "mtime": 1790116500.7076826,
-    "seen": 1790116738.7242382,
-    "ast_hash": "cc589e242e51df05c8380ddebf870ccf",
+    "mtime": 1790198783.3186805,
+    "seen": 1790198977.696508,
+    "ast_hash": "5a6adf5f5c1984a4c803de78350bdfcb",
     "semantic_hash": ""
   },
   "GPURayMarching/Preview Content/Preview Assets.xcassets/Contents.json": {
@@ -372,9 +372,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Core/UIElement+ReactiveSetters.swift": {
-    "mtime": 1790197456.5742254,
-    "seen": 1790197946.014475,
-    "ast_hash": "e460b2f18a7bbc880604ac73ad47c523",
+    "mtime": 1790198726.7975664,
+    "seen": 1790198977.696566,
+    "ast_hash": "46c24a48607e212c9920007454505203",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Core/UIElement.swift": {
@@ -468,9 +468,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Renderable/Text.swift": {
-    "mtime": 1790197443.0375671,
-    "seen": 1790197946.0144892,
-    "ast_hash": "5a92134aff570574312afdf877b4d57f",
+    "mtime": 1790198726.797337,
+    "seen": 1790198977.6965802,
+    "ast_hash": "f506cdd107cb6c985048c594f8f26ce8",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Renderable/UIRenderableElement.swift": {
@@ -624,9 +624,9 @@
     "semantic_hash": "9bf2fdae0d26927b4742b7ac8b8a26d0"
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/BodyParser.swift": {
-    "mtime": 1790197518.7150934,
-    "seen": 1790197946.014512,
-    "ast_hash": "f77f8aaf5b555e32ca2e6e1a5fee161b",
+    "mtime": 1790198847.020648,
+    "seen": 1790198977.6966069,
+    "ast_hash": "e549383632182d745c9408e7c5f8acb4",
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/CodeGen.swift": {
@@ -654,9 +654,9 @@
     "semantic_hash": "851a425431ab876a65ad81689c026419"
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/ElementCatalog.swift": {
-    "mtime": 1790197518.7145019,
-    "seen": 1790197946.014517,
-    "ast_hash": "86f60da71b84feb9bb58c02d66b27383",
+    "mtime": 1790198726.7977269,
+    "seen": 1790198977.6966121,
+    "ast_hash": "be2171dd93f32cd65fb7fa0270d3aa73",
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/IR.swift": {
@@ -714,9 +714,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/docs/CompileTimeState.md": {
-    "mtime": 1790197930.3460104,
-    "seen": 1790197946.01453,
-    "ast_hash": "2279c81e8c1640969e9c7d8f5888405f",
+    "mtime": 1790198975.9956503,
+    "seen": 1790198977.696625,
+    "ast_hash": "c752f76c5560f91751dc01d444aeac1c",
     "semantic_hash": ""
   },
   ".claude/settings.json": {
@@ -732,33 +732,27 @@
     "semantic_hash": ""
   },
   "GPURayMarching/TextDemo.swift": {
-    "mtime": 1790116523.2126584,
-    "seen": 1790116738.724242,
-    "ast_hash": "8f6893304b50bf8cb3b479a41ca93a00",
+    "mtime": 1790198788.2528331,
+    "seen": 1790198977.696512,
+    "ast_hash": "8d7af7328f70fa1044b423649f41f847",
     "semantic_hash": ""
   },
   "GPURayMarching/Demos.swift": {
-    "mtime": 1790194117.1928866,
-    "seen": 1790194175.860208,
-    "ast_hash": "e982b0764edfa33a4f1ea75b03916e85",
-    "semantic_hash": ""
-  },
-  "GPURayMarching/ToggleDemo.swift": {
-    "mtime": 1790117642.3357656,
-    "seen": 1790117816.2980201,
-    "ast_hash": "e534c31ea598b58ce65bc28c7fd330f2",
+    "mtime": 1790198749.4455905,
+    "seen": 1790198977.696505,
+    "ast_hash": "658f72d4760d2b0cf52eb7e727430623",
     "semantic_hash": ""
   },
   "GPURayMarching/LayoutDemo.swift": {
-    "mtime": 1790118182.3284495,
-    "seen": 1790118202.51363,
-    "ast_hash": "c381e680e137ac17e7f4b6b4f51c081b",
+    "mtime": 1790198800.6321838,
+    "seen": 1790198977.696507,
+    "ast_hash": "8e54289ff5921777820ec0e4bdad74cb",
     "semantic_hash": ""
   },
   "GPURayMarching/AnimationDemo.swift": {
-    "mtime": 1790197877.761672,
-    "seen": 1790197946.014405,
-    "ast_hash": "258f8ef447c0bb6fc492208b4f038bfc",
+    "mtime": 1790198814.011207,
+    "seen": 1790198977.696498,
+    "ast_hash": "bc71f313030d5c2193764983567e9b18",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Animation/Animator.swift": {
@@ -804,9 +798,9 @@
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Tests/ReactiveUIMacrosTests/AnimationMacroTests.swift": {
-    "mtime": 1790197587.0203505,
-    "seen": 1790197946.014522,
-    "ast_hash": "8b67a7ade9cd9819c4fd7969ca152866",
+    "mtime": 1790198891.9732742,
+    "seen": 1790198977.696617,
+    "ast_hash": "1554f4a2357d1f3074546cd2e2cc7642",
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Tests/ReactiveUIMacrosTests/MacroAssertions.swift": {
@@ -828,9 +822,9 @@
     "semantic_hash": ""
   },
   ".claude/skills/drive-app/SKILL.md": {
-    "mtime": 1790195631.5921738,
-    "seen": 1790195644.495936,
-    "ast_hash": "666f60cf71b0218430034d581ab4fc37",
+    "mtime": 1790197955.255289,
+    "seen": 1790198977.696623,
+    "ast_hash": "c72bca94782615e9bdd2e8453051aef0",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Animation/UIKeyframe.swift": {

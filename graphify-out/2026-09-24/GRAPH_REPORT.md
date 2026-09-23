@@ -1,13 +1,13 @@
 # Graph Report - MetalGraphics  (2026-09-24)
 
 ## Corpus Check
-- 140 files · ~63,112 words
+- 139 files · ~63,309 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: (none) 4, .plist 3, .resolved 2)
 
 ## Summary
-- 1714 nodes · 3759 edges · 116 communities (102 shown, 14 thin omitted)
-- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 296 edges (avg confidence: 0.85)
+- 1706 nodes · 3741 edges · 104 communities (92 shown, 12 thin omitted)
+- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 287 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
@@ -16,13 +16,13 @@
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- Text
+- TransitionElement
 - Input
-- float2
+- Text
 - Int
 - BoundingBox2D
 - DiagnosticsTests
-- Foundation
+- int2
 - Animator
 - Ray-Marching Shader
 - SIMD2
@@ -30,14 +30,13 @@
 - .isBetween
 - GlyphSDF.metal
 - MathLib.swift
-- .invalidate
+- UIAnimation
 - IMView
 - .expansion
 - Alignment
 - IMView
 - BodyParser
 - float2x2
-- UIAnimation
 - WindowState
 - Graphics2D
 - String
@@ -53,7 +52,6 @@
 - Kind
 - MyMTKView
 - LayoutDemo
-- ListRows
 - float3
 - HList
 - Metal Math Helpers
@@ -68,7 +66,7 @@
 - SDF.swift
 - HStack
 - VStack
-- AnimationDemo
+- float4
 - MetalViewRepresentable
 - ExpandedFrame Element
 - ListDemo
@@ -88,34 +86,29 @@
 - Macro Package Manifest
 - Line
 - FlexFrame
-- TextDemo
-- 1. The pieces
+- Inset
+- Compile-time state in RetainedModeUI
 - Frame
 - EmptyElement
 - Square
 - IMView
-- SwiftUI
-- UIElement
-- EffectElement
-- MultiChildElement
 - MetalGraphicsLib
+- .update
+- EffectElement
+- UIElement
 - uchar4
 - ConditionalDemo
 - SingleChildElement
-- Inset
-- HittableView
-- .offset
+- Padding
+- 9. Animation
 - MouseOver
 - StepIterator
-- Background
-- int2
-- MetalKit
-- TextStyle
+- ViewItem
+- Graphics2D.swift
 - IMView
 - Background
 - Padding
-- AnimationGroup
-- FontManager
+- Event
 - Line
 - Input.swift
 - IMGameView
@@ -123,22 +116,17 @@
 - GridCell
 - .init
 - .expansion
-- SDFFont
-- float4
-- RowView
-- 5. Collections are just `@State` arrays
-- .render
 
 ## God Nodes (most connected - your core abstractions)
-1. `UIContext` - 97 edges
-2. `UIElement` - 94 edges
-3. `UIAnimation` - 70 edges
+1. `UIContext` - 96 edges
+2. `UIElement` - 93 edges
+3. `UIAnimation` - 69 edges
 4. `Input` - 45 edges
 5. `SIMD2` - 43 edges
 6. `Graphics2D` - 37 edges
 7. `CodeGen` - 36 edges
 8. `Inset` - 35 edges
-9. `float4` - 33 edges
+9. `float4` - 32 edges
 10. `ViewRenderer` - 30 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -156,19 +144,19 @@
 ## Import Cycles
 - None detected.
 
-## Communities (116 total, 14 thin omitted)
+## Communities (104 total, 12 thin omitted)
 
-### Community 0 - "Text"
-Cohesion: 0.14
-Nodes (10): float2, Self, Text, .displayedColor, .displayedFontSize, .fontScale, .resolvedColor, .resolvedFace (+2 more)
+### Community 0 - "TransitionElement"
+Cohesion: 0.26
+Nodes (5): Effects and transitions, Float, Void, TransitionElement, .currentState
 
 ### Community 1 - "Input"
 Cohesion: 0.12
 Nodes (12): Input, .mouseDown, .mouseMoved, .mousePressed, .mouseUp, Bool, Double, NSEvent (+4 more)
 
-### Community 2 - "float2"
-Cohesion: 0.16
-Nodes (15): CGPath, GlyphBakeParams, GlyphMetrics, PathElement, PendingBake, SubPath, UInt32, UInt8 (+7 more)
+### Community 2 - "Text"
+Cohesion: 0.06
+Nodes (45): CGGlyph, CGPath, CoreText, CTFont, Hashable, FontManager, .atlasTexture, GlyphBakeParams (+37 more)
 
 ### Community 3 - "Int"
 Cohesion: 0.17
@@ -182,13 +170,13 @@ Nodes (12): BoundingBox2D, .bottom, .bottomRight, .height, .left, .right, .top, 
 Cohesion: 0.06
 Nodes (17): CompilerPlugin, ReactiveUIMacrosPlugin, Macro, AnimationMacroTests, Macro, ComponentMacroTests, component(), DiagnosticsTests (+9 more)
 
-### Community 6 - "Foundation"
-Cohesion: 0.09
-Nodes (17): DispatchQueue, DispatchWorkItem, Foundation, benchmark(), Bool, Void, Debouncer, forEachGridCell() (+9 more)
+### Community 6 - "int2"
+Cohesion: 0.06
+Nodes (26): DispatchQueue, DispatchWorkItem, Foundation, benchmark(), Bool, Void, HittableGrid2D, HittableGridCell (+18 more)
 
 ### Community 7 - "Animator"
-Cohesion: 0.12
-Nodes (23): Apply, AnimatedProperty, color, fontSize, inset, keyframes, offset, opacity (+15 more)
+Cohesion: 0.09
+Nodes (29): Apply, `withAnimation`, AnimatedProperty, color, fontSize, inset, keyframes, offset (+21 more)
 
 ### Community 8 - "Ray-Marching Shader"
 Cohesion: 0.08
@@ -199,7 +187,7 @@ Cohesion: 0.31
 Nodes (8): Float, .packed, SIMD2, .packed, SIMD4, .packed, Float, UIAnimatable
 
 ### Community 10 - "CodeGen"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (15): CodeGen, .armedHandlers, Dependents, RowsMode, full, insert, remove, Bool (+7 more)
 
 ### Community 12 - "GlyphSDF.metal"
@@ -210,9 +198,9 @@ Nodes (28): bakeGlyphSDF(), GlyphBakeParams, emPerTexel, emTopLeft, origin, path
 Cohesion: 0.22
 Nodes (17): dragDirection(), from1DTo3DArray(), from2DTo1DArray(), from3DTo1DArray(), fromPixelCoordToGridIndex(), fromWorldPositionToGridIndex(), lerp(), mix() (+9 more)
 
-### Community 14 - ".invalidate"
-Cohesion: 0.12
-Nodes (14): Background, ExpandedFrame, Frame, HStack, Padding, Alignment, Axis, Float (+6 more)
+### Community 14 - "UIAnimation"
+Cohesion: 0.11
+Nodes (18): 1. The pieces, Text styling, UIAnimation, Background, ExpandedFrame, Frame, HStack, Padding (+10 more)
 
 ### Community 15 - "IMView"
 Cohesion: 0.13
@@ -234,25 +222,21 @@ Nodes (10): ExpandedFrame, FlexFrame, Frame, IMView, Alignment, Axis, Float, flo
 Cohesion: 0.16
 Nodes (11): CodeBlockItemListSyntax, IfExprSyntax, BodyParser, Bool, ExprSyntax, FunctionCallExprSyntax, MemberBlockItemListSyntax, Set (+3 more)
 
-### Community 21 - "UIAnimation"
-Cohesion: 0.16
-Nodes (12): Curve, easeIn, easeInOut, easeOut, keyframes, linear, spring, Bool (+4 more)
-
 ### Community 22 - "WindowState"
-Cohesion: 0.15
-Nodes (13): CaseIterable, Application, Event, Inspector, Navigation, Global, Reload, Bool (+5 more)
+Cohesion: 0.22
+Nodes (8): Application, Global, Reload, Bool, CGPoint, CGSize, WindowState, ObservableObject
 
 ### Community 23 - "Graphics2D"
 Cohesion: 0.14
 Nodes (16): Circle, Glyph, Line, Graphics2D, .size, Float, float2, MTKView (+8 more)
 
 ### Community 24 - "String"
-Cohesion: 0.21
+Cohesion: 0.20
 Nodes (4): String, .uint32, UInt32, Naming
 
 ### Community 25 - "View"
 Cohesion: 0.11
-Nodes (20): Bool, View, Background, ExpandedFrame, FlexFrame, Frame, HStack, .isSpacer (+12 more)
+Nodes (20): .body, Bool, View, Background, ExpandedFrame, FlexFrame, HStack, .isSpacer (+12 more)
 
 ### Community 26 - "Drag"
 Cohesion: 0.16
@@ -267,8 +251,8 @@ Cohesion: 0.15
 Nodes (11): MetalView, .body, CGSize, Double, Float, float2, MTKView, ViewRenderer (+3 more)
 
 ### Community 29 - "UIContext"
-Cohesion: 0.12
-Nodes (13): Invalidation, Bool, Double, float2, Frame, ObjectIdentifier, UInt8, Void (+5 more)
+Cohesion: 0.10
+Nodes (15): Invalidation, Bool, float2, ObjectIdentifier, UInt8, Void, UIContext, .needsRender (+7 more)
 
 ### Community 30 - "SDF.metal"
 Cohesion: 0.15
@@ -279,12 +263,12 @@ Cohesion: 0.26
 Nodes (8): DeclReferenceExprSyntax, MemberAccessExprSyntax, StateRewriter, ClosureExprSyntax, ExprSyntax, Set, SyntaxProtocol, SyntaxRewriter
 
 ### Community 32 - "Sendable"
-Cohesion: 0.09
-Nodes (25): Any, KeyframeElement, KeyframeSegment, Float, float2, Self, V, UIKeyframe (+17 more)
+Cohesion: 0.06
+Nodes (35): Any, The runtime, Curve, easeIn, easeInOut, easeOut, keyframes, linear (+27 more)
 
 ### Community 33 - "TransitionState"
-Cohesion: 0.14
-Nodes (10): Equatable, Effects and transitions, Float, Void, TransitionElement, .currentState, Float, float2 (+2 more)
+Cohesion: 0.25
+Nodes (5): Equatable, Float, float2, TransitionState, UITransition
 
 ### Community 34 - "Kind"
 Cohesion: 0.16
@@ -298,17 +282,13 @@ Nodes (7): Modifier, MyMTKView, .acceptsFirstResponder, Bool, NSEvent, UInt, MTK
 Cohesion: 0.20
 Nodes (8): LayoutDemo, .body, Alignment, Axis, Float, float2, HorizontalAlignment, VerticalAlignment
 
-### Community 37 - "ListRows"
-Cohesion: 0.44
-Nodes (3): ListRows, T, Void
-
 ### Community 38 - "float3"
 Cohesion: 0.18
 Nodes (8): float3, .depth, .height, .width, .xy, Float, float2, int3
 
 ### Community 39 - "HList"
-Cohesion: 0.29
-Nodes (6): HStack, HList, Float, T, VerticalAlignment, Void
+Cohesion: 0.43
+Nodes (4): HStack, HList, T, Void
 
 ### Community 40 - "Metal Math Helpers"
 Cohesion: 0.21
@@ -331,16 +311,16 @@ Cohesion: 0.18
 Nodes (11): PatternBindingSyntax, .states, .reactiveNames, .stateNames, StateProperty, AttributeSyntax, Bool, MemberBlockItemListSyntax (+3 more)
 
 ### Community 45 - "simd"
-Cohesion: 0.10
-Nodes (15): .inspectorView, Number2Field, .body, T, Number3Field, .body, SIMD3, T (+7 more)
+Cohesion: 0.09
+Nodes (19): .inspectorView, Number2Field, .body, T, Number3Field, .body, SIMD3, T (+11 more)
 
 ### Community 46 - "SceneData"
 Cohesion: 0.29
 Nodes (7): DebugData, drawGrid, showFilledCells, SceneData, debug, time, windowSize
 
 ### Community 47 - "GraphicsGrid2D"
-Cohesion: 0.21
-Nodes (9): Int32, GraphicsGrid2D, GridArgBuffer, GridCell, Shape, Float, float2, MTLBuffer (+1 more)
+Cohesion: 0.17
+Nodes (11): Int32, GPUDevice, MTLDevice, GraphicsGrid2D, GridArgBuffer, GridCell, Shape, Float (+3 more)
 
 ### Community 48 - "VList"
 Cohesion: 0.29
@@ -358,9 +338,9 @@ Nodes (5): HStack, .size, Float, float2, VerticalAlignment
 Cohesion: 0.27
 Nodes (5): Float, float2, HorizontalAlignment, VStack, .size
 
-### Community 52 - "AnimationDemo"
-Cohesion: 0.24
-Nodes (6): AnimatedItem, AnimationDemo, .body, Bool, Float, Identifiable
+### Community 52 - "float4"
+Cohesion: 0.15
+Nodes (10): AnimatedItem, AnimationDemo, .body, Bool, Float, float4, .xyz, Double (+2 more)
 
 ### Community 53 - "MetalViewRepresentable"
 Cohesion: 0.29
@@ -371,8 +351,8 @@ Cohesion: 0.33
 Nodes (4): ExpandedFrame, Alignment, Axis, float2
 
 ### Community 55 - "ListDemo"
-Cohesion: 0.35
-Nodes (4): DemoItem, ListDemo, .body, Float
+Cohesion: 0.24
+Nodes (8): DemoItem, ListDemo, .body, RowView, .body, Bool, Float, Void
 
 ### Community 56 - "Float"
 Cohesion: 0.28
@@ -395,8 +375,8 @@ Cohesion: 0.25
 Nodes (8): Glyph, color, depth, fontSize, position, size, uvMax, uvMin
 
 ### Community 61 - "Demo"
-Cohesion: 0.14
-Nodes (15): Demo, animation, conditional, .id, layout, list, text, .title (+7 more)
+Cohesion: 0.17
+Nodes (12): Demo, animation, conditional, .id, layout, list, text, .title (+4 more)
 
 ### Community 62 - "float4x4"
 Cohesion: 0.15
@@ -426,20 +406,20 @@ Nodes (4): Line, .bounds, Float, float2
 Cohesion: 0.26
 Nodes (6): clamp(), T, FlexFrame, Alignment, Float, float2
 
-### Community 75 - "TextDemo"
-Cohesion: 0.53
-Nodes (3): Float, TextDemo, .body
+### Community 75 - "Inset"
+Cohesion: 0.15
+Nodes (10): Float, TextDemo, .body, .packed, Padding, Inset, .horizontal, .topLeft (+2 more)
 
-### Community 76 - "1. The pieces"
-Cohesion: 0.18
-Nodes (9): 1. The pieces, 2. What a component looks like, 3. What gets generated, 4. Rules that follow, 6. Composition, not helper methods, 8. How it lands on screen, Compile-time state in RetainedModeUI, Bool (+1 more)
+### Community 76 - "Compile-time state in RetainedModeUI"
+Cohesion: 0.15
+Nodes (11): 2. What a component looks like, 3. What gets generated, 4. Rules that follow, 5. Collections are just `@State` arrays, 6. Composition, not helper methods, 8. How it lands on screen, Compile-time state in RetainedModeUI, Mutation carries the operation (+3 more)
 
 ### Community 77 - "Frame"
 Cohesion: 0.39
 Nodes (4): Frame, Alignment, float2, Void
 
 ### Community 78 - "EmptyElement"
-Cohesion: 0.22
+Cohesion: 0.25
 Nodes (3): EmptyElement, LeafElement, Spacer
 
 ### Community 79 - "Square"
@@ -450,24 +430,24 @@ Nodes (4): Square, .bounds, Float, float2
 Cohesion: 0.23
 Nodes (10): HStack, .size, IMView, Float, HorizontalAlignment, Self, VerticalAlignment, Void (+2 more)
 
-### Community 81 - "SwiftUI"
+### Community 81 - "MetalGraphicsLib"
 Cohesion: 0.12
-Nodes (13): App, Combine, ContentView, .body, GPURayMarchingApp, .body, MTKView, TestViewRenderer (+5 more)
+Nodes (11): App, Combine, ContentView, GPURayMarchingApp, .body, MTKView, TestViewRenderer, MetalGraphicsLib (+3 more)
 
-### Community 82 - "UIElement"
-Cohesion: 0.12
-Nodes (9): 7. Diagnostics, Bool, float2, Void, UIElement, .hasEffect, .localEffect, .transitionOnSpine (+1 more)
+### Community 82 - ".update"
+Cohesion: 0.14
+Nodes (6): 7. Diagnostics, Double, Frame, LayoutPass, float2, Void
 
 ### Community 83 - "EffectElement"
-Cohesion: 0.20
-Nodes (7): EffectElement, .hasEffect, .localEffect, EffectState, Bool, Float, float2
+Cohesion: 0.17
+Nodes (8): EffectElement, .hasEffect, .localEffect, EffectState, Bool, Float, float2, Void
 
-### Community 84 - "MultiChildElement"
-Cohesion: 0.22
-Nodes (5): Sliding layout, MultiChildElement, .liveChildrenCount, float2, Void
+### Community 84 - "UIElement"
+Cohesion: 0.10
+Nodes (16): MultiChildElement, .liveChildrenCount, float2, Void, Self, Bool, UIElement, .hasEffect (+8 more)
 
 ### Community 86 - "uchar4"
-Cohesion: 0.29
+Cohesion: 0.25
 Nodes (6): UInt8, uchar4, .a, .b, .g, .r
 
 ### Community 87 - "ConditionalDemo"
@@ -475,20 +455,16 @@ Cohesion: 0.39
 Nodes (4): ConditionalDemo, .body, Bool, Float
 
 ### Community 88 - "SingleChildElement"
-Cohesion: 0.29
+Cohesion: 0.27
 Nodes (3): SingleChildElement, float2, Void
 
-### Community 89 - "Inset"
-Cohesion: 0.13
-Nodes (13): IMView, Padding, Float, Self, Void, .packed, Padding, Inset (+5 more)
+### Community 89 - "Padding"
+Cohesion: 0.24
+Nodes (6): IMView, Padding, Float, Self, Void, float2
 
-### Community 90 - "HittableView"
-Cohesion: 0.15
-Nodes (11): HittableGrid2D, HittableGridCell, HoveredView, Float, float2, ObjectIdentifier, HittableView, Bool (+3 more)
-
-### Community 91 - ".offset"
-Cohesion: 0.29
-Nodes (4): Scopes, Float, float2, Frame
+### Community 91 - "9. Animation"
+Cohesion: 0.27
+Nodes (7): 9. Animation, Costs to know, Scopes, Sliding layout, Float, float2, Frame
 
 ### Community 92 - "MouseOver"
 Cohesion: 0.35
@@ -498,21 +474,13 @@ Nodes (6): IMView, MouseOver, Bool, Float, Self, Void
 Cohesion: 0.27
 Nodes (6): IteratorProtocol, StepIterator, StepSequence, Bool, Float, Sequence
 
-### Community 94 - "Background"
-Cohesion: 0.35
-Nodes (5): Background, IMView, Float, Self, Void
+### Community 94 - "ViewItem"
+Cohesion: 0.27
+Nodes (6): Background, IMView, Float, Self, Void, ViewItem
 
-### Community 95 - "int2"
-Cohesion: 0.40
-Nodes (3): int2, float2, from1DTo2DArray()
-
-### Community 96 - "MetalKit"
-Cohesion: 0.18
-Nodes (9): GPUDevice, MTLDevice, DebugData, SceneData, ShapeArgBuffer, Bool, Int32, UInt64 (+1 more)
-
-### Community 97 - "TextStyle"
-Cohesion: 0.42
-Nodes (9): CoreText, layoutText(), measureText(), PlacedGlyph, Float, float2, TextLayout, TextLine (+1 more)
+### Community 96 - "Graphics2D.swift"
+Cohesion: 0.33
+Nodes (6): DebugData, SceneData, ShapeArgBuffer, Bool, Int32, UInt64
 
 ### Community 98 - "IMView"
 Cohesion: 0.39
@@ -526,13 +494,9 @@ Nodes (3): Background, Float, float2
 Cohesion: 0.29
 Nodes (3): Padding, Float, float2
 
-### Community 101 - "AnimationGroup"
-Cohesion: 0.21
-Nodes (10): 9. Animation, Costs to know, Repeat and keyframes, The runtime, `withAnimation`, AnimationGroup, Void, UITransaction (+2 more)
-
-### Community 102 - "FontManager"
-Cohesion: 0.22
-Nodes (9): CGGlyph, Hashable, FontManager, .atlasTexture, GlyphKey, SDFAtlas, MTLComputePipelineState, MTLDevice (+1 more)
+### Community 101 - "Event"
+Cohesion: 0.25
+Nodes (6): CaseIterable, Repeat and keyframes, Event, Inspector, Navigation, Void
 
 ### Community 103 - "Line"
 Cohesion: 0.33
@@ -550,41 +514,25 @@ Nodes (3): GridCell, count, startIndex
 Cohesion: 0.20
 Nodes (9): DeclGroupSyntax, ExtensionDeclSyntax, ExtensionMacro, MemberMacro, ComponentMacro, AttributeSyntax, DeclSyntax, TypeSyntax (+1 more)
 
-### Community 111 - "SDFFont"
-Cohesion: 0.31
-Nodes (6): CTFont, Text styling, SDFFont, Float, Float, TextFont
-
-### Community 112 - "float4"
-Cohesion: 0.22
-Nodes (5): float4, .xyz, Double, Float, Background
-
-### Community 113 - "RowView"
-Cohesion: 0.50
-Nodes (4): RowView, .body, Bool, Void
-
-### Community 114 - "5. Collections are just `@State` arrays"
-Cohesion: 0.67
-Nodes (3): 5. Collections are just `@State` arrays, Mutation carries the operation, The plain setter still works
-
 ## Knowledge Gaps
-- **220 isolated node(s):** `conditional`, `list`, `toggle`, `text`, `layout` (+215 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 529 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **215 isolated node(s):** `conditional`, `list`, `text`, `layout`, `.id` (+210 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 524 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **12 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `String` connect `String` to `Text`, `Input`, `float2`, `Int`, `DiagnosticsTests`, `Foundation`, `CodeGen`, `.invalidate`, `IMView`, `.expansion`, `IMView`, `BodyParser`, `WindowState`, `Graphics2D`, `Drag`, `ModifierSpec`, `.scan`, `Kind`, `LayoutDemo`, `StateProperty`, `simd`, `HStack`, `VStack`, `AnimationDemo`, `ExpandedFrame Element`, `ListDemo`, `Rectangle`, `main.swift`, `Demo`, `float4x4`, `FlexFrame`, `TextDemo`, `Frame`, `IMView`, `SwiftUI`, `UIElement`, `EffectElement`, `MultiChildElement`, `SingleChildElement`, `Inset`, `MouseOver`, `Background`, `TextStyle`, `IMView`, `Background`, `Padding`, `FontManager`, `SDFFont`?**
-  _High betweenness centrality (0.321) - this node is a cross-community bridge._
-- **Why does `Int` connect `Int` to `Foundation`, `Animator`, `.isBetween`, `MathLib.swift`, `IMView`, `BodyParser`, `UIAnimation`, `WindowState`, `Graphics2D`, `String`, `View`, `ModifierSpec`, `UIContext`, `Kind`, `LayoutDemo`, `ListRows`, `HList`, `GraphicsGrid2D`, `VList`, `AnimationDemo`, `ListDemo`, `main.swift`, `Array`, `TextDemo`, `MultiChildElement`, `ConditionalDemo`, `int2`, `FontManager`?**
-  _High betweenness centrality (0.140) - this node is a cross-community bridge._
-- **Why does `Input` connect `Input` to `Sendable`, `Drag`, `MyMTKView`, `Input.swift`, `.scrollWheel`, `1. The pieces`, `String`, `HittableView`, `ViewRenderer`, `UIContext`?**
+- **Why does `String` connect `String` to `Input`, `Text`, `Int`, `DiagnosticsTests`, `int2`, `CodeGen`, `UIAnimation`, `IMView`, `.expansion`, `IMView`, `BodyParser`, `WindowState`, `Graphics2D`, `Drag`, `ModifierSpec`, `.scan`, `Kind`, `LayoutDemo`, `StateProperty`, `simd`, `HStack`, `VStack`, `float4`, `ExpandedFrame Element`, `ListDemo`, `Rectangle`, `main.swift`, `Demo`, `float4x4`, `FlexFrame`, `Inset`, `Frame`, `IMView`, `.update`, `EffectElement`, `SingleChildElement`, `Padding`, `MouseOver`, `ViewItem`, `IMView`, `Background`, `Padding`?**
+  _High betweenness centrality (0.304) - this node is a cross-community bridge._
+- **Why does `Int` connect `Int` to `Text`, `int2`, `Animator`, `.isBetween`, `MathLib.swift`, `IMView`, `BodyParser`, `Graphics2D`, `String`, `View`, `ModifierSpec`, `UIContext`, `Sendable`, `Kind`, `LayoutDemo`, `HList`, `GraphicsGrid2D`, `VList`, `float4`, `ListDemo`, `main.swift`, `Array`, `Inset`, `UIElement`, `ConditionalDemo`, `ViewItem`, `Event`?**
+  _High betweenness centrality (0.158) - this node is a cross-community bridge._
+- **Why does `UIContext` connect `UIContext` to `TransitionElement`, `Sendable`, `Int`, `int2`, `Animator`, `HList`, `simd`, `UIAnimation`, `VList`, `.update`, `EffectElement`, `float4`, `UIElement`, `SingleChildElement`, `ViewRenderer`?**
   _High betweenness centrality (0.086) - this node is a cross-community bridge._
 - **Are the 5 inferred relationships involving `UIContext` (e.g. with `Effects and transitions` and `HittableGrid2D`) actually correct?**
   _`UIContext` has 5 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 4 inferred relationships involving `UIElement` (e.g. with `7. Diagnostics` and `.dropLeaving()`) actually correct?**
   _`UIElement` has 4 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `conditional`, `list`, `toggle` to the rest of the system?**
-  _220 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Text` be split into smaller, more focused modules?**
-  _Cohesion score 0.13725490196078433 - nodes in this community are weakly interconnected._
+- **What connects `conditional`, `list`, `text` to the rest of the system?**
+  _215 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `Input` be split into smaller, more focused modules?**
+  _Cohesion score 0.12333333333333334 - nodes in this community are weakly interconnected._

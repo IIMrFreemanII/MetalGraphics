@@ -274,6 +274,9 @@ struct CodeGen {
   private func branchMethods() -> [DeclSyntax] {
     var decls: [DeclSyntax] = []
 
+    let enclosing = enclosingBranches()
+    let enclosingPaths = Set(enclosing.values.flatMap { $0.map(\.path) })
+
     forEachBranchWithParent { branch, parentPath in
       // --- which arm is current ---
       let tagExpr: String
@@ -342,10 +345,36 @@ struct CodeGen {
       }
       """)
 
+      // --- re-read the current arm, for a branch with a nested one sitting directly in it ---
+      if enclosingPaths.contains(branch.path) {
+        var collectCases: [String] = []
+        for (tag, arm) in branch.arms.enumerated() {
+          var lines = ["\(arm.isEmpty ? "let" : "var") elements: [UIElement] = []"]
+          lines.append(contentsOf: collectLines(arm, into: "elements"))
+          lines.append("return elements")
+          collectCases.append("case \(tag):\n    " + lines.joined(separator: "\n    "))
+        }
+        decls.append("""
+        private func \(raw: Naming.recollect(branch.path))() -> [UIElement] {
+          switch self.\(raw: Naming.tag(branch.path)) {
+          \(raw: collectCases.joined(separator: "\n  "))
+          default:
+            return []
+          }
+        }
+        """)
+      }
+
       // --- the swap itself ---
       // The arm's nodes were built just now and have never been through a mount, so this is the
       // only place their handlers get armed.
       let swapArmCall = armedHandlers.isEmpty ? "" : "self.\(Naming.armHandlers)()\n  "
+      // An `else if` is a branch in the else arm of another, sharing its container. The
+      // container is rebuilt from the outer branch's slot, so that slot has to be re-read
+      // first, innermost outwards, or the old arm's elements would be applied again.
+      let recollectCalls = (enclosing[branch.path] ?? []).map {
+        "self.\(Naming.slot($0.path)) = self.\(Naming.recollect($0.path))()\n  "
+      }.joined()
       decls.append("""
       private func \(raw: Naming.swapBranch(branch.path))(_ context: UIContext, animation: UIAnimation?) {
         let tag = self.\(raw: Naming.evalTag(branch.path))()
@@ -356,7 +385,7 @@ struct CodeGen {
         self.\(raw: Naming.tag(branch.path)) = tag
         self.\(raw: Naming.slot(branch.path)) = self.\(raw: Naming.enterBranch(branch.path))(tag, context)
         self.\(raw: Naming.leaveBranch(branch.path))(previous)
-        \(raw: swapArmCall)self.\(raw: Naming.applyChildren(parentPath))(context, animation: animation)
+        \(raw: recollectCalls)\(raw: swapArmCall)self.\(raw: Naming.applyChildren(parentPath))(context, animation: animation)
       }
       """)
     }
@@ -673,6 +702,26 @@ struct CodeGen {
 
   private func forEachBranch(_ body: (BranchIR) -> Void) {
     forEachBranchWithParent { branch, _ in body(branch) }
+  }
+
+  /// For each branch, the branches whose arms it sits in within the same container, innermost
+  /// first. Empty for most branches; an `else if` chain is the common way to get one.
+  private func enclosingBranches() -> [String: [BranchIR]] {
+    var result: [String: [BranchIR]] = [:]
+    func walk(_ nodes: [NodeIR], enclosing: [BranchIR]) {
+      for node in nodes {
+        switch node {
+        case .element(let element):
+          // A new container: its branches re-apply it, not the one outside.
+          walk(element.children, enclosing: [])
+        case .branch(let branch):
+          if !enclosing.isEmpty { result[branch.path] = enclosing }
+          branch.arms.forEach { walk($0, enclosing: [branch] + enclosing) }
+        }
+      }
+    }
+    walk(nodes, enclosing: [])
+    return result
   }
 
   /// Every branch, with the path of the container whose children it belongs to. That container
