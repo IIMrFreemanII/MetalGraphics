@@ -103,7 +103,7 @@ extension ComponentMacro {
   fileprivate static func stubs(_ states: [StateProperty]) -> [DeclSyntax] {
     let updates: [DeclSyntax] = states.map(\.name).map { name in
       """
-      private func \(raw: Naming.update(name))() {
+      private func \(raw: Naming.update(name))(\(raw: CodeGen.animatedParameter)) {
       }
       """
     }

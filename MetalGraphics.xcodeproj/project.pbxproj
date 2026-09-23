@@ -7,6 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A7A000000000000000000100 /* UIAnimatable.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000000 /* UIAnimatable.swift */; };
+		A7A000000000000000000101 /* UIAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000001 /* UIAnimation.swift */; };
+		A7A000000000000000000102 /* UITransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000002 /* UITransaction.swift */; };
+		A7A000000000000000000103 /* Animator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000003 /* Animator.swift */; };
+		A7A000000000000000000104 /* EffectElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000004 /* EffectElement.swift */; };
+		A7A000000000000000000105 /* UITransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000005 /* UITransition.swift */; };
+		A7A000000000000000000160 /* UIKeyframe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000060 /* UIKeyframe.swift */; };
+		A7A000000000000000000106 /* TransitionElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000006 /* TransitionElement.swift */; };
+		A7A000000000000000000140 /* AnimationDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000040 /* AnimationDemo.swift */; };
 		7E57A0012F00000000000101 /* SDFFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000001 /* SDFFont.swift */; };
 		7E57A0012F00000000000102 /* TextLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000002 /* TextLayout.swift */; };
 		7E57A0012F00000000000103 /* Text.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000003 /* Text.swift */; };
@@ -48,6 +57,7 @@
 		159419EA2C1490B700C56203 /* MetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419B42C147BAA00C56203 /* MetalView.swift */; };
 		159419EB2C1490B700C56203 /* Rect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419D62C14858300C56203 /* Rect.swift */; };
 		159419EC2C1490B700C56203 /* Input.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419B62C147BD300C56203 /* Input.swift */; };
+		A7A000000000000000000150 /* KeyCodes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000050 /* KeyCodes.swift */; };
 		159419ED2C1490B700C56203 /* Inset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419D82C1485B000C56203 /* Inset.swift */; };
 		159419EE2C1490B700C56203 /* ViewRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159419D02C147EA900C56203 /* ViewRenderer.swift */; };
 		159419EF2C1490F600C56203 /* MetalGraphicsLib.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 159419E32C1490A200C56203 /* MetalGraphicsLib.framework */; };
@@ -88,7 +98,6 @@
 		15A1B2C42C147B0E00C56203 /* ListDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A1B2C32C147B0E00C56203 /* ListDemo.swift */; };
 		15A1B2C62C147B0E00C56203 /* ConditionalDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A1B2C52C147B0E00C56203 /* ConditionalDemo.swift */; };
 		7E57A0012F00000000000105 /* TextDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000005 /* TextDemo.swift */; };
-		7E57A0012F00000000000106 /* ToggleDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000006 /* ToggleDemo.swift */; };
 		7E57A0012F00000000000107 /* Demos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000007 /* Demos.swift */; };
 		7E57A0012F00000000000108 /* LayoutDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000008 /* LayoutDemo.swift */; };
 		15B5F055300AC32C00CFE193 /* SparseSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15B5F054300AC32C00CFE193 /* SparseSet.swift */; };
@@ -139,6 +148,15 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A7A000000000000000000000 /* UIAnimatable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIAnimatable.swift; sourceTree = "<group>"; };
+		A7A000000000000000000001 /* UIAnimation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIAnimation.swift; sourceTree = "<group>"; };
+		A7A000000000000000000002 /* UITransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITransaction.swift; sourceTree = "<group>"; };
+		A7A000000000000000000003 /* Animator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Animator.swift; sourceTree = "<group>"; };
+		A7A000000000000000000004 /* EffectElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EffectElement.swift; sourceTree = "<group>"; };
+		A7A000000000000000000005 /* UITransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITransition.swift; sourceTree = "<group>"; };
+		A7A000000000000000000060 /* UIKeyframe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIKeyframe.swift; sourceTree = "<group>"; };
+		A7A000000000000000000006 /* TransitionElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitionElement.swift; sourceTree = "<group>"; };
+		A7A000000000000000000040 /* AnimationDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimationDemo.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000001 /* SDFFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDFFont.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000002 /* TextLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextLayout.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000003 /* Text.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Text.swift; sourceTree = "<group>"; };
@@ -180,6 +198,7 @@
 		159419AF2C147B0F00C56203 /* GPURayMarching.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GPURayMarching.entitlements; sourceTree = "<group>"; };
 		159419B42C147BAA00C56203 /* MetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalView.swift; sourceTree = "<group>"; };
 		159419B62C147BD300C56203 /* Input.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Input.swift; sourceTree = "<group>"; };
+		A7A000000000000000000050 /* KeyCodes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCodes.swift; sourceTree = "<group>"; };
 		159419B82C147C5200C56203 /* MathLib.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathLib.swift; sourceTree = "<group>"; };
 		159419C62C147CDE00C56203 /* String.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = String.swift; sourceTree = "<group>"; };
 		159419C72C147CDE00C56203 /* Comparable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Comparable.swift; sourceTree = "<group>"; };
@@ -222,7 +241,6 @@
 		15A1B2C32C147B0E00C56203 /* ListDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListDemo.swift; sourceTree = "<group>"; };
 		15A1B2C52C147B0E00C56203 /* ConditionalDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConditionalDemo.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000005 /* TextDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextDemo.swift; sourceTree = "<group>"; };
-		7E57A0012F00000000000006 /* ToggleDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToggleDemo.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000007 /* Demos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Demos.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000008 /* LayoutDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutDemo.swift; sourceTree = "<group>"; };
 		15B5F054300AC32C00CFE193 /* SparseSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparseSet.swift; sourceTree = "<group>"; };
@@ -268,6 +286,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		A7A00000000000000000FF00 /* Animation */ = {
+			isa = PBXGroup;
+			children = (
+				A7A000000000000000000000 /* UIAnimatable.swift */,
+				A7A000000000000000000001 /* UIAnimation.swift */,
+				A7A000000000000000000002 /* UITransaction.swift */,
+				A7A000000000000000000003 /* Animator.swift */,
+				A7A000000000000000000004 /* EffectElement.swift */,
+				A7A000000000000000000005 /* UITransition.swift */,
+				A7A000000000000000000060 /* UIKeyframe.swift */,
+				A7A000000000000000000006 /* TransitionElement.swift */,
+			);
+			path = Animation;
+			sourceTree = "<group>";
+		};
 		7E57A0012F00000000000010 /* Text */ = {
 			isa = PBXGroup;
 			children = (
@@ -309,6 +342,7 @@
 				5A7E10012E00000000000000 /* Layout */,
 				5A7E10022E00000000000000 /* Renderable */,
 				5A7E10042E00000000000000 /* Interaction */,
+				A7A00000000000000000FF00 /* Animation */,
 			);
 			path = RetainedModeUI;
 			sourceTree = "<group>";
@@ -350,7 +384,7 @@
 				15A1B2C32C147B0E00C56203 /* ListDemo.swift */,
 				15A1B2C52C147B0E00C56203 /* ConditionalDemo.swift */,
 				7E57A0012F00000000000005 /* TextDemo.swift */,
-				7E57A0012F00000000000006 /* ToggleDemo.swift */,
+				A7A000000000000000000040 /* AnimationDemo.swift */,
 				7E57A0012F00000000000007 /* Demos.swift */,
 				7E57A0012F00000000000008 /* LayoutDemo.swift */,
 				159419AA2C147B0F00C56203 /* Assets.xcassets */,
@@ -424,6 +458,7 @@
 				159419B32C147B7400C56203 /* Math */,
 				159419B42C147BAA00C56203 /* MetalView.swift */,
 				159419B62C147BD300C56203 /* Input.swift */,
+				A7A000000000000000000050 /* KeyCodes.swift */,
 				159419D62C14858300C56203 /* Rect.swift */,
 				159419E52C1490A200C56203 /* MetalGraphicsLib.h */,
 				15941A102C14A64100C56203 /* Time.swift */,
@@ -688,7 +723,7 @@
 				15A1B2C42C147B0E00C56203 /* ListDemo.swift in Sources */,
 				15A1B2C62C147B0E00C56203 /* ConditionalDemo.swift in Sources */,
 				7E57A0012F00000000000105 /* TextDemo.swift in Sources */,
-				7E57A0012F00000000000106 /* ToggleDemo.swift in Sources */,
+				A7A000000000000000000140 /* AnimationDemo.swift in Sources */,
 				7E57A0012F00000000000107 /* Demos.swift in Sources */,
 				7E57A0012F00000000000108 /* LayoutDemo.swift in Sources */,
 				15941A0D2C149DE300C56203 /* TestViewRenderer.swift in Sources */,
@@ -753,6 +788,7 @@
 				157C8D8E2C504CF7009CD7CE /* Background.swift in Sources */,
 				15941A112C14A64100C56203 /* Time.swift in Sources */,
 				159419EC2C1490B700C56203 /* Input.swift in Sources */,
+				A7A000000000000000000150 /* KeyCodes.swift in Sources */,
 				159419ED2C1490B700C56203 /* Inset.swift in Sources */,
 				159419FB2C1498C800C56203 /* float2.swift in Sources */,
 				15A049E62C27149600D28009 /* Editor.swift in Sources */,
@@ -778,6 +814,14 @@
 				157C8D762C4D98FA009CD7CE /* IMMouseOver.swift in Sources */,
 				157C8D642C484E89009CD7CE /* IMGameView.swift in Sources */,
 				1541F3E42D00F91500FE4873 /* UIContext.swift in Sources */,
+				A7A000000000000000000100 /* UIAnimatable.swift in Sources */,
+				A7A000000000000000000101 /* UIAnimation.swift in Sources */,
+				A7A000000000000000000102 /* UITransaction.swift in Sources */,
+				A7A000000000000000000103 /* Animator.swift in Sources */,
+				A7A000000000000000000104 /* EffectElement.swift in Sources */,
+				A7A000000000000000000105 /* UITransition.swift in Sources */,
+				A7A000000000000000000160 /* UIKeyframe.swift in Sources */,
+				A7A000000000000000000106 /* TransitionElement.swift in Sources */,
 				157C8D962C5054C1009CD7CE /* ExpandedFrame.swift in Sources */,
 				15DF1C402C317DFA00E8E7E6 /* Sphere.swift in Sources */,
 				15A049DA2C236C8500D28009 /* Utils.swift in Sources */,

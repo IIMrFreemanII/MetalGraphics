@@ -52,6 +52,13 @@ struct CodeGen {
       decls.append("private var \(raw: Naming.tag(branch.path)): Int = -1")
       decls.append("private var \(raw: Naming.slot(branch.path)): [UIElement] = []")
     }
+    // A constant animation is built once. For a spring that also means its coefficients are.
+    forEachElement { element in
+      for scope in element.scopes {
+        guard let field = scope.constantField else { continue }
+        decls.append("private static let \(raw: field): UIAnimation? = \(raw: scope.animation.trimmedDescription)")
+      }
+    }
     return decls
   }
 
@@ -84,9 +91,10 @@ struct CodeGen {
     """
   }
 
-  /// Replays every setter after a remount, picking up changes made while detached.
+  /// Replays every setter after a remount, picking up changes made while detached. Never
+  /// animated: the changes happened while nothing was on screen.
   private func refreshAll() -> DeclSyntax {
-    let calls = reactiveNames.map { "self.\(Naming.update($0))()" }.joined(separator: "\n  ")
+    let calls = reactiveNames.map { "self.\(Naming.update($0))(false)" }.joined(separator: "\n  ")
     return """
     private func \(raw: Naming.refreshAll)() {
       \(raw: calls)
@@ -143,7 +151,7 @@ struct CodeGen {
       lines.append(contentsOf: buildLines(child))
     }
     if !element.children.isEmpty {
-      lines.append("self.\(Naming.applyChildren(element.path))(context)")
+      lines.append("self.\(Naming.applyChildren(element.path))(context, animation: nil)")
     }
     return lines
   }
@@ -219,21 +227,22 @@ struct CodeGen {
       lines.append(contentsOf: collectLines(children, into: "children"))
       switch owner {
       case .component:
-        lines.append("self.setChild(children.first ?? EmptyElement(), context)")
+        lines.append("self.setChild(children.first ?? EmptyElement(), context, animation: animation)")
       case .node(let field, let arity):
         switch arity {
         case .single:
-          lines.append("if let owner = self.\(field) { owner.setChild(children.first ?? EmptyElement(), context) }")
+          lines.append("if let owner = self.\(field) { owner.setChild(children.first ?? EmptyElement(), context, animation: animation) }")
         case .multi:
           // replaceChildren already diffs by identity, unmounts what went, mounts what came
-          // and invalidates layout — so a branch swap needs no new runtime.
-          lines.append("if let owner = self.\(field) { owner.replaceChildren(children, context) }")
+          // and invalidates layout — so a branch swap needs no new runtime. With an animation
+          // it also plays the transitions of what came and went.
+          lines.append("if let owner = self.\(field) { owner.replaceChildren(children, context, animation: animation) }")
         case .leaf:
           break
         }
       }
       return """
-      private func \(raw: Naming.applyChildren(path))(_ context: UIContext) {
+      private func \(raw: Naming.applyChildren(path))(_ context: UIContext, animation: UIAnimation?) {
         \(raw: lines.joined(separator: "\n  "))
       }
       """
@@ -338,7 +347,7 @@ struct CodeGen {
       // only place their handlers get armed.
       let swapArmCall = armedHandlers.isEmpty ? "" : "self.\(Naming.armHandlers)()\n  "
       decls.append("""
-      private func \(raw: Naming.swapBranch(branch.path))(_ context: UIContext) {
+      private func \(raw: Naming.swapBranch(branch.path))(_ context: UIContext, animation: UIAnimation?) {
         let tag = self.\(raw: Naming.evalTag(branch.path))()
         guard tag != self.\(raw: Naming.tag(branch.path)) else {
           return
@@ -347,7 +356,7 @@ struct CodeGen {
         self.\(raw: Naming.tag(branch.path)) = tag
         self.\(raw: Naming.slot(branch.path)) = self.\(raw: Naming.enterBranch(branch.path))(tag, context)
         self.\(raw: Naming.leaveBranch(branch.path))(previous)
-        \(raw: swapArmCall)self.\(raw: Naming.applyChildren(parentPath))(context)
+        \(raw: swapArmCall)self.\(raw: Naming.applyChildren(parentPath))(context, animation: animation)
       }
       """)
     }
@@ -368,31 +377,79 @@ struct CodeGen {
     case remove     // removeRow: one child dropped at `index`
   }
 
-  private func dependentLines(for stateName: String, rows: RowsMode) -> [String] {
+  /// The body of one update method.
+  private struct Dependents {
     var lines: [String] = []
+    /// A line animates with `UITransaction.animation`, so the method declares the local it reads.
+    var usesTransaction = false
+  }
 
-    forEachElement { element in
-      for link in element.chain {
-        for bound in link.bound where bound.reads.contains(stateName) {
-          let call: String
-          switch rows {
-          case .insert where bound.isRows:
-            call = "insertRow(element, at: index, context)"
-          case .remove where bound.isRows:
-            call = "removeRow(element, at: index, context)"
-          default:
-            call = "\(bound.setter)(\(bound.value.trimmedDescription), context)"
+  /// Every line a write to `stateName` runs, each with its animation resolved here, at compile
+  /// time.
+  ///
+  /// A binding that can animate — an animatable setter, a list's rows, a branch swap — takes
+  /// the animation of the innermost `.animation(_:value:)` scope that covers it and that
+  /// `stateName` triggers. No such scope means `withAnimation`'s, read from the transaction; outside
+  /// `withAnimation` that is nil and the binding snaps, as it always did. `animated` is false for
+  /// the remount replay, which is never animated.
+  private func dependents(for stateName: String, rows: RowsMode) -> Dependents {
+    var result = Dependents()
+    var branchLines: [String] = []
+
+    func animationArgument(_ scope: AnimationScope?) -> String {
+      guard let scope else {
+        result.usesTransaction = true
+        return Naming.transaction
+      }
+      if let field = scope.constantField {
+        return "animated ? Self.\(field) : nil"
+      }
+      return "animated ? (\(scope.animation.trimmedDescription)) as UIAnimation? : nil"
+    }
+
+    func walk(_ node: NodeIR, inherited: AnimationScope?) {
+      switch node {
+      case .element(let element):
+        // The scopes this state triggers, innermost first: the parser records them in chain
+        // order, so the first whose `upToLink` covers a link is the one written closest to it.
+        let own = element.scopes.filter { $0.triggers.contains(stateName) }
+
+        for (index, link) in element.chain.enumerated() {
+          let scope = own.first { $0.upToLink > index } ?? inherited
+          for bound in link.bound where bound.reads.contains(stateName) {
+            let call: String
+            switch rows {
+            case .insert where bound.isRows:
+              call = "insertRow(element, at: index, context, animation: \(animationArgument(scope)))"
+            case .remove where bound.isRows:
+              call = "removeRow(element, at: index, context, animation: \(animationArgument(scope)))"
+            default:
+              let value = bound.value.trimmedDescription
+              call = bound.animatable || bound.isRows
+                ? "\(bound.setter)(\(value), context, animation: \(animationArgument(scope)))"
+                : "\(bound.setter)(\(value), context)"
+            }
+            result.lines.append("if let n = self.\(link.field) { n.\(call) }")
           }
-          lines.append("if let n = self.\(link.field) { n.\(call) }")
         }
+
+        // Every scope on an element covers its children.
+        let childScope = own.first ?? inherited
+        element.children.forEach { walk($0, inherited: childScope) }
+
+      case .branch(let branch):
+        if branch.reads.contains(stateName) {
+          branchLines.append(
+            "self.\(Naming.swapBranch(branch.path))(context, animation: \(animationArgument(inherited)))"
+          )
+        }
+        branch.arms.forEach { $0.forEach { walk($0, inherited: inherited) } }
       }
     }
-    forEachBranch { branch in
-      if branch.reads.contains(stateName) {
-        lines.append("self.\(Naming.swapBranch(branch.path))(context)")
-      }
-    }
-    return lines
+
+    nodes.forEach { walk($0, inherited: nil) }
+    result.lines.append(contentsOf: branchLines)
+    return result
   }
 
   /// True when at least one list binds this state, i.e. there is something to apply
@@ -411,8 +468,12 @@ struct CodeGen {
 
   /// The shared shape of every applier: capture the context or note a missed update, then
   /// straight-line assignments.
-  private func applier(_ name: String, _ parameters: String, _ lines: [String]) -> DeclSyntax {
-    """
+  private func applier(_ name: String, _ parameters: String, _ dependents: Dependents) -> DeclSyntax {
+    var lines = dependents.lines
+    if dependents.usesTransaction {
+      lines.insert("let \(Naming.transaction) = animated ? UITransaction.animation : nil", at: 0)
+    }
+    return """
     private func \(raw: name)(\(raw: parameters)) {
       guard let context = self.\(raw: Naming.context) else {
         self.\(raw: Naming.needsRefresh) = true
@@ -423,23 +484,27 @@ struct CodeGen {
     """
   }
 
+  /// The trailing parameter every applier takes. Defaulted, so `@State`'s setter and the
+  /// mutation methods call them without it.
+  static let animatedParameter = "_ animated: Bool = true"
+
   /// One method per state. A state that no node reads still gets one \u{2014} otherwise `@State`'s
   /// setter cannot resolve its call.
   private func updates() -> [DeclSyntax] {
     reactiveNames.map { stateName in
-      let lines = dependentLines(for: stateName, rows: .full)
+      let dependents = dependents(for: stateName, rows: .full)
 
-      guard !lines.isEmpty else {
+      guard !dependents.lines.isEmpty else {
         // Nothing depends on it yet; still note an unmounted change so a remount replays it.
         return """
-        private func \(raw: Naming.update(stateName))() {
+        private func \(raw: Naming.update(stateName))(\(raw: Self.animatedParameter)) {
           if self.\(raw: Naming.context) == nil {
             self.\(raw: Naming.needsRefresh) = true
           }
         }
         """
       }
-      return applier(Naming.update(stateName), "", lines)
+      return applier(Naming.update(stateName), Self.animatedParameter, dependents)
     }
   }
 
@@ -527,12 +592,12 @@ struct CodeGen {
 
       if incremental {
         decls.append(applier(
-          Naming.didInsert(name), "_ element: \(element), at index: Int",
-          dependentLines(for: name, rows: .insert)
+          Naming.didInsert(name), "_ element: \(element), at index: Int, \(Self.animatedParameter)",
+          dependents(for: name, rows: .insert)
         ))
         decls.append(applier(
-          Naming.didRemove(name), "_ element: \(element), at index: Int",
-          dependentLines(for: name, rows: .remove)
+          Naming.didRemove(name), "_ element: \(element), at index: Int, \(Self.animatedParameter)",
+          dependents(for: name, rows: .remove)
         ))
       }
       return decls

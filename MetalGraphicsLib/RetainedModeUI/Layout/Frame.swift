@@ -35,7 +35,7 @@ public class Frame : SingleChildElement {
       let availableSize = max(self.size - childSize, float2())
       let offset = lerp(min: float2(), max: availableSize, t: self.alignment.offset)
       
-      child.calcPosition(position + offset)
+      self.place(child, at: position + offset, in: position)
     }
   }
 }

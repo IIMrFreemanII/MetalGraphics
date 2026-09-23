@@ -1,5 +1,5 @@
 import SwiftSyntaxMacros
-import SwiftSyntaxMacrosTestSupport
+import SwiftSyntaxMacrosGenericTestSupport
 import Testing
 
 @testable import ReactiveUIMacrosPlugin
@@ -127,7 +127,7 @@ struct ListMacroTests {
           }
 
           private func __refreshAll() {
-            self.__update_rows()
+            self.__update_rows(false)
           }
 
           private func __build(_ context: UIContext) -> UIElement {
@@ -147,7 +147,7 @@ struct ListMacroTests {
             self.__n0_2a = n0_2a
             self.__tag0_3 = self.__evalTag0_3()
             self.__slot0_3 = self.__enter0_3(self.__tag0_3, context)
-            self.__applyChildren0(context)
+            self.__applyChildren0(context, animation: nil)
             var root: [UIElement] = []
             if let e = self.__n0a {
                 root.append(e)
@@ -155,15 +155,15 @@ struct ListMacroTests {
             return root.first ?? EmptyElement()
           }
 
-          private func __applyChildrenRoot(_ context: UIContext) {
+          private func __applyChildrenRoot(_ context: UIContext, animation: UIAnimation?) {
             var children: [UIElement] = []
             if let e = self.__n0a {
                 children.append(e)
             }
-            self.setChild(children.first ?? EmptyElement(), context)
+            self.setChild(children.first ?? EmptyElement(), context, animation: animation)
           }
 
-          private func __applyChildren0(_ context: UIContext) {
+          private func __applyChildren0(_ context: UIContext, animation: UIAnimation?) {
             var children: [UIElement] = []
             if let e = self.__n0_0b {
                 children.append(e)
@@ -176,7 +176,7 @@ struct ListMacroTests {
             }
             children.append(contentsOf: self.__slot0_3)
             if let owner = self.__n0a {
-                owner.replaceChildren(children, context)
+                owner.replaceChildren(children, context, animation: animation)
             }
           }
 
@@ -213,7 +213,7 @@ struct ListMacroTests {
             }
           }
 
-          private func __swap0_3(_ context: UIContext) {
+          private func __swap0_3(_ context: UIContext, animation: UIAnimation?) {
             let tag = self.__evalTag0_3()
             guard tag != self.__tag0_3 else {
               return
@@ -222,24 +222,25 @@ struct ListMacroTests {
             self.__tag0_3 = tag
             self.__slot0_3 = self.__enter0_3(tag, context)
             self.__leave0_3(previous)
-            self.__applyChildren0(context)
+            self.__applyChildren0(context, animation: animation)
           }
 
-          private func __update_rows() {
+          private func __update_rows(_ animated: Bool = true) {
             guard let context = self.__context else {
               self.__needsRefresh = true
               return
             }
+            let transaction = animated ? UITransaction.animation : nil
             if let n = self.__n0_0b {
-                n.setSize(float2(Float(self._rows.count), 6), context)
+                n.setSize(float2(Float(self._rows.count), 6), context, animation: transaction)
             }
             if let n = self.__n0_1a {
-                n.setItems(self._rows, context)
+                n.setItems(self._rows, context, animation: transaction)
             }
             if let n = self.__n0_2a {
-                n.setItems(self._rows, context)
+                n.setItems(self._rows, context, animation: transaction)
             }
-            self.__swap0_3(context)
+            self.__swap0_3(context, animation: transaction)
           }
 
           public func appendRows(_ element: Item) {
@@ -285,38 +286,40 @@ struct ListMacroTests {
             self.__update_rows()
           }
 
-          private func __rows_didInsert(_ element: Item, at index: Int) {
+          private func __rows_didInsert(_ element: Item, at index: Int, _ animated: Bool = true) {
             guard let context = self.__context else {
               self.__needsRefresh = true
               return
             }
+            let transaction = animated ? UITransaction.animation : nil
             if let n = self.__n0_0b {
-                n.setSize(float2(Float(self._rows.count), 6), context)
+                n.setSize(float2(Float(self._rows.count), 6), context, animation: transaction)
             }
             if let n = self.__n0_1a {
-                n.insertRow(element, at: index, context)
+                n.insertRow(element, at: index, context, animation: transaction)
             }
             if let n = self.__n0_2a {
-                n.insertRow(element, at: index, context)
+                n.insertRow(element, at: index, context, animation: transaction)
             }
-            self.__swap0_3(context)
+            self.__swap0_3(context, animation: transaction)
           }
 
-          private func __rows_didRemove(_ element: Item, at index: Int) {
+          private func __rows_didRemove(_ element: Item, at index: Int, _ animated: Bool = true) {
             guard let context = self.__context else {
               self.__needsRefresh = true
               return
             }
+            let transaction = animated ? UITransaction.animation : nil
             if let n = self.__n0_0b {
-                n.setSize(float2(Float(self._rows.count), 6), context)
+                n.setSize(float2(Float(self._rows.count), 6), context, animation: transaction)
             }
             if let n = self.__n0_1a {
-                n.removeRow(element, at: index, context)
+                n.removeRow(element, at: index, context, animation: transaction)
             }
             if let n = self.__n0_2a {
-                n.removeRow(element, at: index, context)
+                n.removeRow(element, at: index, context, animation: transaction)
             }
-            self.__swap0_3(context)
+            self.__swap0_3(context, animation: transaction)
           }
       }
 
@@ -402,7 +405,7 @@ struct ListMacroTests {
           }
 
           private func __refreshAll() {
-            self.__update_tags()
+            self.__update_tags(false)
           }
 
           private func __build(_ context: UIContext) -> UIElement {
@@ -417,21 +420,22 @@ struct ListMacroTests {
             return root.first ?? EmptyElement()
           }
 
-          private func __applyChildrenRoot(_ context: UIContext) {
+          private func __applyChildrenRoot(_ context: UIContext, animation: UIAnimation?) {
             var children: [UIElement] = []
             if let e = self.__n0b {
                 children.append(e)
             }
-            self.setChild(children.first ?? EmptyElement(), context)
+            self.setChild(children.first ?? EmptyElement(), context, animation: animation)
           }
 
-          private func __update_tags() {
+          private func __update_tags(_ animated: Bool = true) {
             guard let context = self.__context else {
               self.__needsRefresh = true
               return
             }
+            let transaction = animated ? UITransaction.animation : nil
             if let n = self.__n0b {
-                n.setSize(float2(Float(self._tags.count), 6), context)
+                n.setSize(float2(Float(self._tags.count), 6), context, animation: transaction)
             }
           }
 

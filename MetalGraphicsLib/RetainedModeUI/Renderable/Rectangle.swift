@@ -41,9 +41,13 @@ public class Rectangle : UIRenderableElement {
     child?.calcPosition(position)
   }
   
-  public override func render(_ renderer: Graphics2D) {
+  public override func render(_ renderer: Graphics2D, _ effect: EffectState) {
+    guard effect.opacity > 0 else { return }
+    let size = self.size * effect.scale
+    var color = self.color
+    color.w *= effect.opacity
     // origin -> top left
-    let newPosition = self.position - renderer.size * 0.5 + self.size * 0.5
-    renderer.draw(square: Square(position: newPosition, size: self.size, color: self.color))
+    let newPosition = effect.apply(to: self.position) - renderer.size * 0.5 + size * 0.5
+    renderer.draw(square: Square(position: newPosition, size: size, color: color))
   }
 }

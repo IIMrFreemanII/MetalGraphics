@@ -29,26 +29,29 @@ final class ListRows<T : Identifiable> {
 
   /// Rebuilds every child from `items`. O(n), and the only path that can repair a list whose
   /// children have drifted out of step with the array.
-  func setItems(_ items: [T], _ context: UIContext) -> Void {
+  func setItems(_ items: [T], _ context: UIContext, animation: UIAnimation?) -> Void {
     let elements = items.map { self.element(for: $0) }
 
     let ids = Set(items.map { $0.id })
     self.elementsById = self.elementsById.filter { ids.contains($0.key) }
 
-    self.stack.replaceChildren(elements, context)
+    self.stack.replaceChildren(elements, context, animation: animation)
   }
 
-  func insertRow(_ item: T, at index: Int, _ context: UIContext) -> Void {
-    self.stack.insertChild(self.element(for: item), at: index, context)
+  func insertRow(_ item: T, at index: Int, _ context: UIContext, animation: UIAnimation?) -> Void {
+    self.stack.insertChild(self.element(for: item), at: index, context, animation: animation)
   }
 
   /// `item` is the row that was just removed from the array — it is passed rather than looked
   /// up so dropping the cache entry stays O(1).
-  func removeRow(_ item: T, at index: Int, _ context: UIContext) -> Void {
-    guard self.stack.children.indices.contains(index) else { return }
+  ///
+  /// `index` is logical: rows still playing a removal transition are not counted, so it stays
+  /// aligned with the array while they animate out.
+  func removeRow(_ item: T, at index: Int, _ context: UIContext, animation: UIAnimation?) -> Void {
+    guard index >= 0, index < self.stack.liveChildrenCount else { return }
 
     self.elementsById.removeValue(forKey: item.id)
-    self.stack.remove(at: index, context)
+    self.stack.remove(at: index, context, animation: animation)
   }
 
   private func element(for item: T) -> UIElement {

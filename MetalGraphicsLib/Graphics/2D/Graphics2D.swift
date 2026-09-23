@@ -298,9 +298,10 @@ public struct SceneData {
     return layout.size
   }
 
-  /// Draws a layout made by `layoutText` with its top left corner at `position`.
-  public func draw(textLayout layout: TextLayout, at position: float2, color: float4) {
-    let fontSize = layout.fontSize
+  /// Draws a layout made by `layoutText` with its top left corner at `position`, magnified by
+  /// `scale` about that corner.
+  public func draw(textLayout layout: TextLayout, at position: float2, color: float4, scale: Float = 1) {
+    let fontSize = layout.fontSize * scale
     // Baselines land between two rows of pixel samples, so a flat glyph edge covers whole rows
     // instead of blurring across two. `compute2D` samples pixel `gid` at
     // `(gid - drawableSize / 2) / pixelsPerPoint`.
@@ -310,12 +311,12 @@ public struct SceneData {
     }
 
     for line in layout.lines {
-      let baseline = snapToPixelEdge(position.y + line.baseline)
+      let baseline = snapToPixelEdge(position.y + line.baseline * scale)
       for glyph in line.glyphs {
         let metrics = glyph.metrics
         let topLeft = float2(
-          position.x + glyph.origin.x + metrics.boundsMin.x * fontSize,
-          baseline - glyph.origin.y - metrics.boundsMax.y * fontSize
+          position.x + glyph.origin.x * scale + metrics.boundsMin.x * fontSize,
+          baseline - glyph.origin.y * scale - metrics.boundsMax.y * fontSize
         )
         self.glyphs.append(Glyph(
           position: topLeft,

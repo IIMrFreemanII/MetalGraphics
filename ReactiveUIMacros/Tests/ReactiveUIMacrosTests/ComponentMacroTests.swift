@@ -1,5 +1,5 @@
 import SwiftSyntaxMacros
-import SwiftSyntaxMacrosTestSupport
+import SwiftSyntaxMacrosGenericTestSupport
 import Testing
 
 @testable import ReactiveUIMacrosPlugin
@@ -101,8 +101,8 @@ struct ComponentMacroTests {
           }
 
           private func __refreshAll() {
-            self.__update_color()
-            self.__update_isLoggedIn()
+            self.__update_color(false)
+            self.__update_isLoggedIn(false)
           }
 
           private func __build(_ context: UIContext) -> UIElement {
@@ -117,7 +117,7 @@ struct ComponentMacroTests {
             let n0_1c = n0_1b.onTap { _ in
             }
             self.__n0_1c = n0_1c
-            self.__applyChildren0(context)
+            self.__applyChildren0(context, animation: nil)
             var root: [UIElement] = []
             if let e = self.__n0a {
                 root.append(e)
@@ -135,22 +135,22 @@ struct ComponentMacroTests {
             self.__n0_1c?.onTap = nil
           }
 
-          private func __applyChildrenRoot(_ context: UIContext) {
+          private func __applyChildrenRoot(_ context: UIContext, animation: UIAnimation?) {
             var children: [UIElement] = []
             if let e = self.__n0a {
                 children.append(e)
             }
-            self.setChild(children.first ?? EmptyElement(), context)
+            self.setChild(children.first ?? EmptyElement(), context, animation: animation)
           }
 
-          private func __applyChildren0(_ context: UIContext) {
+          private func __applyChildren0(_ context: UIContext, animation: UIAnimation?) {
             var children: [UIElement] = []
             children.append(contentsOf: self.__slot0_0)
             if let e = self.__n0_1c {
                 children.append(e)
             }
             if let owner = self.__n0a {
-                owner.replaceChildren(children, context)
+                owner.replaceChildren(children, context, animation: animation)
             }
           }
 
@@ -198,7 +198,7 @@ struct ComponentMacroTests {
             }
           }
 
-          private func __swap0_0(_ context: UIContext) {
+          private func __swap0_0(_ context: UIContext, animation: UIAnimation?) {
             let tag = self.__evalTag0_0()
             guard tag != self.__tag0_0 else {
               return
@@ -208,25 +208,27 @@ struct ComponentMacroTests {
             self.__slot0_0 = self.__enter0_0(tag, context)
             self.__leave0_0(previous)
             self.__armHandlers()
-            self.__applyChildren0(context)
+            self.__applyChildren0(context, animation: animation)
           }
 
-          private func __update_color() {
+          private func __update_color(_ animated: Bool = true) {
             guard let context = self.__context else {
               self.__needsRefresh = true
               return
             }
+            let transaction = animated ? UITransaction.animation : nil
             if let n = self.__n0_1a {
-                n.setColor(self._color, context)
+                n.setColor(self._color, context, animation: transaction)
             }
           }
 
-          private func __update_isLoggedIn() {
+          private func __update_isLoggedIn(_ animated: Bool = true) {
             guard let context = self.__context else {
               self.__needsRefresh = true
               return
             }
-            self.__swap0_0(context)
+            let transaction = animated ? UITransaction.animation : nil
+            self.__swap0_0(context, animation: transaction)
           }
       }
 
@@ -289,9 +291,9 @@ struct ComponentMacroTests {
           }
 
           private func __refreshAll() {
-            self.__update_isOn()
-            self.__update_a()
-            self.__update_b()
+            self.__update_isOn(false)
+            self.__update_a(false)
+            self.__update_b(false)
           }
 
           private func __build(_ context: UIContext) -> UIElement {
@@ -304,41 +306,44 @@ struct ComponentMacroTests {
             return root.first ?? EmptyElement()
           }
 
-          private func __applyChildrenRoot(_ context: UIContext) {
+          private func __applyChildrenRoot(_ context: UIContext, animation: UIAnimation?) {
             var children: [UIElement] = []
             if let e = self.__n0a {
                 children.append(e)
             }
-            self.setChild(children.first ?? EmptyElement(), context)
+            self.setChild(children.first ?? EmptyElement(), context, animation: animation)
           }
 
-          private func __update_isOn() {
+          private func __update_isOn(_ animated: Bool = true) {
             guard let context = self.__context else {
               self.__needsRefresh = true
               return
             }
+            let transaction = animated ? UITransaction.animation : nil
             if let n = self.__n0a {
-                n.setColor(self._isOn ? self._a : self._b, context)
+                n.setColor(self._isOn ? self._a : self._b, context, animation: transaction)
             }
           }
 
-          private func __update_a() {
+          private func __update_a(_ animated: Bool = true) {
             guard let context = self.__context else {
               self.__needsRefresh = true
               return
             }
+            let transaction = animated ? UITransaction.animation : nil
             if let n = self.__n0a {
-                n.setColor(self._isOn ? self._a : self._b, context)
+                n.setColor(self._isOn ? self._a : self._b, context, animation: transaction)
             }
           }
 
-          private func __update_b() {
+          private func __update_b(_ animated: Bool = true) {
             guard let context = self.__context else {
               self.__needsRefresh = true
               return
             }
+            let transaction = animated ? UITransaction.animation : nil
             if let n = self.__n0a {
-                n.setColor(self._isOn ? self._a : self._b, context)
+                n.setColor(self._isOn ? self._a : self._b, context, animation: transaction)
             }
           }
       }
@@ -403,8 +408,8 @@ struct ComponentMacroTests {
           }
 
           private func __refreshAll() {
-            self.__update_w()
-            self.__update_c()
+            self.__update_w(false)
+            self.__update_c(false)
           }
 
           private func __build(_ context: UIContext) -> UIElement {
@@ -419,31 +424,33 @@ struct ComponentMacroTests {
             return root.first ?? EmptyElement()
           }
 
-          private func __applyChildrenRoot(_ context: UIContext) {
+          private func __applyChildrenRoot(_ context: UIContext, animation: UIAnimation?) {
             var children: [UIElement] = []
             if let e = self.__n0b {
                 children.append(e)
             }
-            self.setChild(children.first ?? EmptyElement(), context)
+            self.setChild(children.first ?? EmptyElement(), context, animation: animation)
           }
 
-          private func __update_w() {
+          private func __update_w(_ animated: Bool = true) {
             guard let context = self.__context else {
               self.__needsRefresh = true
               return
             }
+            let transaction = animated ? UITransaction.animation : nil
             if let n = self.__n0b {
-                n.setSize(float2(self._w, 100), context)
+                n.setSize(float2(self._w, 100), context, animation: transaction)
             }
           }
 
-          private func __update_c() {
+          private func __update_c(_ animated: Bool = true) {
             guard let context = self.__context else {
               self.__needsRefresh = true
               return
             }
+            let transaction = animated ? UITransaction.animation : nil
             if let n = self.__n0a {
-                n.setColor(self._c, context)
+                n.setColor(self._c, context, animation: transaction)
             }
           }
       }
@@ -518,7 +525,7 @@ struct ComponentMacroTests {
           }
 
           private func __refreshAll() {
-            self.__update_color()
+            self.__update_color(false)
           }
 
           private func __build(_ context: UIContext) -> UIElement {
@@ -544,21 +551,22 @@ struct ComponentMacroTests {
             self.__n0b?.onTap = nil
           }
 
-          private func __applyChildrenRoot(_ context: UIContext) {
+          private func __applyChildrenRoot(_ context: UIContext, animation: UIAnimation?) {
             var children: [UIElement] = []
             if let e = self.__n0b {
                 children.append(e)
             }
-            self.setChild(children.first ?? EmptyElement(), context)
+            self.setChild(children.first ?? EmptyElement(), context, animation: animation)
           }
 
-          private func __update_color() {
+          private func __update_color(_ animated: Bool = true) {
             guard let context = self.__context else {
               self.__needsRefresh = true
               return
             }
+            let transaction = animated ? UITransaction.animation : nil
             if let n = self.__n0a {
-                n.setColor(self._color, context)
+                n.setColor(self._color, context, animation: transaction)
             }
           }
       }

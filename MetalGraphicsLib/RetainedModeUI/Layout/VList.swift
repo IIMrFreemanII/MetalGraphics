@@ -12,15 +12,15 @@ public final class VList<T : Identifiable> : VStack {
     self.applyContent(self.rows.initialElements(items))
   }
 
-  public func setItems(_ items: [T], _ context: UIContext) -> Void {
-    self.rows.setItems(items, context)
+  public func setItems(_ items: [T], _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.rows.setItems(items, context, animation: animation)
   }
 
-  public func insertRow(_ item: T, at index: Int, _ context: UIContext) -> Void {
-    self.rows.insertRow(item, at: index, context)
+  public func insertRow(_ item: T, at index: Int, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.rows.insertRow(item, at: index, context, animation: animation)
   }
 
-  public func removeRow(_ item: T, at index: Int, _ context: UIContext) -> Void {
-    self.rows.removeRow(item, at: index, context)
+  public func removeRow(_ item: T, at index: Int, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.rows.removeRow(item, at: index, context, animation: animation)
   }
 }

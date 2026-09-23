@@ -38,6 +38,14 @@ enum Naming {
   static func leaveBranch(_ path: String) -> String { "__leave\(path)" }
   static func swapBranch(_ path: String) -> String { "__swap\(path)" }
 
+  /// A constant `.animation(_:value:)` hoisted into a `static let`, named by the element's path
+  /// and the scope's position among that element's scopes. Not by the links it covers: two
+  /// scopes written back to back cover the same links.
+  static func animationConstant(_ path: String, _ index: Int) -> String { "__anim\(path)_\(index)" }
+
+  /// The update methods' local holding `UITransaction.animation`, for bindings no scope claims.
+  static let transaction = "transaction"
+
   /// Rebuilds one container's children from its slots.
   static func applyChildren(_ path: String) -> String { "__applyChildren\(path.isEmpty ? "Root" : path)" }
 

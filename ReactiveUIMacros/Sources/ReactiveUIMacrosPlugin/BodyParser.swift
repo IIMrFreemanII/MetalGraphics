@@ -249,6 +249,7 @@ struct BodyParser {
     }
 
     var chain: [ChainLink] = []
+    var scopes: [AnimationScope] = []
 
     // A generic element (`VList<T>`) needs its argument spelled out in the node field's type,
     // and the macro can only get it from the written annotation of the @State being passed.
@@ -267,7 +268,7 @@ struct BodyParser {
       )
     )
 
-    for (offset, call) in calls.dropFirst().enumerated() {
+    for call in calls.dropFirst() {
       guard let member = call.calledExpression.as(MemberAccessExprSyntax.self) else { return nil }
       let name = member.declName.baseName.text
       guard let spec = ElementCatalog.modifiers[name] else {
@@ -278,9 +279,26 @@ struct BodyParser {
         )
         return nil
       }
+      if spec.isScope {
+        guard let scope = parseAnimationScope(call, path: path, upToLink: chain.count, index: scopes.count)
+        else { return nil }
+        scopes.append(scope)
+        continue
+      }
+      // F13: an in-place modifier sets a property of what it is called on, so it has to be
+      // called on that type, not on a wrapper around it.
+      if let target = spec.inPlaceOn, let receiver = chain.last, receiver.type != target {
+        context.error(
+          "F13",
+          "'.\(name)' applies to \(target) only; call it directly on the \(target), before '\(receiver.type)' wraps it.",
+          at: member.declName
+        )
+        return nil
+      }
+      // Named by position among the links, so a scope marker leaves no gap in the lettering.
       chain.append(
         ChainLink(
-          field: Naming.node(path, offset + 1), local: Naming.local(path, offset + 1),
+          field: Naming.node(path, chain.count), local: Naming.local(path, chain.count),
           type: spec.produces, kind: .modifier(call: call, spec: spec),
           bound: parseModifierArgs(call, spec), handler: handlerClosure(call, spec)
         )
@@ -301,7 +319,50 @@ struct BodyParser {
       }
     }
 
-    return ElementIR(path: path, chain: chain, children: children, arity: typeSpec.arity)
+    return ElementIR(path: path, chain: chain, children: children, arity: typeSpec.arity, scopes: scopes)
+  }
+
+  // MARK: - Animation scopes
+
+  /// F12: `.animation(A, value: V)` animates writes to the states `V` reads, so `V` has to read
+  /// at least one. Anything else would be a scope that never fires.
+  private func parseAnimationScope(
+    _ call: FunctionCallExprSyntax, path: String, upToLink: Int, index: Int
+  ) -> AnimationScope? {
+    let arguments = Array(call.arguments)
+    guard arguments.count == 2, arguments[0].label == nil, arguments[1].label?.text == "value" else {
+      context.error("F12", "write '.animation(<animation>, value: self.<state>)'.", at: call)
+      return nil
+    }
+
+    let triggers = StateRewriter.scan(arguments[1].expression, states: states).reads
+    guard !triggers.isEmpty else {
+      context.error(
+        "F12",
+        "'.animation(_:value:)' animates the changes a write to the states 'value:' reads makes, "
+          + "so 'value:' must read a @State property, e.g. 'value: self.isOn'.",
+        at: arguments[1].expression
+      )
+      return nil
+    }
+
+    let (animation, reads) = StateRewriter.scan(arguments[0].expression, states: states)
+    return AnimationScope(
+      upToLink: upToLink, animation: animation, triggers: triggers,
+      constantField: Self.isConstant(animation, reads: reads)
+        ? Naming.animationConstant(path, index) : nil
+    )
+  }
+
+  /// True for an expression that can be evaluated once, in a `static let`: it reads no state and
+  /// mentions neither `self` (which a static context has no instance for) nor `Self`, which a
+  /// stored property's initializer cannot reference. `Self.x` names a static already, so
+  /// evaluating it in place costs nothing.
+  private static func isConstant(_ expr: ExprSyntax, reads: Set<String>) -> Bool {
+    guard reads.isEmpty else { return false }
+    return !expr.tokens(viewMode: .sourceAccurate).contains {
+      $0.tokenKind == .keyword(.self) || $0.tokenKind == .keyword(.Self)
+    }
   }
 
   // MARK: - Generic arguments
@@ -386,7 +447,8 @@ struct BodyParser {
       if !reads.isEmpty {
         bound.append(BoundArg(
           setter: setter, value: rewritten, reads: reads,
-          isRows: label != nil && label == spec.genericOverItemsOf
+          isRows: label != nil && label == spec.genericOverItemsOf,
+          animatable: argSpec.animatable
         ))
       }
     }
@@ -403,9 +465,14 @@ struct BodyParser {
   private func parseModifierArgs(_ call: FunctionCallExprSyntax, _ spec: ModifierSpec) -> [BoundArg] {
     guard let setter = spec.setter else { return [] }   // onTap/onHover: the handler is opaque
 
+    var arguments = Array(call.arguments)
+    if case .labeled(let label) = spec.combine {
+      arguments = arguments.filter { $0.label?.text == label }
+    }
+
     var rewritten: [ExprSyntax] = []
     var reads: Set<String> = []
-    for argument in call.arguments {
+    for argument in arguments {
       let (expr, found) = StateRewriter.scan(argument.expression, states: states)
       rewritten.append(expr)
       reads.formUnion(found)
@@ -414,7 +481,7 @@ struct BodyParser {
 
     let value: ExprSyntax
     switch spec.combine {
-    case .identity:
+    case .identity, .labeled:
       guard let first = rewritten.first else { return [] }
       value = first
     case .float2:
@@ -422,6 +489,6 @@ struct BodyParser {
       guard rewritten.count == 2 else { return [] }
       value = "float2(\(rewritten[0]), \(rewritten[1]))"
     }
-    return [BoundArg(setter: setter, value: value, reads: reads)]
+    return [BoundArg(setter: setter, value: value, reads: reads, animatable: spec.animatable)]
   }
 }

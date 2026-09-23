@@ -26,12 +26,14 @@ final class RowView : SingleChildElement {
     super.init()
   }
   
-  private static let labelStyle = TextStyle(color: .white, fontSize: 12)
+  private static let labelFont = TextFont.system(size: 12)
 
   // The label is a reactive argument too: hovering swaps it for the action a tap takes, and the
   // hover survives a shuffle because the row keeps its element.
   @UIElementBuilder var body: [UIElement] {
-    Text(self.hovered ? "remove" : self.item.name, style: Self.labelStyle)
+    Text(self.hovered ? "remove" : self.item.name)
+      .font(Self.labelFont)
+      .foregroundColor(.white)
       .frame(width: 80, height: 24)
       .background(self.hovered ? .black : self.item.color)
       .onHover { isHovered, _ in
@@ -57,7 +59,7 @@ final class ListDemo : SingleChildElement {
     ("purple", .init(0.6, 0.3, 0.9, 1)),
     ("teal", .init(0.1, 0.6, 0.6, 1)),
   ]
-  private static let buttonStyle = TextStyle(color: .white, fontSize: 13)
+  private static let buttonFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
   private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
 
@@ -73,27 +75,39 @@ final class ListDemo : SingleChildElement {
   @UIElementBuilder var body: [UIElement] {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 6) {
-        Text("Append", style: Self.buttonStyle)
+        Text("Append")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(Self.buttonColor)
           .onTap { _ in self.append() }
-        Text("Insert first", style: Self.buttonStyle)
+        Text("Insert first")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(Self.buttonColor)
           .onTap { _ in self.insertFirst() }
-        Text("Remove last", style: Self.buttonStyle)
+        Text("Remove last")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(Self.buttonColor)
           .onTap { _ in self.removeLast() }
-        Text("Shuffle", style: Self.buttonStyle)
+        Text("Shuffle")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(Self.buttonColor)
           .onTap { _ in self.shuffle() }
-        Text("Clear", style: Self.buttonStyle)
+        Text("Clear")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(Self.buttonColor)
           .onTap { _ in self.clear() }
-        Text("Spacing", style: Self.buttonStyle)
+        Text("Spacing")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(Self.buttonColor)
           .onTap { _ in self.toggleSpacing() }
@@ -115,7 +129,9 @@ final class ListDemo : SingleChildElement {
 
       // Read in a condition, so emptying the collection swaps this branch in.
       if self.items.isEmpty {
-        Text("No items. Press Append.", style: TextStyle(color: .init(0.45, 0.45, 0.45, 1), fontSize: 14))
+        Text("No items. Press Append.")
+          .font(.system(size: 14))
+          .foregroundColor(.init(0.45, 0.45, 0.45, 1))
       }
     }
   }

@@ -31,6 +31,17 @@ class TestViewRenderer: ViewRenderer {
 
     self.uiContext.update(root: self.root, size: self.windowSize, input: self.input, graphics: graphics)
 
+    // Nothing changed since the last frame, so there is nothing new to present: the layer keeps
+    // showing the last drawable. A running animation keeps `needsRender` set every frame.
+    //
+    // The input's per-frame state (clicks, deltas, keys) is normally reset at the end of the
+    // drawn frame; a skipped frame has to reset it too, or a click would still read as pressed
+    // on every frame after it.
+    guard self.uiContext.needsRender else {
+      self.input.endFrame()
+      return
+    }
+
     graphics.context(in: view) { _ in
       self.uiContext.render(root: self.root, graphics)
 //      self.root.render(graphics)

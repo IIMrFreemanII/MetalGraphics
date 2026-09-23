@@ -14,13 +14,33 @@ struct BoundArg {
   /// form: `setItems` rebuilds every row, while `insertRow`/`removeRow` touch exactly one.
   /// Everything else (a count read, a branch condition) has to re-run its expression whole.
   let isRows: Bool
+  /// True when the setter takes an `animation:`, i.e. the property can be interpolated.
+  let animatable: Bool
 
-  init(setter: String, value: ExprSyntax, reads: Set<String>, isRows: Bool = false) {
+  init(setter: String, value: ExprSyntax, reads: Set<String>, isRows: Bool = false, animatable: Bool = false) {
     self.setter = setter
     self.value = value
     self.reads = reads
     self.isRows = isRows
+    self.animatable = animatable
   }
+}
+
+/// `.animation(A, value: V)` in a chain. Not a link: it adds no node and no field.
+///
+/// It animates, in the update method of each state `V` reads, the bindings of the links before
+/// it in the chain and everything under the element. Which scope wins for a binding is decided
+/// per state: the innermost one whose triggers include that state.
+struct AnimationScope {
+  /// Applies to chain links `0 ..< upToLink`, and to the element's children.
+  let upToLink: Int
+  /// The animation, with state reads rewritten to storage.
+  let animation: ExprSyntax
+  /// The states `value:` reads. A write to any of them animates this scope.
+  let triggers: Set<String>
+  /// The `static let` holding the animation when it is a constant, so it is built once rather
+  /// than on every update; nil when it reads state or `self` and must be evaluated in place.
+  let constantField: String?
 }
 
 /// A handler bound to a link: which property to assign, and the closure the user wrote.
@@ -69,6 +89,7 @@ struct ElementIR {
   let chain: [ChainLink]  // innermost (the constructor) first
   let children: [NodeIR]
   let arity: Arity
+  let scopes: [AnimationScope]
 
   /// What the parent attaches — the outermost link of the chain.
   var outermost: ChainLink { chain[chain.count - 1] }

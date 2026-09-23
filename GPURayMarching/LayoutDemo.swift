@@ -8,9 +8,10 @@ import ReactiveUI
 // Grey backgrounds show a container's own bounds: the space it was given, or the size it took.
 @Component
 final class LayoutDemo : SingleChildElement {
-  private static let captionStyle = TextStyle(color: .init(0.45, 0.45, 0.45, 1), fontSize: 12)
-  private static let buttonStyle = TextStyle(color: .white, fontSize: 13)
-  private static let labelStyle = TextStyle(color: .white, fontSize: 13)
+  private static let captionFont = TextFont.system(size: 12)
+  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let buttonFont = TextFont.system(size: 13)
+  private static let labelFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
   private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
   private static let grey = float4(0.9, 0.9, 0.9, 1)
@@ -49,13 +50,19 @@ final class LayoutDemo : SingleChildElement {
     HStack(alignment: .top, spacing: 40) {
       VStack(alignment: .leading, spacing: 8) {
         // Children are placed within the widest child; the stack is only as wide as that.
-        Text("VStack: alignment and spacing", style: Self.captionStyle)
+        Text("VStack: alignment and spacing")
+          .font(Self.captionFont)
+          .foregroundColor(Self.captionColor)
         HStack(spacing: 6) {
-          Text("alignment: \(Self.horizontalAlignments[self.vStackAlignment].name)", style: Self.buttonStyle)
+          Text("alignment: \(Self.horizontalAlignments[self.vStackAlignment].name)")
+            .font(Self.buttonFont)
+            .foregroundColor(.white)
             .padding(Self.buttonInset)
             .background(Self.buttonColor)
             .onTap { _ in self.cycleVStackAlignment() }
-          Text("spacing: \(Int(Self.spacings[self.spacing]))", style: Self.buttonStyle)
+          Text("spacing: \(Int(Self.spacings[self.spacing]))")
+            .font(Self.buttonFont)
+            .foregroundColor(.white)
             .padding(Self.buttonInset)
             .background(Self.buttonColor)
             .onTap { _ in self.cycleSpacing() }
@@ -69,8 +76,12 @@ final class LayoutDemo : SingleChildElement {
         .background(Self.grey)
 
         // The same spacing state drives both stacks.
-        Text("HStack: alignment and spacing", style: Self.captionStyle)
-        Text("alignment: \(Self.verticalAlignments[self.hStackAlignment].name)", style: Self.buttonStyle)
+        Text("HStack: alignment and spacing")
+          .font(Self.captionFont)
+          .foregroundColor(Self.captionColor)
+        Text("alignment: \(Self.verticalAlignments[self.hStackAlignment].name)")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(Self.buttonColor)
           .onTap { _ in self.cycleHStackAlignment() }
@@ -84,30 +95,38 @@ final class LayoutDemo : SingleChildElement {
 
         // A spacer takes an equal share of what the stack was offered, so each row sits in a
         // fixed-width frame to give it something to divide.
-        Text("Spacer: pushes apart, centres, shares equally", style: Self.captionStyle)
+        Text("Spacer: pushes apart, centres, shares equally")
+          .font(Self.captionFont)
+          .foregroundColor(Self.captionColor)
         Frame(float2(300, 24), .topLeading) {
           HStack {
-            Text("A", style: Self.labelStyle).frame(width: 24, height: 24).background(.blue)
+            Text("A").font(Self.labelFont).foregroundColor(.white)
+              .frame(width: 24, height: 24).background(.blue)
             Spacer()
-            Text("B", style: Self.labelStyle).frame(width: 24, height: 24).background(.blue)
+            Text("B").font(Self.labelFont).foregroundColor(.white)
+              .frame(width: 24, height: 24).background(.blue)
           }
         }
         .background(Self.grey)
         Frame(float2(300, 24), .topLeading) {
           HStack {
             Spacer()
-            Text("A", style: Self.labelStyle).frame(width: 24, height: 24).background(Self.purple)
+            Text("A").font(Self.labelFont).foregroundColor(.white)
+              .frame(width: 24, height: 24).background(Self.purple)
             Spacer()
           }
         }
         .background(Self.grey)
         Frame(float2(300, 24), .topLeading) {
           HStack {
-            Text("A", style: Self.labelStyle).frame(width: 24, height: 24).background(Self.amber)
+            Text("A").font(Self.labelFont).foregroundColor(.white)
+              .frame(width: 24, height: 24).background(Self.amber)
             Spacer()
-            Text("B", style: Self.labelStyle).frame(width: 24, height: 24).background(Self.amber)
+            Text("B").font(Self.labelFont).foregroundColor(.white)
+              .frame(width: 24, height: 24).background(Self.amber)
             Spacer()
-            Text("C", style: Self.labelStyle).frame(width: 24, height: 24).background(Self.amber)
+            Text("C").font(Self.labelFont).foregroundColor(.white)
+              .frame(width: 24, height: 24).background(Self.amber)
           }
         }
         .background(Self.grey)
@@ -115,8 +134,12 @@ final class LayoutDemo : SingleChildElement {
 
       VStack(alignment: .leading, spacing: 8) {
         // A frame has a fixed size and places its child inside it.
-        Text("Frame: alignment", style: Self.captionStyle)
-        Text("alignment: \(Self.alignments[self.frameAlignment].name)", style: Self.buttonStyle)
+        Text("Frame: alignment")
+          .font(Self.captionFont)
+          .foregroundColor(Self.captionColor)
+        Text("alignment: \(Self.alignments[self.frameAlignment].name)")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(Self.buttonColor)
           .onTap { _ in self.cycleFrameAlignment() }
@@ -125,8 +148,12 @@ final class LayoutDemo : SingleChildElement {
         }
         .background(Self.grey)
 
-        Text("Frame: size", style: Self.captionStyle)
-        Text("size: \(Int(Self.frameSizes[self.frameSize].x))×\(Int(Self.frameSizes[self.frameSize].y))", style: Self.buttonStyle)
+        Text("Frame: size")
+          .font(Self.captionFont)
+          .foregroundColor(Self.captionColor)
+        Text("size: \(Int(Self.frameSizes[self.frameSize].x))×\(Int(Self.frameSizes[self.frameSize].y))")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(Self.buttonColor)
           .onTap { _ in self.cycleFrameSize() }
@@ -136,30 +163,44 @@ final class LayoutDemo : SingleChildElement {
         .background(Self.grey)
 
         // Padding shrinks the space offered to its child and grows the child's size by the inset.
-        Text("Padding: uniform and per edge", style: Self.captionStyle)
-        Text("inset: \(Int(Self.insets[self.inset]))", style: Self.buttonStyle)
+        Text("Padding: uniform and per edge")
+          .font(Self.captionFont)
+          .foregroundColor(Self.captionColor)
+        Text("inset: \(Int(Self.insets[self.inset]))")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(Self.buttonColor)
           .onTap { _ in self.cycleInset() }
         HStack(alignment: .top, spacing: 12) {
-          Text("padded", style: Self.labelStyle)
+          Text("padded")
+            .font(Self.labelFont)
+            .foregroundColor(.white)
             .padding(Inset(all: Self.insets[self.inset]))
             .background(Self.amber)
-          Text("left 24, bottom 16", style: Self.labelStyle)
+          Text("left 24, bottom 16")
+            .font(Self.labelFont)
+            .foregroundColor(.white)
             .padding(Inset(left: 24, top: 4, right: 4, bottom: 16))
             .background(Self.purple)
         }
 
         // An expanded frame takes all the offered space along its axis and only its content's
         // size across it. Light blue is the expanded frame; grey is the space it was offered.
-        Text("ExpandedFrame: axis", style: Self.captionStyle)
-        Text("axis: \(Self.axes[self.axis].name)", style: Self.buttonStyle)
+        Text("ExpandedFrame: axis")
+          .font(Self.captionFont)
+          .foregroundColor(Self.captionColor)
+        Text("axis: \(Self.axes[self.axis].name)")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(Self.buttonColor)
           .onTap { _ in self.cycleAxis() }
         Frame(float2(220, 90), .topLeading) {
           ExpandedFrame(Self.axes[self.axis].value, .center) {
-            Text("content", style: Self.labelStyle)
+            Text("content")
+              .font(Self.labelFont)
+              .foregroundColor(.white)
               .padding(Inset(all: 6))
               .background(.blue)
           }

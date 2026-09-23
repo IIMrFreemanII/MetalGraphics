@@ -41,7 +41,7 @@ public class VStack : MultiChildElement {
       self.contentHeight = contentHeight
     }
     
-    for child in self.children {
+    for child in self.children where !child.isLeaving {
       let childSize = child.calcSize(availableSize)
       contentHeight += childSize.y + spacing
       maxWidth = max(maxWidth, childSize.x)
@@ -66,7 +66,7 @@ public class VStack : MultiChildElement {
   public override func calcPosition(_ position: float2) {
     var yOffset = position.y
     
-    for child in self.children {
+    for child in self.children where !child.isLeaving {
       if child is Spacer {
         yOffset += self.spacerSize
         continue
@@ -78,7 +78,8 @@ public class VStack : MultiChildElement {
       let result = SIMD2<Float>(xOffset, yOffset)
       yOffset += childSize.y + self.spacing
       
-      child.calcPosition(result)
+      self.place(child, at: result, in: position)
     }
+    self.placeLeaving(in: position)
   }
 }

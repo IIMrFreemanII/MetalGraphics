@@ -37,7 +37,10 @@ let package = Package(
       name: "ReactiveUIMacrosTests",
       dependencies: [
         "ReactiveUIMacrosPlugin",
-        .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+        // The generic flavour, so expansion failures can be reported to Swift Testing; the
+        // XCTest one only produces warnings there. See MacroAssertions.swift.
+        .product(name: "SwiftSyntaxMacrosGenericTestSupport", package: "swift-syntax"),
+        .product(name: "SwiftSyntaxMacroExpansion", package: "swift-syntax"),
       ]
     ),
   ]

@@ -1,4 +1,4 @@
-public struct Inset {
+public struct Inset: Equatable {
   public var left: Float
   public var top: Float
   public var right: Float

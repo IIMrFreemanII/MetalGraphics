@@ -16,9 +16,10 @@ final class ConditionalDemo : SingleChildElement {
     .init(0.6, 0.3, 0.9, 1),  // purple
     .init(0.2, 0.8, 0.8, 1),  // teal
   ]
-  private static let buttonStyle = TextStyle(color: .white, fontSize: 13)
+  private static let buttonFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
-  private static let captionStyle = TextStyle(color: .init(0.45, 0.45, 0.45, 1), fontSize: 12)
+  private static let captionFont = TextFont.system(size: 12)
+  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
 
   @State var isOn: Bool = true
   @State var mode: Int = 0
@@ -28,19 +29,27 @@ final class ConditionalDemo : SingleChildElement {
   @UIElementBuilder var body: [UIElement] {
     VStack(alignment: .leading, spacing: 10) {
       HStack(spacing: 6) {
-        Text("Toggle isOn", style: Self.buttonStyle)
+        Text("Toggle isOn")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(.green)
           .onTap { _ in self.toggle() }
-        Text("Cycle mode", style: Self.buttonStyle)
+        Text("Cycle mode")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(.blue)
           .onTap { _ in self.cycleMode() }
-        Text("Pick colour", style: Self.buttonStyle)
+        Text("Pick colour")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(.init(0.85, 0.6, 0.1, 1))
           .onTap { _ in self.toggleSelection() }
-        Text("Step size", style: Self.buttonStyle)
+        Text("Step size")
+          .font(Self.buttonFont)
+          .foregroundColor(.white)
           .padding(Self.buttonInset)
           .background(.init(0.5, 0.5, 0.5, 1))
           .onTap { _ in self.stepSize() }
@@ -48,17 +57,23 @@ final class ConditionalDemo : SingleChildElement {
 
       // Reactive arguments: each state change goes through `Text.setText`, no arm is rebuilt.
       Text("isOn: \(self.isOn)   mode: \(self.mode)   size: \(Int(self.size))")
-      Text(self.selected == nil ? "selected: nil" : "selected: a colour", style: Self.captionStyle)
+      Text(self.selected == nil ? "selected: nil" : "selected: a colour")
+        .font(Self.captionFont)
+        .foregroundColor(Self.captionColor)
 
       // `if` with no else: the empty arm contributes no children, so everything below moves up.
-      Text("if isOn", style: Self.captionStyle)
+      Text("if isOn")
+        .font(Self.captionFont)
+        .foregroundColor(Self.captionColor)
       if self.isOn {
         Rectangle(.green).frame(width: 60, height: 24)
       }
 
       // No `switch` in a body (F2): a multi-way choice is an `else if` chain, which is one
       // branch nested in the else arm of another.
-      Text("if mode == 0 / else if mode == 1 / else", style: Self.captionStyle)
+      Text("if mode == 0 / else if mode == 1 / else")
+        .font(Self.captionFont)
+        .foregroundColor(Self.captionColor)
       if self.mode == 0 {
         Rectangle(.red).frame(width: 40, height: 40)
       } else if self.mode == 1 {
@@ -70,7 +85,9 @@ final class ConditionalDemo : SingleChildElement {
       // `if let` swaps only when the value flips between nil and non-nil, and `color` is read
       // once, when the arm is built. That is why `toggleSelection` always goes through nil:
       // each selection is a fresh entry into the arm, built with the new colour.
-      Text("if let selected / else", style: Self.captionStyle)
+      Text("if let selected / else")
+        .font(Self.captionFont)
+        .foregroundColor(Self.captionColor)
       if let color = self.selected {
         Rectangle(color).frame(width: 60, height: 24)
       } else {
@@ -81,7 +98,9 @@ final class ConditionalDemo : SingleChildElement {
       // is an ordinary reactive argument: while the arm is hidden its node fields are nil, so a
       // size change is a no-op, and re-entering builds it with whatever `size` is by then.
       // The tap handler is armed right after the swap, so it works on the arm's first frame.
-      Text("if isOn && mode != 2", style: Self.captionStyle)
+      Text("if isOn && mode != 2")
+        .font(Self.captionFont)
+        .foregroundColor(Self.captionColor)
       if self.isOn && self.mode != 2 {
         HStack(spacing: 6) {
           Rectangle(.black)

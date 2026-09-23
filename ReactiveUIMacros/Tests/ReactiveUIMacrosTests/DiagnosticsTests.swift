@@ -1,5 +1,5 @@
 import SwiftSyntaxMacros
-import SwiftSyntaxMacrosTestSupport
+import SwiftSyntaxMacrosGenericTestSupport
 import Testing
 
 @testable import ReactiveUIMacrosPlugin
@@ -15,7 +15,7 @@ private func stubsOnly(_ body: String) -> String {
   \(body)
     }
 
-      private func __update_color() {
+      private func __update_color(_ animated: Bool = true) {
       }
   }
 
@@ -136,7 +136,7 @@ struct DiagnosticsTests {
           }
         }
 
-          private func __update_rows() {
+          private func __update_rows(_ animated: Bool = true) {
           }
 
           public func appendRows(_ element: Item) {
@@ -223,7 +223,7 @@ struct DiagnosticsTests {
           }
         }
 
-          private func __update_rows() {
+          private func __update_rows(_ animated: Bool = true) {
           }
       }
 
@@ -263,7 +263,7 @@ struct DiagnosticsTests {
         func appendRows(_ item: Item) {
         }
 
-          private func __update_rows() {
+          private func __update_rows(_ animated: Bool = true) {
           }
 
           public func appendRows(_ element: Item) {
@@ -316,6 +316,55 @@ struct DiagnosticsTests {
         DiagnosticSpec(
           message: "@Component generates 'appendRows' for the @State array 'rows'. Rename your own method, or the property.",
           line: 2, column: 13
+        )
+      ],
+      macros: ["Component": ComponentMacro.self],
+      applyFixIts: [], fixedSource: nil
+    )
+  }
+
+  @Test("F12: an animation scope whose value reads no state would never fire")
+  func animationValueReadsNoState() {
+    assertMacroExpansion(
+      component("    Rectangle(.red).animation(.spring(), value: 1)"),
+      expandedSource: stubsOnly("    Rectangle(.red).animation(.spring(), value: 1)"),
+      diagnostics: [
+        DiagnosticSpec(
+          message: "'.animation(_:value:)' animates the changes a write to the states 'value:' reads "
+            + "makes, so 'value:' must read a @State property, e.g. 'value: self.isOn'.",
+          line: 6, column: 49
+        )
+      ],
+      macros: ["Component": ComponentMacro.self],
+      applyFixIts: [], fixedSource: nil
+    )
+  }
+
+  @Test("F12: an animation scope needs its value")
+  func animationWithoutValue() {
+    assertMacroExpansion(
+      component("    Rectangle(.red).animation(.spring())"),
+      expandedSource: stubsOnly("    Rectangle(.red).animation(.spring())"),
+      diagnostics: [
+        DiagnosticSpec(
+          message: "write '.animation(<animation>, value: self.<state>)'.",
+          line: 6, column: 5
+        )
+      ],
+      macros: ["Component": ComponentMacro.self],
+      applyFixIts: [], fixedSource: nil
+    )
+  }
+
+  @Test("F13: an in-place modifier must be called on its own type, not on a wrapper")
+  func inPlaceModifierOnWrapper() {
+    assertMacroExpansion(
+      component("    Text(\"a\").padding(Inset(all: 1)).font(.system(size: 12))"),
+      expandedSource: stubsOnly("    Text(\"a\").padding(Inset(all: 1)).font(.system(size: 12))"),
+      diagnostics: [
+        DiagnosticSpec(
+          message: "'.font' applies to Text only; call it directly on the Text, before 'Padding' wraps it.",
+          line: 6, column: 38
         )
       ],
       macros: ["Component": ComponentMacro.self],

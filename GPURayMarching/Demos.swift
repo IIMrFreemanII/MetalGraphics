@@ -4,9 +4,9 @@ import ReactiveUI
 enum Demo : Identifiable {
   case conditional
   case list
-  case toggle
   case text
   case layout
+  case animation
 
   var id: Self { self }
 
@@ -14,9 +14,9 @@ enum Demo : Identifiable {
     switch self {
     case .conditional: "Conditional"
     case .list: "List"
-    case .toggle: "Toggle"
     case .text: "Text"
     case .layout: "Layout"
+    case .animation: "Animation"
     }
   }
 
@@ -24,9 +24,9 @@ enum Demo : Identifiable {
     switch self {
     case .conditional: ConditionalDemo()
     case .list: ListDemo()
-    case .toggle: ToggleDemo()
     case .text: TextDemo()
     case .layout: LayoutDemo()
+    case .animation: AnimationDemo()
     }
   }
 }
@@ -38,8 +38,8 @@ final class Demos : SingleChildElement {
   private static let tabInset = Inset(vertical: 5, horizontal: 12)
   private static let activeTabColor = float4(0.2, 0.2, 0.2, 1)
   private static let inactiveTabColor = float4(0.88, 0.88, 0.88, 1)
-  private static let activeTabStyle = TextStyle(color: .white, fontSize: 14)
-  private static let inactiveTabStyle = TextStyle(fontSize: 14)
+  private static let tabFont = TextFont.system(size: 14)
+  private static let tabAnimation = UIAnimation.easeOut(0.15)
 
   @State var selected: Demo = .text
   // Always `[selected]`: the list needs a `@State` array of its own (F10).
@@ -48,26 +48,41 @@ final class Demos : SingleChildElement {
   @UIElementBuilder var body: [UIElement] {
     VStack(alignment: .leading) {
       HStack(spacing: 4) {
-        Text(Demo.conditional.title, style: self.selected == .conditional ? Self.activeTabStyle : Self.inactiveTabStyle)
+        Text(Demo.conditional.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .conditional ? .white : .black)
           .padding(Self.tabInset)
           .background(self.selected == .conditional ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
           .onTap { _ in self.select(.conditional) }
-        Text(Demo.list.title, style: self.selected == .list ? Self.activeTabStyle : Self.inactiveTabStyle)
+        Text(Demo.list.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .list ? .white : .black)
           .padding(Self.tabInset)
           .background(self.selected == .list ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
           .onTap { _ in self.select(.list) }
-        Text(Demo.toggle.title, style: self.selected == .toggle ? Self.activeTabStyle : Self.inactiveTabStyle)
-          .padding(Self.tabInset)
-          .background(self.selected == .toggle ? Self.activeTabColor : Self.inactiveTabColor)
-          .onTap { _ in self.select(.toggle) }
-        Text(Demo.text.title, style: self.selected == .text ? Self.activeTabStyle : Self.inactiveTabStyle)
+        Text(Demo.text.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .text ? .white : .black)
           .padding(Self.tabInset)
           .background(self.selected == .text ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
           .onTap { _ in self.select(.text) }
-        Text(Demo.layout.title, style: self.selected == .layout ? Self.activeTabStyle : Self.inactiveTabStyle)
+        Text(Demo.layout.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .layout ? .white : .black)
           .padding(Self.tabInset)
           .background(self.selected == .layout ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
           .onTap { _ in self.select(.layout) }
+        Text(Demo.animation.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .animation ? .white : .black)
+          .padding(Self.tabInset)
+          .background(self.selected == .animation ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
+          .onTap { _ in self.select(.animation) }
         Spacer()
       }
       VList(alignment: .leading, items: self.shown) { demo in

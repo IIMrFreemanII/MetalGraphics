@@ -1,3 +1,4 @@
+// For `GCKeyCode`, the key vocabulary. No GameController input is read.
 import GameController
 import simd
 
@@ -72,78 +73,13 @@ extension Drag: CustomStringConvertible {
   public var hScrolling = false
   public var vScrolling = false
 
-  public init() {
-    let center = NotificationCenter.default
-
-    center.addObserver(
-      forName: .GCMouseDidConnect,
-      object: nil,
-      queue: nil
-    ) { notification in
-      let mouse = notification.object as? GCMouse
-      // 1
-      mouse?.mouseInput?.leftButton.pressedChangedHandler = { _, _, pressed in
-        self.leftMousePressed = pressed
-
-        if pressed {
-          self.leftMouseDown = true
-        } else {
-          self.leftMouseUp = true
-        }
-      }
-      mouse?.mouseInput?.rightButton?.pressedChangedHandler = { _, _, pressed in
-        self.rightMousePressed = pressed
-
-        if pressed {
-          self.rightMouseDown = true
-        } else {
-          self.rightMouseUp = true
-        }
-      }
-    }
-
-    center.addObserver(
-      forName: .GCKeyboardDidConnect,
-      object: nil,
-      queue: nil
-    ) { notification in
-      let keyboard = notification.object as? GCKeyboard
-      keyboard?.keyboardInput?.keyChangedHandler = { _, _, keyCode, pressed in
-        if pressed {
-          self.keysDown.insert(keyCode)
-          self.keysPressed.insert(keyCode)
-
-          switch keyCode {
-          case .leftGUI, .rightGUI:
-            self.commandPressed = true
-          case .leftShift, .rightShift:
-            self.shiftPressed = true
-          default:
-            break
-          }
-        } else {
-          self.keysPressed.remove(keyCode)
-          self.keysUp.insert(keyCode)
-
-          switch keyCode {
-          case .leftGUI, .rightGUI:
-            self.commandPressed = false
-          case .leftShift, .rightShift:
-            self.shiftPressed = false
-          default:
-            break
-          }
-        }
-      }
-    }
-
-    // #if os(macOS)
-    //    NSEvent.addLocalMonitorForEvents(
-    //      matching: [.keyDown]) { event in
-    //        return NSApp.keyWindow?.firstResponder is NSTextView ? event : nil
-    //      }
-    // #endif
-  }
+  // Every field is fed by `MyMTKView` from the view's own `NSEvent`s.
+  //
+  // Not GameController: `GCMouse`/`GCKeyboard` read the physical devices directly. That made
+  // input global — a click on the inspector, or in another app, tapped whatever sat under the
+  // last pointer position — and invisible to synthetic events, so the app could not be driven
+  // by anything but a hand on the hardware. `GCKeyCode` stays as the key vocabulary only.
+  public init() {}
 
   public func hideHScrollDebounced() {
     self.hScrollTimer?.invalidate()
