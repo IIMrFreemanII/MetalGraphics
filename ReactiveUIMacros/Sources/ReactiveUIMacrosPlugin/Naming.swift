@@ -37,6 +37,9 @@ enum Naming {
   static func enterBranch(_ path: String) -> String { "__enter\(path)" }
   static func leaveBranch(_ path: String) -> String { "__leave\(path)" }
   static func swapBranch(_ path: String) -> String { "__swap\(path)" }
+  /// Re-reads the current arm's elements into the slot, for a branch whose arm holds another
+  /// branch directly (an `else if`): that one can swap without this one swapping.
+  static func recollect(_ path: String) -> String { "__recollect\(path)" }
 
   /// A constant `.animation(_:value:)` hoisted into a `static let`, named by the element's path
   /// and the scope's position among that element's scopes. Not by the links it covers: two
