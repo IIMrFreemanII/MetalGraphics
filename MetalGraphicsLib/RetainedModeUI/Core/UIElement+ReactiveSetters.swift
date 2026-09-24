@@ -1,3 +1,4 @@
+import AppKit
 import simd
 
 // The update door for generated code.
@@ -114,6 +115,31 @@ extension Text {
 
   public func setForegroundColor(_ value: float4, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
     self.restyle(context, animation) { $0.color = value }
+  }
+}
+
+// A new image snaps; its foreground color animates.
+extension Image {
+  public func setName(_ value: String, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.load(name: value)
+    context.invalidate(.layout, animation: animation)
+  }
+
+  public func setNSImage(_ value: NSImage, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.load(nsImage: value)
+    context.invalidate(.layout, animation: animation)
+  }
+
+  public func setSVG(_ value: String, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.load(svg: value)
+    context.invalidate(.layout, animation: animation)
+  }
+
+  public func setForegroundColor(_ value: float4, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    context.animator.set(self, .color, from: self.color, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: Image.self).color = float4(packed: value)
+      context.invalidate()
+    }
   }
 }
 

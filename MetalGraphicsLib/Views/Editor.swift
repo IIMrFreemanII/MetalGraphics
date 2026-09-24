@@ -119,31 +119,6 @@ public struct Editor: View {
   }
   
   public var body: some View {
-    NavigationSplitView {
-      Navigation(renderer: renderer)
-    } detail: {
-      ZStack {
-        MetalView(viewRenderer: renderer)
-      }
-//      .frame(minWidth: 300)
-      .inspector(isPresented: $showDetails) {
-        Inspector(renderer: renderer)
-          .padding()
-          .inspectorColumnWidth(min: 200, ideal: 250, max: 700)
-      }
-    }
-    .toolbar {
-      ToolbarItem {
-        Button(action: {
-          SwiftUI.withAnimation {
-            self.showDetails.toggle()
-          }
-        }) {
-          Image(systemName: "sidebar.right")
-            .font(.title)
-        }
-      }
-    }
-    .environmentObject(Global.shared.reload)
+    MetalView(viewRenderer: renderer)
   }
 }

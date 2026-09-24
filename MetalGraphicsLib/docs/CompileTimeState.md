@@ -185,7 +185,7 @@ From the outside `RowView(item:onRemove:)` is an ordinary constructor call, opaq
 | F10 | a list's `items:` that is not a direct `@State` array reference |
 | F11 | a generated mutation method colliding with one the component declares |
 | F12 | `.animation(_:value:)` whose `value:` reads no `@State`, or written without `value:` |
-| F13 | an in-place modifier (`.font`, `.foregroundColor`) called on something other than a `Text` |
+| F13 | an in-place modifier (`.font`, `.foregroundColor`, `.resizable`, …) called on something other than the element it styles |
 
 F9 is retired, not missing: it warned that a handler capturing `self` strongly leaks, which stopped
 being true once the macro started clearing handlers on unmount. The numbers are not reused.
@@ -409,6 +409,13 @@ how a `Text` is styled; unset, it draws at 16pt in the default face, in black. T
 the macro they are *in-place* modifiers: links of their own whose field holds the same `Text`, so
 scopes cover them by position like any link, and calling one on anything but a `Text` is F13.
 `TextFont` is not named `Font`, which would clash with SwiftUI's.
+
+`Image` works the same way. `Image(name)` takes its name reactively (`setName`), and
+`.foregroundColor(_:)` is in place on it as on `Text`: an in-place modifier lists every type it
+may be called on, and its link is typed as its receiver. `.resizable()`, `.aspectRatio(_:contentMode:)`,
+`.scaledToFit()`, `.scaledToFill()`, `.renderingMode(_:)` and `.interpolation(_:)` are in place on
+`Image` only, and constant: they have no setter, so they are built once with the image and a
+`@State` they read is read then and never again.
 
 Color and font size animate — `setFont` and `setForegroundColor` — and a new face snaps, since
 glyphs cannot morph. The text is shaped once, at the size it animates to, and drawn scaled in

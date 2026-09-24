@@ -18,8 +18,8 @@
     "semantic_hash": "9deb2ada1cc834bbebf8bbad9c8978a1"
   },
   "GPURayMarching/ConditionalDemo.swift": {
-    "mtime": 1790198783.3182983,
-    "seen": 1790198977.696503,
+    "mtime": 1790202422.8249338,
+    "seen": 1790264957.692039,
     "ast_hash": "ff67428b2e241616700a7bc7b43b8358",
     "semantic_hash": ""
   },
@@ -36,8 +36,8 @@
     "semantic_hash": "4859bfdd180455a28840e65d2da1900c"
   },
   "GPURayMarching/ListDemo.swift": {
-    "mtime": 1790198783.3186805,
-    "seen": 1790198977.696508,
+    "mtime": 1790202422.825177,
+    "seen": 1790264957.692045,
     "ast_hash": "5a6adf5f5c1984a4c803de78350bdfcb",
     "semantic_hash": ""
   },
@@ -114,9 +114,9 @@
     "semantic_hash": "d5cd50cd8272b709721547f37d6593c8"
   },
   "MetalGraphicsLib/Graphics/2D/Graphics2D.swift": {
-    "mtime": 1790193129.8927627,
-    "seen": 1790194175.8602262,
-    "ast_hash": "4b19f3facfc4ae448cb3341b89e83bd8",
+    "mtime": 1790203112.4843142,
+    "seen": 1790264957.6920588,
+    "ast_hash": "15984d241fe430e6ffd9107f18281c96",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/Graphics/2D/Shapes2D/Circle.swift": {
@@ -138,9 +138,9 @@
     "semantic_hash": "45dd923c137696a67e95885205b0f5d9"
   },
   "MetalGraphicsLib/Graphics/2D/Text/SDFFont.swift": {
-    "mtime": 1790115825.4878185,
-    "seen": 1790115998.858021,
-    "ast_hash": "0c72fa0a6b8edf238eda36b1ef7122d9",
+    "mtime": 1790202980.633808,
+    "seen": 1790264957.692066,
+    "ast_hash": "04a762d5cc34595f163cea8e028829a9",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/Graphics/2D/Text/TextLayout.swift": {
@@ -168,9 +168,9 @@
     "semantic_hash": "891d610f3c32aa75c7fb410cbbb4c82e"
   },
   "MetalGraphicsLib/GraphicsGrid2D.swift": {
-    "mtime": 1790114274.117586,
-    "seen": 1790114535.968682,
-    "ast_hash": "bb8759daea1af187e527c12a89a234bc",
+    "mtime": 1790203077.8057098,
+    "seen": 1790264957.6920698,
+    "ast_hash": "1c98a70001d94e82e37ffa8f9cc7fb4d",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/HittableGrid2D.swift": {
@@ -372,9 +372,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Core/UIElement+ReactiveSetters.swift": {
-    "mtime": 1790198726.7975664,
-    "seen": 1790198977.696566,
-    "ast_hash": "46c24a48607e212c9920007454505203",
+    "mtime": 1790203344.497767,
+    "seen": 1790264957.692111,
+    "ast_hash": "2a27325b6ff859b61eecc8bfee45f983",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Core/UIElement.swift": {
@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/Shaders/GlyphSDF.metal": {
-    "mtime": 1790115905.2758093,
-    "seen": 1790115998.8580759,
-    "ast_hash": "3436ea13a9405eb871ab51e4bae4b0a0",
+    "mtime": 1790203003.2205749,
+    "seen": 1790264957.6921291,
+    "ast_hash": "cbaa989fb976accca8df04baad748ed5",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/Shaders/Math.h": {
@@ -510,9 +510,9 @@
     "semantic_hash": "33082b773339066b498505f8e6a06285"
   },
   "MetalGraphicsLib/Shaders/Shaders.metal": {
-    "mtime": 1790114234.463058,
-    "seen": 1790114535.9687319,
-    "ast_hash": "4c62bbbdfdbbf39d54fd99582f81b40d",
+    "mtime": 1790203126.4072862,
+    "seen": 1790264957.692134,
+    "ast_hash": "052d0d1ac9809b9ff2125b82f7af5722",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/Shaders/Utils.h": {
@@ -576,9 +576,9 @@
     "semantic_hash": "c5419dad75893ca56c5b55fba153d5b6"
   },
   "MetalGraphicsLib/Views/Editor.swift": {
-    "mtime": 1790193236.075307,
-    "seen": 1790194175.8603048,
-    "ast_hash": "0bc37aafa5ec6d54986665f51bab87fc",
+    "mtime": 1790203350.0217726,
+    "seen": 1790264957.6921442,
+    "ast_hash": "1de7929e7ef7a706fb2019de02f6b03b",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/Views/Number2Field.swift": {
@@ -624,14 +624,14 @@
     "semantic_hash": "9bf2fdae0d26927b4742b7ac8b8a26d0"
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/BodyParser.swift": {
-    "mtime": 1790198847.020648,
-    "seen": 1790198977.6966069,
-    "ast_hash": "e549383632182d745c9408e7c5f8acb4",
+    "mtime": 1790203431.311406,
+    "seen": 1790264957.692152,
+    "ast_hash": "8b605cd0c88307b56173060d1f0f91a5",
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/CodeGen.swift": {
-    "mtime": 1790193598.060508,
-    "seen": 1790194175.8603141,
+    "mtime": 1790202422.8263035,
+    "seen": 1790264957.692153,
     "ast_hash": "32a4278b71749b88446223145679ea6b",
     "semantic_hash": ""
   },
@@ -654,9 +654,9 @@
     "semantic_hash": "851a425431ab876a65ad81689c026419"
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/ElementCatalog.swift": {
-    "mtime": 1790198726.7977269,
-    "seen": 1790198977.6966121,
-    "ast_hash": "be2171dd93f32cd65fb7fa0270d3aa73",
+    "mtime": 1790203431.311137,
+    "seen": 1790264957.692157,
+    "ast_hash": "5cadebb3219a5fabb9fc9be3b7c6ddf2",
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/IR.swift": {
@@ -666,8 +666,8 @@
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/Naming.swift": {
-    "mtime": 1790193598.0600681,
-    "seen": 1790194175.860319,
+    "mtime": 1790202422.8265297,
+    "seen": 1790264957.692158,
     "ast_hash": "a5f61ab52db975ec488672e15fecfe85",
     "semantic_hash": ""
   },
@@ -690,15 +690,15 @@
     "semantic_hash": "4e492e7f441472954f440b9113f65e5b"
   },
   "ReactiveUIMacros/Tests/ReactiveUIMacrosTests/ComponentMacroTests.swift": {
-    "mtime": 1790193525.6451921,
-    "seen": 1790194175.8603232,
-    "ast_hash": "0a83c636f7cfd411f77d168d7140f921",
+    "mtime": 1790203487.6880183,
+    "seen": 1790264957.692163,
+    "ast_hash": "a8087771f5df849d6374a3fca84353c7",
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Tests/ReactiveUIMacrosTests/DiagnosticsTests.swift": {
-    "mtime": 1790197597.7482996,
-    "seen": 1790197946.014524,
-    "ast_hash": "d2a5118a3474664b7fc27f0fee571f21",
+    "mtime": 1790203487.6882074,
+    "seen": 1790264957.6921642,
+    "ast_hash": "4e7dd4d9ec03bd5d8c59ce991bccfb72",
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Tests/ReactiveUIMacrosTests/ListMacroTests.swift": {
@@ -714,9 +714,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/docs/CompileTimeState.md": {
-    "mtime": 1790198975.9956503,
-    "seen": 1790198977.696625,
-    "ast_hash": "c752f76c5560f91751dc01d444aeac1c",
+    "mtime": 1790203511.926385,
+    "seen": 1790264957.692171,
+    "ast_hash": "b978a072c1b741ab71a52a326e790f3b",
     "semantic_hash": ""
   },
   ".claude/settings.json": {
@@ -738,9 +738,9 @@
     "semantic_hash": ""
   },
   "GPURayMarching/Demos.swift": {
-    "mtime": 1790198749.4455905,
-    "seen": 1790198977.696505,
-    "ast_hash": "658f72d4760d2b0cf52eb7e727430623",
+    "mtime": 1790264939.1388903,
+    "seen": 1790264957.692041,
+    "ast_hash": "2ff15b5c056acb5cb0802fe555c527de",
     "semantic_hash": ""
   },
   "GPURayMarching/LayoutDemo.swift": {
@@ -831,6 +831,168 @@
     "mtime": 1790197298.7058303,
     "seen": 1790197946.0144682,
     "ast_hash": "f08e8f86a246ec781acf0a31c6f14aeb",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/arrow.dataset/Contents.json": {
+    "mtime": 1790203570.1022933,
+    "seen": 1790264957.69203,
+    "ast_hash": "e45d0060d4b2cd6c5cefe931c50415be",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/badge.dataset/Contents.json": {
+    "mtime": 1790203570.102519,
+    "seen": 1790264957.692031,
+    "ast_hash": "3d53c7ce0b602c2b35deb225d0bf6b88",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/check-circle.dataset/Contents.json": {
+    "mtime": 1790203570.1014025,
+    "seen": 1790264957.692032,
+    "ast_hash": "d35f01d4ccc6b648f47097fb73f32a00",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/photo.imageset/Contents.json": {
+    "mtime": 1790203570.1028726,
+    "seen": 1790264957.692033,
+    "ast_hash": "1ecf6e9551e4903ee21bc1dbab428982",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/pixel-heart.imageset/Contents.json": {
+    "mtime": 1790203570.1029987,
+    "seen": 1790264957.692034,
+    "ast_hash": "706f80d03fc6a3015f9a001563ba48bb",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/ring.dataset/Contents.json": {
+    "mtime": 1790203570.1015968,
+    "seen": 1790264957.692035,
+    "ast_hash": "7da4ebe3d2368c7146cf7677a313f7d6",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/star-fill.dataset/Contents.json": {
+    "mtime": 1790203570.1011937,
+    "seen": 1790264957.692035,
+    "ast_hash": "0185f6f5f48426059cf6feea511c9416",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/star.dataset/Contents.json": {
+    "mtime": 1790203570.100986,
+    "seen": 1790264957.6920362,
+    "ast_hash": "d2f5a279d677a2a0ff303e4c35dd309e",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/sun.dataset/Contents.json": {
+    "mtime": 1790203570.1020436,
+    "seen": 1790264957.692037,
+    "ast_hash": "3387312c2ed1fe1b74f8feaa433db67e",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/wave.dataset/Contents.json": {
+    "mtime": 1790203570.1027424,
+    "seen": 1790264957.6920378,
+    "ast_hash": "eb4fa40868059af5c5be1a728f14d0b0",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/ImageDemo.swift": {
+    "mtime": 1790203611.0197926,
+    "seen": 1790264957.692043,
+    "ast_hash": "4c86fc582b91a8ac075da84da94d0c42",
+    "semantic_hash": ""
+  },
+  "MetalGraphicsLib/Graphics/2D/Image/ImageManager.swift": {
+    "mtime": 1790203057.7345972,
+    "seen": 1790264957.6920588,
+    "ast_hash": "815ceef29ebd8ef3f5e642b21e514daa",
+    "semantic_hash": ""
+  },
+  "MetalGraphicsLib/Graphics/2D/SDF/SDFBaker.swift": {
+    "mtime": 1790202963.9364147,
+    "seen": 1790264957.69206,
+    "ast_hash": "6d3ef083291ab3162281a7e6dd3a1c90",
+    "semantic_hash": ""
+  },
+  "MetalGraphicsLib/Graphics/2D/SVG/SVGIcon.swift": {
+    "mtime": 1790203304.3485658,
+    "seen": 1790264957.692061,
+    "ast_hash": "6ca9bc274f2b3ce0b18730d43ee3e3d1",
+    "semantic_hash": ""
+  },
+  "MetalGraphicsLib/Graphics/2D/SVG/SVGParser.swift": {
+    "mtime": 1790203276.2247016,
+    "seen": 1790264957.692062,
+    "ast_hash": "334f611f0dbe01b8b7f05d6a204c5903",
+    "semantic_hash": ""
+  },
+  "MetalGraphicsLib/Graphics/2D/SVG/SVGPathData.swift": {
+    "mtime": 1790203216.5386255,
+    "seen": 1790264957.692062,
+    "ast_hash": "b7cf4d252dbabb2c590d128f21656a55",
+    "semantic_hash": ""
+  },
+  "MetalGraphicsLib/RetainedModeUI/Renderable/Image.swift": {
+    "mtime": 1790203406.8343637,
+    "seen": 1790264957.6921248,
+    "ast_hash": "86e94078da678577db666fa7fb749860",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/arrow.dataset/arrow.svg": {
+    "mtime": 1790203570.102201,
+    "seen": 1790264957.692172,
+    "ast_hash": "e38d7b83ed8cb7a86402588870dfd9a6",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/badge.dataset/badge.svg": {
+    "mtime": 1790203570.1024165,
+    "seen": 1790264957.692172,
+    "ast_hash": "ab30721925b789b39fe79aa733a96462",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/check-circle.dataset/check-circle.svg": {
+    "mtime": 1790203570.1013103,
+    "seen": 1790264957.692173,
+    "ast_hash": "b4ea24831a255c8bb6377ffcad8ec7f0",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/photo.imageset/photo.png": {
+    "mtime": 1790203591.0540545,
+    "seen": 1790264957.6921742,
+    "ast_hash": "320f5d6e2eb079138f245b60fd491f26",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/pixel-heart.imageset/pixel-heart.png": {
+    "mtime": 1790203591.0546315,
+    "seen": 1790264957.6921751,
+    "ast_hash": "f0f5a1d20ff9e6c406a5c6f5c5934262",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/ring.dataset/ring.svg": {
+    "mtime": 1790203570.1015155,
+    "seen": 1790264957.6921751,
+    "ast_hash": "eab40533a491b81d36a2b708ccc691d4",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/star-fill.dataset/star-fill.svg": {
+    "mtime": 1790203570.1011062,
+    "seen": 1790264957.6921759,
+    "ast_hash": "3223597230cfc211128214c874141d03",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/star.dataset/star.svg": {
+    "mtime": 1790203570.1008508,
+    "seen": 1790264957.6921768,
+    "ast_hash": "ac6ab52ec674398aa28c52b542ea6617",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/sun.dataset/sun.svg": {
+    "mtime": 1790203570.101889,
+    "seen": 1790264957.692178,
+    "ast_hash": "6c84fc48e303044054acac2438570ce6",
+    "semantic_hash": ""
+  },
+  "GPURayMarching/Assets.xcassets/wave.dataset/wave.svg": {
+    "mtime": 1790203570.1026518,
+    "seen": 1790264957.692178,
+    "ast_hash": "b4a58d90abbf383d7a7b10f42e617e4d",
     "semantic_hash": ""
   }
 }

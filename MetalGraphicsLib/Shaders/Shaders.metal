@@ -52,6 +52,27 @@ struct Glyph {
   float fontSize;
 };
 
+struct ImageQuad {
+  // top left corner, y down
+  float2 position;
+  float2 size;
+  // region of the texture
+  float2 uvMin;
+  float2 uvMax;
+  // a template image's color; an original image takes only its alpha, as opacity
+  float4 tint;
+  float depth;
+  int textureIndex;
+  // bit 0 - template, bit 1 - nearest filtering
+  uint flags;
+  // mip level to sample, log2 of texels per pixel
+  float lod;
+};
+
+struct TextureHandle {
+  texture2d<float> texture;
+};
+
 struct GridCell {
   // maps into shapes buffer
   int startIndex;
@@ -78,6 +99,11 @@ struct ShapeArgBuffer {
   
   device Glyph* glyphs [[id(6)]];
   int glyphsCount [[id(7)]];
+
+  device ImageQuad* images [[id(8)]];
+  int imagesCount [[id(9)]];
+  // premultiplied bitmaps, indexed by `ImageQuad.textureIndex`
+  device TextureHandle* textures [[id(10)]];
 };
 
 struct DebugData {
@@ -128,6 +154,8 @@ kernel void compute2D(
   // --------------------------
   
   constexpr sampler atlasSampler(filter::linear, address::clamp_to_edge);
+  constexpr sampler imageSampler(filter::linear, mip_filter::linear, address::clamp_to_edge);
+  constexpr sampler pixelatedSampler(filter::nearest, mip_filter::nearest, address::clamp_to_edge);
   float pixelsPerPoint = float(width) / float(windowSize.x);
   
   float4 bgColor = color::white;
@@ -212,6 +240,34 @@ kernel void compute2D(
           // one pixel wide anti-aliasing regardless of the font size
           coverage = saturate(0.5 + dist * item.fontSize * pixelsPerPoint);
           shapeColor = item.color;
+          
+          break;
+        }
+          // image
+        case 4: {
+          if (shape.index < 0 || shape.index >= buffer.imagesCount) {
+            break;
+          }
+          ImageQuad item = buffer.images[shape.index];
+          if (any(item.size <= 0) || item.textureIndex < 0) {
+            break;
+          }
+          float2 t = (uv - item.position) / item.size;
+          if (any(t < 0) || any(t > 1)) {
+            break;
+          }
+          texture2d<float> image = buffer.textures[item.textureIndex].texture;
+          float2 imageUV = mix(item.uvMin, item.uvMax, t);
+          float4 texel = (item.flags & 2) != 0
+            ? image.sample(pixelatedSampler, imageUV, level(item.lod))
+            : image.sample(imageSampler, imageUV, level(item.lod));
+          coverage = 1;
+          if ((item.flags & 1) != 0) {
+            shapeColor = float4(item.tint.rgb, item.tint.a * texel.a);
+          } else {
+            // stored premultiplied, composited straight
+            shapeColor = float4(texel.rgb / max(texel.a, 1e-6), texel.a * item.tint.a);
+          }
           
           break;
         }

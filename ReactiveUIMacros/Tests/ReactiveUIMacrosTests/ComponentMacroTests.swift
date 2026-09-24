@@ -577,4 +577,113 @@ struct ComponentMacroTests {
       macros: ["Component": ComponentMacro.self]
     )
   }
+
+  // `Image` takes its name reactively. `.resizable()` and `.scaledToFit()` are in-place and
+  // constant: links typed `Image`, built once, never updated. `.foregroundColor` is in-place on
+  // `Image` as it is on `Text`, so its link is typed `Image` too.
+  @Test("Image: a reactive name, constant in-place modifiers, and a reactive foreground color")
+  func imageInPlaceModifiers() {
+    assertMacroExpansion(
+      """
+      @Component
+      final class Like: SingleChildElement {
+        @State var liked: Bool = false
+
+        @UIElementBuilder var body: [UIElement] {
+          Image(self.liked ? "heart.fill" : "heart")
+            .resizable()
+            .scaledToFit()
+            .foregroundColor(self.liked ? .red : .black)
+        }
+      }
+      """,
+      expandedSource: """
+      final class Like: SingleChildElement {
+        @State var liked: Bool = false
+
+        @UIElementBuilder var body: [UIElement] {
+          Image(self.liked ? "heart.fill" : "heart")
+            .resizable()
+            .scaledToFit()
+            .foregroundColor(self.liked ? .red : .black)
+        }
+
+          private var __context: UIContext? = nil
+
+          private var __needsRefresh: Bool = false
+
+          private var __built: Bool = false
+
+          private var __n0a: Image? = nil
+
+          private var __n0b: Image? = nil
+
+          private var __n0c: Image? = nil
+
+          private var __n0d: Image? = nil
+
+          public override func mount(_ context: UIContext) {
+            self.__context = context
+            if !self.__built {
+              self.__built = true
+              self.setChild(self.__build(context), context)
+            } else if self.__needsRefresh {
+              self.__needsRefresh = false
+              self.__refreshAll()
+            }
+          }
+
+          public override func unmount(_ context: UIContext) {
+            self.__context = nil
+          }
+
+          private func __refreshAll() {
+            self.__update_liked(false)
+          }
+
+          private func __build(_ context: UIContext) -> UIElement {
+            let n0a = Image(self._liked ? "heart.fill" : "heart")
+            self.__n0a = n0a
+            let n0b = n0a.resizable()
+            self.__n0b = n0b
+            let n0c = n0b.scaledToFit()
+            self.__n0c = n0c
+            let n0d = n0c.foregroundColor(self._liked ? .red : .black)
+            self.__n0d = n0d
+            var root: [UIElement] = []
+            if let e = self.__n0d {
+                root.append(e)
+            }
+            return root.first ?? EmptyElement()
+          }
+
+          private func __applyChildrenRoot(_ context: UIContext, animation: UIAnimation?) {
+            var children: [UIElement] = []
+            if let e = self.__n0d {
+                children.append(e)
+            }
+            self.setChild(children.first ?? EmptyElement(), context, animation: animation)
+          }
+
+          private func __update_liked(_ animated: Bool = true) {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            let transaction = animated ? UITransaction.animation : nil
+            if let n = self.__n0a {
+                n.setName(self._liked ? "heart.fill" : "heart", context, animation: transaction)
+            }
+            if let n = self.__n0d {
+                n.setForegroundColor(self._liked ? .red : .black, context, animation: transaction)
+            }
+          }
+      }
+
+      extension Like: ReactiveComponent {
+      }
+      """,
+      macros: ["Component": ComponentMacro.self]
+    )
+  }
 }

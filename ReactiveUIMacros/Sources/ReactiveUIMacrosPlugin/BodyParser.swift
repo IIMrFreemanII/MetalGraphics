@@ -286,8 +286,9 @@ struct BodyParser {
         continue
       }
       // F13: an in-place modifier sets a property of what it is called on, so it has to be
-      // called on that type, not on a wrapper around it.
-      if let target = spec.inPlaceOn, let receiver = chain.last, receiver.type != target {
+      // called on one of its types, not on a wrapper around it.
+      if let targets = spec.inPlaceOn, let receiver = chain.last, !targets.contains(receiver.type) {
+        let target = targets.sorted().joined(separator: " or ")
         context.error(
           "F13",
           "'.\(name)' applies to \(target) only; call it directly on the \(target), before '\(receiver.type)' wraps it.",
@@ -299,7 +300,8 @@ struct BodyParser {
       chain.append(
         ChainLink(
           field: Naming.node(path, chain.count), local: Naming.local(path, chain.count),
-          type: spec.produces, kind: .modifier(call: call, spec: spec),
+          type: spec.inPlaceOn != nil ? chain.last?.type ?? spec.produces : spec.produces,
+          kind: .modifier(call: call, spec: spec),
           bound: parseModifierArgs(call, spec), handler: handlerClosure(call, spec)
         )
       )

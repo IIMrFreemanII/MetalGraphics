@@ -105,16 +105,18 @@ struct ModifierSpec {
   /// records an `AnimationScope` instead.
   let isScope: Bool
   /// Set for modifiers that wrap nothing: they set a property of the element they are called on,
-  /// which must be of this type (F13), and return it. `.font` and `.foregroundColor` on `Text`.
+  /// which must be one of these types (F13), and return it. `.font` on `Text`, `.foregroundColor`
+  /// on `Text` and `Image`, `.resizable` and the other image modifiers on `Image`.
   ///
-  /// Still a link of its own, with its own field — holding the same element as the receiver's —
-  /// so everything positional, like which `.animation` scope covers it, works as for any link.
-  let inPlaceOn: String?
+  /// Still a link of its own, with its own field — holding the same element as the receiver's,
+  /// and typed as the receiver — so everything positional, like which `.animation` scope covers
+  /// it, works as for any link.
+  let inPlaceOn: Set<String>?
 
   init(
     name: String, labels: [String?], produces: String,
     setter: String?, combine: ArgCombine, handler: HandlerSpec? = nil,
-    animatable: Bool = false, isScope: Bool = false, inPlaceOn: String? = nil
+    animatable: Bool = false, isScope: Bool = false, inPlaceOn: Set<String>? = nil
   ) {
     self.name = name
     self.labels = labels
@@ -172,6 +174,12 @@ enum ElementCatalog {
       args: [ArgSpec(nil, "setText", animatable: true)],
       arity: .leaf
     ),
+    "Image": TypeSpec(
+      name: "Image",
+      args: [ArgSpec(nil, "setName", animatable: true), ArgSpec("bundle", nil),
+             ArgSpec("nsImage", "setNSImage", animatable: true), ArgSpec("svg", "setSVG", animatable: true)],
+      arity: .leaf
+    ),
     "Spacer": TypeSpec(name: "Spacer", args: [], arity: .leaf),
     "EmptyElement": TypeSpec(name: "EmptyElement", args: [], arity: .leaf),
   ]
@@ -204,12 +212,35 @@ enum ElementCatalog {
     ),
     "font": ModifierSpec(
       name: "font", labels: [nil],
-      produces: "Text", setter: "setFont", combine: .identity, animatable: true, inPlaceOn: "Text"
+      produces: "Text", setter: "setFont", combine: .identity, animatable: true, inPlaceOn: ["Text"]
     ),
+    // `produces` is only a default: an in-place link is typed as its receiver.
     "foregroundColor": ModifierSpec(
       name: "foregroundColor", labels: [nil],
       produces: "Text", setter: "setForegroundColor", combine: .identity, animatable: true,
-      inPlaceOn: "Text"
+      inPlaceOn: ["Text", "Image"]
+    ),
+    // How an image is sized and drawn: constant, built once with it.
+    "resizable": ModifierSpec(
+      name: "resizable", labels: [], produces: "Image", setter: nil, combine: .identity, inPlaceOn: ["Image"]
+    ),
+    "aspectRatio": ModifierSpec(
+      name: "aspectRatio", labels: [nil, "contentMode"],
+      produces: "Image", setter: nil, combine: .identity, inPlaceOn: ["Image"]
+    ),
+    "scaledToFit": ModifierSpec(
+      name: "scaledToFit", labels: [], produces: "Image", setter: nil, combine: .identity, inPlaceOn: ["Image"]
+    ),
+    "scaledToFill": ModifierSpec(
+      name: "scaledToFill", labels: [], produces: "Image", setter: nil, combine: .identity, inPlaceOn: ["Image"]
+    ),
+    "renderingMode": ModifierSpec(
+      name: "renderingMode", labels: [nil],
+      produces: "Image", setter: nil, combine: .identity, inPlaceOn: ["Image"]
+    ),
+    "interpolation": ModifierSpec(
+      name: "interpolation", labels: [nil],
+      produces: "Image", setter: nil, combine: .identity, inPlaceOn: ["Image"]
     ),
     // Constant: a transition is how an element enters and leaves, not a value that changes.
     "transition": ModifierSpec(

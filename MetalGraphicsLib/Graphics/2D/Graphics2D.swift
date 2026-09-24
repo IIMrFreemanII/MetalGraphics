@@ -12,6 +12,11 @@ private struct ShapeArgBuffer {
 
   var glyphs: UInt64 = 0
   var glyphsCount: Int32 = 0
+
+  var images: UInt64 = 0
+  var imagesCount: Int32 = 0
+  /// `MTLResourceID`s of the textures `images` index.
+  var textures: UInt64 = 0
 }
 
 public struct DebugData {
@@ -56,6 +61,8 @@ public struct SceneData {
     self.squareBuffer = self.device.makeBuffer(length: MemoryLayout<Square>.stride * 1)
     self.lineBuffer = self.device.makeBuffer(length: MemoryLayout<Line>.stride * 1)
     self.glyphBuffer = self.device.makeBuffer(length: MemoryLayout<Glyph>.stride * 1)
+    self.imageBuffer = self.device.makeBuffer(length: MemoryLayout<ImageQuad>.stride * 1)
+    self.textureTableBuffer = self.device.makeBuffer(length: MemoryLayout<MTLResourceID>.stride * 1)
 
     do {
       guard let kernel = self.library.makeFunction(name: "compute2D")
@@ -91,6 +98,15 @@ public struct SceneData {
   private var glyphBuffer: MTLBuffer!
   private var glyphBufferCount: Int = 0
 
+  private var images: [ImageQuad] = []
+  private var imageBuffer: MTLBuffer!
+  private var imageBufferCount: Int = 0
+  /// The textures this frame's images sample, each once, in the order `textureIndex` counts.
+  private var imageTextures: [MTLTexture] = []
+  private var imageTextureIndices: [ObjectIdentifier: Int32] = [:]
+  private var textureTableBuffer: MTLBuffer!
+  private var textureTableCount: Int = 0
+
   public var sceneData = SceneData()
   /// Drawable pixels per point, the ratio `compute2D` maps pixels to points with.
   private(set) var pixelsPerPoint: Float = 1
@@ -103,6 +119,9 @@ public struct SceneData {
     self.squares.removeAll(keepingCapacity: true)
     self.lines.removeAll(keepingCapacity: true)
     self.glyphs.removeAll(keepingCapacity: true)
+    self.images.removeAll(keepingCapacity: true)
+    self.imageTextures.removeAll(keepingCapacity: true)
+    self.imageTextureIndices.removeAll(keepingCapacity: true)
   }
 
   func endFrame() {
@@ -124,6 +143,9 @@ public struct SceneData {
     }
     for (i, item) in self.glyphs.enumerated() {
       self.grid.mapShapeBoundingBoxToGrid(item.bounds, Shape(index: Int32(i), shapeType: ShapeType2D.Glyph.rawValue))
+    }
+    for (i, item) in self.images.enumerated() {
+      self.grid.mapShapeBoundingBoxToGrid(item.bounds, Shape(index: Int32(i), shapeType: ShapeType2D.Image.rawValue))
     }
 
     self.grid.updateBuffers()
@@ -168,6 +190,29 @@ public struct SceneData {
       self.glyphBuffer.contents().copyMemory(from: &self.glyphs, byteCount: self.glyphs.byteCount)
     }
 
+    do {
+      if self.imageBufferCount < self.images.count {
+        self.imageBufferCount += self.images.count + 10
+        self.imageBuffer = self.device.makeBuffer(length: MemoryLayout<ImageQuad>.stride * self.imageBufferCount)
+        self.imageBuffer.label = "Image buffer"
+      }
+
+      self.imageBuffer.contents().copyMemory(from: &self.images, byteCount: self.images.byteCount)
+    }
+
+    do {
+      if self.textureTableCount < self.imageTextures.count {
+        self.textureTableCount += self.imageTextures.count + 10
+        self.textureTableBuffer = self.device.makeBuffer(length: MemoryLayout<MTLResourceID>.stride * self.textureTableCount)
+        self.textureTableBuffer.label = "Texture table"
+      }
+
+      let table = self.textureTableBuffer.contents().bindMemory(to: MTLResourceID.self, capacity: self.imageTextures.count)
+      for (i, texture) in self.imageTextures.enumerated() {
+        table[i] = texture.gpuResourceID
+      }
+    }
+
     let shapeArgPointer = self.shapeArgBuffer.contents().bindMemory(to: ShapeArgBuffer.self, capacity: 1)
     shapeArgPointer.pointee.circles = self.circleBuffer.gpuAddress
     shapeArgPointer.pointee.circlesCount = Int32(self.circles.count)
@@ -177,6 +222,9 @@ public struct SceneData {
     shapeArgPointer.pointee.linesCount = Int32(self.lines.count)
     shapeArgPointer.pointee.glyphs = self.glyphBuffer.gpuAddress
     shapeArgPointer.pointee.glyphsCount = Int32(self.glyphs.count)
+    shapeArgPointer.pointee.images = self.imageBuffer.gpuAddress
+    shapeArgPointer.pointee.imagesCount = Int32(self.images.count)
+    shapeArgPointer.pointee.textures = self.textureTableBuffer.gpuAddress
 
     self.renderer.input.endFrame()
   }
@@ -188,20 +236,25 @@ public struct SceneData {
     else {
       return
     }
-    // Glyphs first laid out this frame are baked before `compute2D` samples the atlas.
-    FontManager.shared.encodePendingBakes(into: commandBuffer)
+    // Glyphs and icons first laid out this frame are baked, and images first drawn uploaded,
+    // before `compute2D` samples them.
+    SDFBaker.shared.encodePendingBakes(into: commandBuffer)
+    ImageManager.shared.encodePendingUploads(into: commandBuffer)
     guard let commandEncoder = commandBuffer.makeComputeCommandEncoder() else {
       // the bakes are already dequeued, so they still have to run
       commandBuffer.commit()
       return
     }
 
-    commandEncoder.useResources([self.grid.cellBuffer, self.grid.shapeBuffer, self.circleBuffer, self.squareBuffer, self.lineBuffer, self.glyphBuffer], usage: .read)
+    commandEncoder.useResources([self.grid.cellBuffer, self.grid.shapeBuffer, self.circleBuffer, self.squareBuffer, self.lineBuffer, self.glyphBuffer, self.imageBuffer, self.textureTableBuffer], usage: .read)
+    if !self.imageTextures.isEmpty {
+      commandEncoder.useResources(self.imageTextures, usage: .read)
+    }
 
     commandEncoder.setComputePipelineState(self.pipelineState)
     let texture = drawable.texture
     commandEncoder.setTexture(texture, index: 0)
-    commandEncoder.setTexture(FontManager.shared.atlasTexture, index: 1)
+    commandEncoder.setTexture(SDFBaker.shared.atlas.texture, index: 1)
 
     self.sceneData.windowSize = SIMD2<Int32>(Int32(self.renderer.windowSize.x), Int32(self.renderer.windowSize.y))
     self.sceneData.time = self.renderer.time
@@ -249,6 +302,8 @@ public struct SceneData {
       self.lines[Int(shape.index)].depth
     case .Glyph:
       self.glyphs[Int(shape.index)].depth
+    case .Image:
+      self.images[Int(shape.index)].depth
     default:
       fatalError("Unsupported Shape: \(shape)")
     }
@@ -286,6 +341,90 @@ public struct SceneData {
     temp.depth = self.depth
     self.lines.append(temp)
     self.depth += 1
+  }
+
+  /// Moves a top left corner onto the pixel grid, half a pixel off the samples `compute2D` takes,
+  /// so something drawn 1:1 has every sample land on a texel center. `compute2D` samples pixel
+  /// `gid` at `(gid - drawableSize / 2) / pixelsPerPoint`.
+  private func snapToPixelEdge(_ point: float2) -> float2 {
+    let halfWindow = self.size * 0.5
+    return (((point + halfWindow) * self.pixelsPerPoint).rounded(.down) + 0.5) / self.pixelsPerPoint - halfWindow
+  }
+
+  /// Draws the `uvMin`...`uvMax` part of `image` over the rect with its top left corner at
+  /// `position`. A template image is drawn in `tint`, its alpha a mask; an original one in its
+  /// own colors, with `tint`'s alpha as its opacity.
+  public func draw(
+    image: BitmapTexture, at position: float2, size: float2,
+    uvMin: float2 = float2(0, 0), uvMax: float2 = float2(1, 1),
+    tint: float4, template: Bool = false, nearest: Bool = false
+  ) {
+    guard size.x > 0, size.y > 0, tint.w > 0 else { return }
+
+    var index = self.imageTextureIndices[ObjectIdentifier(image.texture)]
+    if index == nil {
+      index = Int32(self.imageTextures.count)
+      self.imageTextures.append(image.texture)
+      self.imageTextureIndices[ObjectIdentifier(image.texture)] = index
+    }
+
+    // Sampling the mip level with about one texel per pixel is what keeps a shrunk image from
+    // shimmering; a compute kernel has no derivatives to pick it itself.
+    let pixels = float2(Float(image.pixelSize.x), Float(image.pixelSize.y))
+    let texelsPerPixel = abs(uvMax - uvMin) * pixels / (size * self.pixelsPerPoint)
+    let lod = max(0, log2(max(texelsPerPixel.x, texelsPerPixel.y)))
+
+    var flags: UInt32 = 0
+    if template { flags |= ImageQuad.templateFlag }
+    if nearest { flags |= ImageQuad.nearestFlag }
+
+    self.images.append(ImageQuad(
+      position: self.snapToPixelEdge(position), size: size,
+      uvMin: uvMin, uvMax: uvMax, tint: tint, depth: self.depth,
+      textureIndex: index!, flags: flags, lod: lod.isFinite ? lod : 0
+    ))
+    self.depth += 1
+  }
+
+  /// Draws `icon` with its view box stretched over the rect with its top left corner at
+  /// `position`, keeping only what falls inside `clipMin`...`clipMax`. Each layer is drawn in
+  /// `color(layer)`, above the ones before it.
+  func draw(
+    icon: SVGIcon, at position: float2, size: float2, clipMin: float2, clipMax: float2,
+    color: (SVGIcon.Layer) -> float4
+  ) {
+    guard size.x > 0, size.y > 0 else { return }
+    // points per em, on each axis
+    let scale = size / icon.viewBoxSize
+    // Distances are scaled by one number; the smaller axis keeps edges from blurring.
+    let distanceScale = min(scale.x, scale.y)
+    let origin = self.snapToPixelEdge(position)
+    let clipMin = clipMin + (origin - position)
+    let clipMax = clipMax + (origin - position)
+
+    for layer in icon.layers {
+      let layerColor = color(layer)
+      guard layerColor.w > 0 else { continue }
+      // em space is y up, from the view box's top left corner
+      let quadMin = origin + float2(layer.boundsMin.x, -layer.boundsMax.y) * scale
+      let quadSize = (layer.boundsMax - layer.boundsMin) * scale
+      let visibleMin = simd_max(quadMin, clipMin)
+      let visibleMax = simd_min(quadMin + quadSize, clipMax)
+      guard visibleMin.x < visibleMax.x, visibleMin.y < visibleMax.y, quadSize.x > 0, quadSize.y > 0 else { continue }
+      let t0 = (visibleMin - quadMin) / quadSize
+      let t1 = (visibleMax - quadMin) / quadSize
+
+      self.glyphs.append(Glyph(
+        position: visibleMin,
+        size: visibleMax - visibleMin,
+        uvMin: simd_mix(layer.uvMin, layer.uvMax, t0),
+        uvMax: simd_mix(layer.uvMin, layer.uvMax, t1),
+        color: layerColor,
+        depth: self.depth,
+        fontSize: distanceScale
+      ))
+      self.depth += 1
+    }
   }
 
   /// Draws `text` with its top left corner at `position`, and returns the size it occupies.
