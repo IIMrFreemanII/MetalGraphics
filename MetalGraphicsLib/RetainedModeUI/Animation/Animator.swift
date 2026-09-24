@@ -21,6 +21,20 @@ public enum AnimatedProperty: UInt8, Sendable {
   case keyframes
   /// A `Text`'s presented font size.
   case fontSize
+  /// Vector shape geometry and style.
+  case center
+  case radius
+  case origin
+  case cornerRadius
+  case lineWidth
+  case trimFrom
+  case trimTo
+  case rotation
+  case scale
+  /// A `Path`'s progress between two outlines.
+  case morph
+  /// The value a `Path` builds its outline from.
+  case pathValue
 }
 
 /// Drives every running animation, once per frame, from `UIContext.update`.

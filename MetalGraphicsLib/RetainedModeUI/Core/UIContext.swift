@@ -19,7 +19,7 @@ public struct Invalidation: OptionSet, Sendable {
 @MainActor
 public class UIContext {
   private var renderableViews: [ObjectIdentifier : UIRenderableElement] = [:]
-  private var hittableViews: [ObjectIdentifier : HittableView] = [:]
+  private var hittableViews: [ObjectIdentifier : any Hittable] = [:]
 
   /// Registered renderables in the order they are drawn: tree pre-order, so a parent is drawn
   /// before its children and an earlier sibling's whole subtree before a later sibling.
@@ -33,7 +33,7 @@ public class UIContext {
   /// Registered hittable views in the same tree pre-order, so the last one is the one drawn on
   /// top. Built by the same walk as `paintOrder`, which is what keeps what is clicked and what
   /// is seen from disagreeing.
-  private var hitOrder: [HittableView] = []
+  private var hitOrder: [any Hittable] = []
 
   /// Every element with an effect in the tree — each `EffectElement`, and each element that is
   /// sliding — in pre-order, so a parent always comes before its children. `effectParents[i]` is the index of the nearest effect above `effectOrder[i]`,
@@ -108,12 +108,12 @@ public class UIContext {
     self.invalidate(.treeOrder)
   }
 
-  public func registerHittableView(_ view: HittableView) -> Void {
+  public func registerHittableView(_ view: any Hittable) -> Void {
     self.hittableViews[ObjectIdentifier(view)] = view
     self.invalidate(.treeOrder)
   }
 
-  public func unregisterHittableView(_ view: HittableView) -> Void {
+  public func unregisterHittableView(_ view: any Hittable) -> Void {
     self.hittableViews.removeValue(forKey: ObjectIdentifier(view))
     self.invalidate(.treeOrder)
   }
@@ -254,7 +254,7 @@ public class UIContext {
        self.renderableViews[ObjectIdentifier(renderable)] != nil {
       self.paintOrder.append(renderable)
       self.paintEffects.append(effect)
-    } else if !leaving, let hittable = element as? HittableView,
+    } else if !leaving, let hittable = element as? any Hittable,
               self.hittableViews[ObjectIdentifier(hittable)] != nil {
       self.hitOrder.append(hittable)
     }

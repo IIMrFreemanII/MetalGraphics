@@ -16,6 +16,13 @@
 		A7A000000000000000000160 /* UIKeyframe.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000060 /* UIKeyframe.swift */; };
 		A7A000000000000000000106 /* TransitionElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000006 /* TransitionElement.swift */; };
 		A7A000000000000000000140 /* AnimationDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000040 /* AnimationDemo.swift */; };
+		1A6E00012F00000000000101 /* SDFBaker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00012F00000000000001 /* SDFBaker.swift */; };
+		1A6E00012F00000000000102 /* ImageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00012F00000000000002 /* ImageManager.swift */; };
+		1A6E00012F00000000000103 /* SVGPathData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00012F00000000000003 /* SVGPathData.swift */; };
+		1A6E00012F00000000000104 /* SVGParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00012F00000000000004 /* SVGParser.swift */; };
+		1A6E00012F00000000000105 /* SVGIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00012F00000000000005 /* SVGIcon.swift */; };
+		1A6E00012F00000000000106 /* Image.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00012F00000000000006 /* Image.swift */; };
+		1A6E00012F00000000000107 /* ImageDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00012F00000000000007 /* ImageDemo.swift */; };
 		7E57A0012F00000000000101 /* SDFFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000001 /* SDFFont.swift */; };
 		7E57A0012F00000000000102 /* TextLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000002 /* TextLayout.swift */; };
 		7E57A0012F00000000000103 /* Text.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000003 /* Text.swift */; };
@@ -121,6 +128,15 @@
 		5A7E00072E0000000000010E /* UIRenderableElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00072E0000000000000E /* UIRenderableElement.swift */; };
 		5A7E00082E00000000000110 /* MultiChildElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00082E00000000000010 /* MultiChildElement.swift */; };
 		5A7E00092E00000000000112 /* LeafElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00092E00000000000012 /* LeafElement.swift */; };
+		1A6E00022F00000000000101 /* VectorItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00022F00000000000001 /* VectorItem.swift */; };
+		1A6E00022F00000000000102 /* VectorBaker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00022F00000000000002 /* VectorBaker.swift */; };
+		1A6E00022F00000000000103 /* PathBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00022F00000000000003 /* PathBuilder.swift */; };
+		1A6E00022F00000000000104 /* VectorSDF.metal in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00022F00000000000004 /* VectorSDF.metal */; };
+		1A6E00022F00000000000105 /* Hittable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00022F00000000000005 /* Hittable.swift */; };
+		1A6E00022F00000000000106 /* VectorShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00022F00000000000006 /* VectorShape.swift */; };
+		1A6E00022F00000000000107 /* Path.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00022F00000000000007 /* Path.swift */; };
+		1A6E00022F00000000000108 /* VectorCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00022F00000000000008 /* VectorCanvas.swift */; };
+		1A6E00022F00000000000109 /* VectorDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A6E00022F00000000000009 /* VectorDemo.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -157,6 +173,13 @@
 		A7A000000000000000000060 /* UIKeyframe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIKeyframe.swift; sourceTree = "<group>"; };
 		A7A000000000000000000006 /* TransitionElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransitionElement.swift; sourceTree = "<group>"; };
 		A7A000000000000000000040 /* AnimationDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimationDemo.swift; sourceTree = "<group>"; };
+		1A6E00012F00000000000001 /* SDFBaker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDFBaker.swift; sourceTree = "<group>"; };
+		1A6E00012F00000000000002 /* ImageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageManager.swift; sourceTree = "<group>"; };
+		1A6E00012F00000000000003 /* SVGPathData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVGPathData.swift; sourceTree = "<group>"; };
+		1A6E00012F00000000000004 /* SVGParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVGParser.swift; sourceTree = "<group>"; };
+		1A6E00012F00000000000005 /* SVGIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVGIcon.swift; sourceTree = "<group>"; };
+		1A6E00012F00000000000006 /* Image.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Image.swift; sourceTree = "<group>"; };
+		1A6E00012F00000000000007 /* ImageDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDemo.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000001 /* SDFFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDFFont.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000002 /* TextLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextLayout.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000003 /* Text.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Text.swift; sourceTree = "<group>"; };
@@ -264,6 +287,15 @@
 		5A7E00072E0000000000000E /* UIRenderableElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIRenderableElement.swift; sourceTree = "<group>"; };
 		5A7E00082E00000000000010 /* MultiChildElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiChildElement.swift; sourceTree = "<group>"; };
 		5A7E00092E00000000000012 /* LeafElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeafElement.swift; sourceTree = "<group>"; };
+		1A6E00022F00000000000001 /* VectorItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VectorItem.swift; sourceTree = "<group>"; };
+		1A6E00022F00000000000002 /* VectorBaker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VectorBaker.swift; sourceTree = "<group>"; };
+		1A6E00022F00000000000003 /* PathBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PathBuilder.swift; sourceTree = "<group>"; };
+		1A6E00022F00000000000004 /* VectorSDF.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = VectorSDF.metal; sourceTree = "<group>"; };
+		1A6E00022F00000000000005 /* Hittable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hittable.swift; sourceTree = "<group>"; };
+		1A6E00022F00000000000006 /* VectorShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VectorShape.swift; sourceTree = "<group>"; };
+		1A6E00022F00000000000007 /* Path.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Path.swift; sourceTree = "<group>"; };
+		1A6E00022F00000000000008 /* VectorCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VectorCanvas.swift; sourceTree = "<group>"; };
+		1A6E00022F00000000000009 /* VectorDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VectorDemo.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -299,6 +331,32 @@
 				A7A000000000000000000006 /* TransitionElement.swift */,
 			);
 			path = Animation;
+			sourceTree = "<group>";
+		};
+		1A6E00012F00000000000011 /* SDF */ = {
+			isa = PBXGroup;
+			children = (
+				1A6E00012F00000000000001 /* SDFBaker.swift */,
+			);
+			path = SDF;
+			sourceTree = "<group>";
+		};
+		1A6E00012F00000000000012 /* Image */ = {
+			isa = PBXGroup;
+			children = (
+				1A6E00012F00000000000002 /* ImageManager.swift */,
+			);
+			path = Image;
+			sourceTree = "<group>";
+		};
+		1A6E00012F00000000000013 /* SVG */ = {
+			isa = PBXGroup;
+			children = (
+				1A6E00012F00000000000003 /* SVGPathData.swift */,
+				1A6E00012F00000000000004 /* SVGParser.swift */,
+				1A6E00012F00000000000005 /* SVGIcon.swift */,
+			);
+			path = SVG;
 			sourceTree = "<group>";
 		};
 		7E57A0012F00000000000010 /* Text */ = {
@@ -342,6 +400,7 @@
 				5A7E10012E00000000000000 /* Layout */,
 				5A7E10022E00000000000000 /* Renderable */,
 				5A7E10042E00000000000000 /* Interaction */,
+				1A6E00022F00000000000012 /* Vector */,
 				A7A00000000000000000FF00 /* Animation */,
 			);
 			path = RetainedModeUI;
@@ -384,6 +443,8 @@
 				15A1B2C32C147B0E00C56203 /* ListDemo.swift */,
 				15A1B2C52C147B0E00C56203 /* ConditionalDemo.swift */,
 				7E57A0012F00000000000005 /* TextDemo.swift */,
+				1A6E00012F00000000000007 /* ImageDemo.swift */,
+				1A6E00022F00000000000009 /* VectorDemo.swift */,
 				A7A000000000000000000040 /* AnimationDemo.swift */,
 				7E57A0012F00000000000007 /* Demos.swift */,
 				7E57A0012F00000000000008 /* LayoutDemo.swift */,
@@ -516,6 +577,7 @@
 				15A049DF2C24B22500D28009 /* Utils.h */,
 				15C91D3C2C1F350200A2857F /* Shaders.metal */,
 				7E57A0012F00000000000004 /* GlyphSDF.metal */,
+				1A6E00022F00000000000004 /* VectorSDF.metal */,
 			);
 			path = Shaders;
 			sourceTree = "<group>";
@@ -525,6 +587,10 @@
 			children = (
 				15C91D372C1F1ADA00A2857F /* Shapes2D */,
 				7E57A0012F00000000000010 /* Text */,
+				1A6E00012F00000000000011 /* SDF */,
+				1A6E00012F00000000000012 /* Image */,
+				1A6E00012F00000000000013 /* SVG */,
+				1A6E00022F00000000000011 /* Vector */,
 				15C91D3A2C1F1B9F00A2857F /* Graphics2D.swift */,
 			);
 			path = 2D;
@@ -587,6 +653,7 @@
 				5A7E00072E0000000000000E /* UIRenderableElement.swift */,
 				157C8D9B2C5188FC009CD7CE /* Rectangle.swift */,
 				7E57A0012F00000000000003 /* Text.swift */,
+				1A6E00012F00000000000006 /* Image.swift */,
 				157C8D8D2C504CF7009CD7CE /* Background.swift */,
 			);
 			path = Renderable;
@@ -596,8 +663,29 @@
 			isa = PBXGroup;
 			children = (
 				159CB8D82CFCF4CC006E74C5 /* HittableView.swift */,
+				1A6E00022F00000000000005 /* Hittable.swift */,
 			);
 			path = Interaction;
+			sourceTree = "<group>";
+		};
+		1A6E00022F00000000000011 /* Vector */ = {
+			isa = PBXGroup;
+			children = (
+				1A6E00022F00000000000001 /* VectorItem.swift */,
+				1A6E00022F00000000000002 /* VectorBaker.swift */,
+				1A6E00022F00000000000003 /* PathBuilder.swift */,
+			);
+			path = Vector;
+			sourceTree = "<group>";
+		};
+		1A6E00022F00000000000012 /* Vector */ = {
+			isa = PBXGroup;
+			children = (
+				1A6E00022F00000000000006 /* VectorShape.swift */,
+				1A6E00022F00000000000007 /* Path.swift */,
+				1A6E00022F00000000000008 /* VectorCanvas.swift */,
+			);
+			path = Vector;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -723,6 +811,8 @@
 				15A1B2C42C147B0E00C56203 /* ListDemo.swift in Sources */,
 				15A1B2C62C147B0E00C56203 /* ConditionalDemo.swift in Sources */,
 				7E57A0012F00000000000105 /* TextDemo.swift in Sources */,
+				1A6E00012F00000000000107 /* ImageDemo.swift in Sources */,
+				1A6E00022F00000000000109 /* VectorDemo.swift in Sources */,
 				A7A000000000000000000140 /* AnimationDemo.swift in Sources */,
 				7E57A0012F00000000000107 /* Demos.swift in Sources */,
 				7E57A0012F00000000000108 /* LayoutDemo.swift in Sources */,
@@ -742,6 +832,20 @@
 				159419EE2C1490B700C56203 /* ViewRenderer.swift in Sources */,
 				157C8D782C4E9501009CD7CE /* NumberField.swift in Sources */,
 				15C91D3D2C1F350200A2857F /* Shaders.metal in Sources */,
+				1A6E00012F00000000000101 /* SDFBaker.swift in Sources */,
+				1A6E00012F00000000000102 /* ImageManager.swift in Sources */,
+				1A6E00012F00000000000103 /* SVGPathData.swift in Sources */,
+				1A6E00012F00000000000104 /* SVGParser.swift in Sources */,
+				1A6E00012F00000000000105 /* SVGIcon.swift in Sources */,
+				1A6E00012F00000000000106 /* Image.swift in Sources */,
+				1A6E00022F00000000000101 /* VectorItem.swift in Sources */,
+				1A6E00022F00000000000102 /* VectorBaker.swift in Sources */,
+				1A6E00022F00000000000103 /* PathBuilder.swift in Sources */,
+				1A6E00022F00000000000104 /* VectorSDF.metal in Sources */,
+				1A6E00022F00000000000105 /* Hittable.swift in Sources */,
+				1A6E00022F00000000000106 /* VectorShape.swift in Sources */,
+				1A6E00022F00000000000107 /* Path.swift in Sources */,
+				1A6E00022F00000000000108 /* VectorCanvas.swift in Sources */,
 				7E57A0012F00000000000101 /* SDFFont.swift in Sources */,
 				7E57A0012F00000000000102 /* TextLayout.swift in Sources */,
 				7E57A0012F00000000000103 /* Text.swift in Sources */,

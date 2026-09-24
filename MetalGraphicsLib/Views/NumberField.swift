@@ -39,7 +39,7 @@ public struct NumberField<T : SIMDScalar> : View {
         SwiftUI.Text(" ")
         TextField("", text: $text, onEditingChanged: { _ in validateNumber() })
           .textFieldStyle(.roundedBorder)
-          .background(RoundedRectangle(cornerRadius: 5)
+          .background(SwiftUI.RoundedRectangle(cornerRadius: 5)
             .stroke(isValid ? SwiftUI.Color.clear : SwiftUI.Color.red, lineWidth: 1)
           )
           .foregroundStyle(isValid ? SwiftUI.Color.primary : SwiftUI.Color.red)

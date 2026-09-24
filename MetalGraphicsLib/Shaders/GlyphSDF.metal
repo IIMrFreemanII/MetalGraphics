@@ -2,8 +2,9 @@
 //  GlyphSDF.metal
 //  MetalGraphicsLib
 //
-//  Bakes the signed distance field of a single glyph outline into a region of the SDF atlas.
-//  Ported from SwiftImgui's VectorText.metal, with the render pass replaced by a compute kernel.
+//  Bakes the signed distance field of a glyph outline, or of one layer of an SVG icon, into a
+//  region of the SDF atlas. Ported from SwiftImgui's VectorText.metal, with the render pass
+//  replaced by a compute kernel.
 //
 
 #include <metal_stdlib>
@@ -29,22 +30,35 @@ struct SubPath {
   uint end;
 };
 
-struct GlyphBakeParams {
+// One fill or stroke. A region is the union of its shapes.
+struct SDFShape {
+  uint subPathStart;
+  uint subPathEnd;
+  // 0 - fill, nonzero winding
+  // 1 - fill, even-odd winding
+  // 2 - stroke, inside within halfWidth of the outline
+  uint mode;
+  float halfWidth;
+};
+
+struct SDFBakeParams {
   // region of the atlas in texels
   uint2 origin;
   uint2 size;
   // em space position of the center of the region's top left texel, y up
   float2 emTopLeft;
   float emPerTexel;
-  uint subPathStart;
-  uint subPathEnd;
-  // bounds every index into the path element buffer
+  uint shapeStart;
+  uint shapeEnd;
+  // bound every index into the path element and subpath buffers
   uint pathElementCount;
+  uint subPathCount;
 };
 
 // Hard caps, so corrupt input can never turn into an unbounded loop on the GPU.
 constant const uint kMaxPathElements = 4096;
 constant const uint kMaxSubPaths = 256;
+constant const uint kMaxShapes = 256;
 // Distance returned for an empty outline: far outside any glyph.
 constant const float kOutside = 1e3;
 
@@ -168,14 +182,16 @@ static int quadraticWinding(float2 p, float2 A, float2 B, float2 C) {
   return winding;
 }
 
-// Signed distance to a glyph outline, negative inside. Inside is decided by the nonzero winding
-// rule over every subpath together, the way font rasterizers fill glyphs, so holes and
-// overlapping contours both come out right.
-static float sdGlyph(float2 p, constant SubPath *subPaths, uint start, uint end, constant PathElement *pathElems, uint pathElementCount) {
-  end = min(end, start + kMaxSubPaths);
+// Signed distance to a shape, negative inside. A fill decides inside by the winding rule over
+// every subpath together, the way font rasterizers fill glyphs, so holes and overlapping
+// contours both come out right. A stroke is inside within its half width of the outline.
+static float sdShape(float2 p, SDFShape shape, constant SubPath *subPaths, uint subPathCount, constant PathElement *pathElems, uint pathElementCount) {
+  uint start = shape.subPathStart;
+  uint end = min(min(shape.subPathEnd, subPathCount), start + kMaxSubPaths);
   if (start >= end) {
     return kOutside;
   }
+  bool isStroke = shape.mode == 2;
 
   float distSquared = kOutside * kOutside;
   int winding = 0;
@@ -198,7 +214,9 @@ static float sdGlyph(float2 p, constant SubPath *subPaths, uint start, uint end,
         case 1: {
           float2 currentPoint = pathElem.point0;
           distSquared = min(distSquared, sdSegmentSquared(p, prevPoint, currentPoint));
-          winding += lineWinding(p, prevPoint, currentPoint);
+          if (!isStroke) {
+            winding += lineWinding(p, prevPoint, currentPoint);
+          }
           prevPoint = currentPoint;
           break;
         }
@@ -211,17 +229,23 @@ static float sdGlyph(float2 p, constant SubPath *subPaths, uint start, uint end,
           float2 b = prevPoint - 2.0 * controlPoint + currentPoint;
           if (dot(b, b) < 1e-10) {
             distSquared = min(distSquared, sdSegmentSquared(p, prevPoint, currentPoint));
-            winding += lineWinding(p, prevPoint, currentPoint);
+            if (!isStroke) {
+              winding += lineWinding(p, prevPoint, currentPoint);
+            }
           } else {
             distSquared = min(distSquared, sdQuadraticBezierSquared(p, prevPoint, controlPoint, currentPoint));
-            winding += quadraticWinding(p, prevPoint, controlPoint, currentPoint);
+            if (!isStroke) {
+              winding += quadraticWinding(p, prevPoint, controlPoint, currentPoint);
+            }
           }
           prevPoint = currentPoint;
           break;
         }
         case 4: {
           distSquared = min(distSquared, sdSegmentSquared(p, prevPoint, pathStart));
-          winding += lineWinding(p, prevPoint, pathStart);
+          if (!isStroke) {
+            winding += lineWinding(p, prevPoint, pathStart);
+          }
           prevPoint = pathStart;
           break;
         }
@@ -230,25 +254,38 @@ static float sdGlyph(float2 p, constant SubPath *subPaths, uint start, uint end,
   }
 
   float distance = sqrt(distSquared);
-  return winding != 0 ? -distance : distance;
+  switch (shape.mode) {
+    case 1:
+      return (winding & 1) != 0 ? -distance : distance;
+    case 2:
+      return distance - shape.halfWidth;
+    default:
+      return winding != 0 ? -distance : distance;
+  }
 }
 
-kernel void bakeGlyphSDF(
-                         texture2d<float, access::write> atlas [[texture(0)]],
-                         constant GlyphBakeParams &params [[buffer(0)]],
-                         constant PathElement *pathElems [[buffer(1)]],
-                         constant SubPath *subPaths [[buffer(2)]],
-                         uint2 gid [[thread_position_in_grid]]
-                         )
+kernel void bakeSDF(
+                    texture2d<float, access::write> atlas [[texture(0)]],
+                    constant SDFBakeParams &params [[buffer(0)]],
+                    constant PathElement *pathElems [[buffer(1)]],
+                    constant SubPath *subPaths [[buffer(2)]],
+                    constant SDFShape *shapes [[buffer(3)]],
+                    uint2 gid [[thread_position_in_grid]]
+                    )
 {
   if (gid.x >= params.size.x || gid.y >= params.size.y) {
     return;
   }
 
-  // texel row 0 is the top of the glyph, font space is y up
+  // texel row 0 is the top of the region, em space is y up
   float2 p = params.emTopLeft + float2(gid.x, -float(gid.y)) * params.emPerTexel;
 
-  float distance = sdGlyph(p, subPaths, params.subPathStart, params.subPathEnd, pathElems, params.pathElementCount);
-  // positive inside the glyph
+  // the union of the shapes: whichever is nearest, or deepest inside
+  float distance = kOutside;
+  uint shapeEnd = min(params.shapeEnd, params.shapeStart + kMaxShapes);
+  for (uint s = params.shapeStart; s < shapeEnd; s++) {
+    distance = min(distance, sdShape(p, shapes[s], subPaths, params.subPathCount, pathElems, params.pathElementCount));
+  }
+  // positive inside
   atlas.write(float4(-distance, 0, 0, 0), params.origin + gid);
 }
