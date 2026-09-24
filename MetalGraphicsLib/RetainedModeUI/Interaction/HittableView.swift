@@ -1,7 +1,8 @@
-public class HittableView: SingleChildElement {
+public class HittableView: SingleChildElement, Hittable {
   public var position: SIMD2<Float> = .init()
   public var size: SIMD2<Float> = .init()
   public var isHovered: Bool = false
+  public var isPressed: Bool = false
   
   /// Settable, and cleared while unmounted.
   ///
@@ -11,6 +12,16 @@ public class HittableView: SingleChildElement {
   /// initializer would suggest. An element built by hand keeps whatever it was constructed with.
   public var onTap: ((Input) -> Void)?
   public var onHover: ((Bool, Input) -> Void)?
+  /// Called with true when the left button goes down on it, and with false when it comes up,
+  /// wherever the pointer is by then.
+  public var onPress: ((Bool, Input) -> Void)?
+
+  public var hitPosition: float2 { self.position }
+  public var hitSize: float2 { self.size }
+
+  public func hitTest(_ point: float2) -> Bool {
+    pointInAABBoxTopLeftOrigin(point: point, position: self.position, size: self.size)
+  }
   
   public override func mount(_ context: UIContext) {
     context.registerHittableView(self)
@@ -21,13 +32,18 @@ public class HittableView: SingleChildElement {
     // and an element unmounted mid-hover would otherwise come back believing it is still
     // hovered, and never fire `onHover(true)` again until the pointer left and re-entered.
     self.isHovered = false
+    self.isPressed = false
     
     context.unregisterHittableView(self)
   }
   
-  init(onTap: ((Input) -> Void)? = nil, onHover: ((Bool, Input) -> Void)? = nil, @UIElementBuilder content: () -> [UIElement]) {
+  init(
+    onTap: ((Input) -> Void)? = nil, onHover: ((Bool, Input) -> Void)? = nil,
+    onPress: ((Bool, Input) -> Void)? = nil, @UIElementBuilder content: () -> [UIElement]
+  ) {
     self.onTap = onTap
     self.onHover = onHover
+    self.onPress = onPress
     
     super.init()
     

@@ -379,7 +379,7 @@ struct DiagnosticsTests {
       expandedSource: stubsOnly("    Image(\"a\").padding(Inset(all: 1)).resizable()"),
       diagnostics: [
         DiagnosticSpec(
-          message: "'.resizable' applies to Image only; call it directly on the Image, before 'Padding' wraps it.",
+          message: "'.resizable' applies to Image or VectorCanvas only; call it directly on the Image or VectorCanvas, before 'Padding' wraps it.",
           line: 6, column: 39
         )
       ],
@@ -397,6 +397,22 @@ struct DiagnosticsTests {
         DiagnosticSpec(
           message: "'.foregroundColor' applies to Image or Text only; call it directly on the Image or Text, before 'Padding' wraps it.",
           line: 6, column: 39
+        )
+      ],
+      macros: ["Component": ComponentMacro.self],
+      applyFixIts: [], fixedSource: nil
+    )
+  }
+
+  @Test("F13: a shape modifier after a wrapper names the shapes")
+  func shapeModifierOnWrapper() {
+    assertMacroExpansion(
+      component("    Circle(center: float2(1, 1), radius: 1).padding(Inset(all: 1)).trim(to: 0.5)"),
+      expandedSource: stubsOnly("    Circle(center: float2(1, 1), radius: 1).padding(Inset(all: 1)).trim(to: 0.5)"),
+      diagnostics: [
+        DiagnosticSpec(
+          message: "'.trim' applies to Capsule or Circle or Ellipse or Path or RoundedRectangle only; call it directly on the Capsule or Circle or Ellipse or Path or RoundedRectangle, before 'Padding' wraps it.",
+          line: 6, column: 68
         )
       ],
       macros: ["Component": ComponentMacro.self],

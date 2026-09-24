@@ -686,4 +686,148 @@ struct ComponentMacroTests {
       macros: ["Component": ComponentMacro.self]
     )
   }
+
+  @Test("VectorCanvas: shape arguments, per-argument setters, a handler in place on a shape")
+  func vectorCanvas() {
+    assertMacroExpansion(
+      """
+      @Component
+      final class Check: SingleChildElement {
+        @State var checked: Bool = false
+
+        @UIElementBuilder var body: [UIElement] {
+          VectorCanvas(width: 24, height: 24) {
+            Circle(center: float2(12, 12), radius: self.checked ? 10 : 8)
+              .stroke(self.checked ? .green : .black, lineWidth: self.checked ? 3 : 2)
+              .trim(from: 0, to: self.checked ? 1 : 0)
+              .onTap { _ in self.checked.toggle() }
+          }
+        }
+      }
+      """,
+      expandedSource: """
+      final class Check: SingleChildElement {
+        @State var checked: Bool = false
+
+        @UIElementBuilder var body: [UIElement] {
+          VectorCanvas(width: 24, height: 24) {
+            Circle(center: float2(12, 12), radius: self.checked ? 10 : 8)
+              .stroke(self.checked ? .green : .black, lineWidth: self.checked ? 3 : 2)
+              .trim(from: 0, to: self.checked ? 1 : 0)
+              .onTap { _ in self.checked.toggle() }
+          }
+        }
+
+          private var __context: UIContext? = nil
+
+          private var __needsRefresh: Bool = false
+
+          private var __built: Bool = false
+
+          private var __n0a: VectorCanvas? = nil
+
+          private var __n0_0a: Circle? = nil
+
+          private var __n0_0b: Circle? = nil
+
+          private var __n0_0c: Circle? = nil
+
+          private var __n0_0d: Circle? = nil
+
+          public override func mount(_ context: UIContext) {
+            self.__context = context
+            if !self.__built {
+              self.__built = true
+              self.setChild(self.__build(context), context)
+            } else if self.__needsRefresh {
+              self.__needsRefresh = false
+              self.__refreshAll()
+            }
+            self.__armHandlers()
+          }
+
+          public override func unmount(_ context: UIContext) {
+            self.__disarmHandlers()
+            self.__context = nil
+          }
+
+          private func __refreshAll() {
+            self.__update_checked(false)
+          }
+
+          private func __build(_ context: UIContext) -> UIElement {
+            let n0a = VectorCanvas(width: 24, height: 24)
+            self.__n0a = n0a
+            let n0_0a = Circle(center: float2(12, 12), radius: self._checked ? 10 : 8)
+            self.__n0_0a = n0_0a
+            let n0_0b = n0_0a.stroke(self._checked ? .green : .black, lineWidth: self._checked ? 3 : 2)
+            self.__n0_0b = n0_0b
+            let n0_0c = n0_0b.trim(from: 0, to: self._checked ? 1 : 0)
+            self.__n0_0c = n0_0c
+            let n0_0d = n0_0c.onTap { _ in
+            }
+            self.__n0_0d = n0_0d
+            self.__applyChildren0(context, animation: nil)
+            var root: [UIElement] = []
+            if let e = self.__n0a {
+                root.append(e)
+            }
+            return root.first ?? EmptyElement()
+          }
+
+          private func __armHandlers() {
+            self.__n0_0d?.onTap = { _ in
+                self.checked.toggle()
+            }
+          }
+
+          private func __disarmHandlers() {
+            self.__n0_0d?.onTap = nil
+          }
+
+          private func __applyChildrenRoot(_ context: UIContext, animation: UIAnimation?) {
+            var children: [UIElement] = []
+            if let e = self.__n0a {
+                children.append(e)
+            }
+            self.setChild(children.first ?? EmptyElement(), context, animation: animation)
+          }
+
+          private func __applyChildren0(_ context: UIContext, animation: UIAnimation?) {
+            var children: [UIElement] = []
+            if let e = self.__n0_0d {
+                children.append(e)
+            }
+            if let owner = self.__n0a {
+                owner.replaceChildren(children, context, animation: animation)
+            }
+          }
+
+          private func __update_checked(_ animated: Bool = true) {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            let transaction = animated ? UITransaction.animation : nil
+            if let n = self.__n0_0a {
+                n.setRadius(self._checked ? 10 : 8, context, animation: transaction)
+            }
+            if let n = self.__n0_0b {
+                n.setColor(self._checked ? .green : .black, context, animation: transaction)
+            }
+            if let n = self.__n0_0b {
+                n.setLineWidth(self._checked ? 3 : 2, context, animation: transaction)
+            }
+            if let n = self.__n0_0c {
+                n.setTrimTo(self._checked ? 1 : 0, context, animation: transaction)
+            }
+          }
+      }
+
+      extension Check: ReactiveComponent {
+      }
+      """,
+      macros: ["Component": ComponentMacro.self]
+    )
+  }
 }

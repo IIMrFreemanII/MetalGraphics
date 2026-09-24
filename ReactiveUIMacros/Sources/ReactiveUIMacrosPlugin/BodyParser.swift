@@ -286,8 +286,9 @@ struct BodyParser {
         continue
       }
       // F13: an in-place modifier sets a property of what it is called on, so it has to be
-      // called on one of its types, not on a wrapper around it.
-      if let targets = spec.inPlaceOn, let receiver = chain.last, !targets.contains(receiver.type) {
+      // called on one of its types, not on a wrapper around it — unless it wraps anything else.
+      let inPlace = spec.inPlaceOn.map { targets in chain.last.map { targets.contains($0.type) } ?? false } ?? false
+      if let targets = spec.inPlaceOn, !inPlace, !spec.wrapsOtherwise, let receiver = chain.last {
         let target = targets.sorted().joined(separator: " or ")
         context.error(
           "F13",
@@ -300,7 +301,7 @@ struct BodyParser {
       chain.append(
         ChainLink(
           field: Naming.node(path, chain.count), local: Naming.local(path, chain.count),
-          type: spec.inPlaceOn != nil ? chain.last?.type ?? spec.produces : spec.produces,
+          type: inPlace ? chain.last?.type ?? spec.produces : spec.produces,
           kind: .modifier(call: call, spec: spec),
           bound: parseModifierArgs(call, spec), handler: handlerClosure(call, spec)
         )
@@ -465,6 +466,18 @@ struct BodyParser {
   }
 
   private func parseModifierArgs(_ call: FunctionCallExprSyntax, _ spec: ModifierSpec) -> [BoundArg] {
+    if let argSetters = spec.argSetters {
+      // Each argument to its own setter, like a constructor's.
+      return call.arguments.compactMap { argument in
+        let label = argument.label?.text
+        guard let argSpec = argSetters.first(where: { $0.label == label }), let setter = argSpec.setter else {
+          return nil
+        }
+        let (rewritten, reads) = StateRewriter.scan(argument.expression, states: states)
+        guard !reads.isEmpty else { return nil }
+        return BoundArg(setter: setter, value: rewritten, reads: reads, animatable: argSpec.animatable)
+      }
+    }
     guard let setter = spec.setter else { return [] }   // onTap/onHover: the handler is opaque
 
     var arguments = Array(call.arguments)

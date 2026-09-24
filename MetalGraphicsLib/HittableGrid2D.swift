@@ -6,7 +6,7 @@
 //
 
 public struct HittableGridCell {
-  var hittableViews: [HittableView] = []
+  var hittableViews: [any Hittable] = []
 }
 
 @MainActor public class HittableGrid2D {
@@ -26,10 +26,14 @@ public struct HittableGridCell {
   /// `HittableView` alive after the component that owns it was deallocated, and the next mouse
   /// move would call that view's handler against freed memory.
   private struct HoveredView {
-    weak var view: HittableView?
+    weak var view: (any Hittable)?
   }
 
   private var hoveredViews: [ObjectIdentifier : HoveredView] = [:]
+
+  /// The view the left button went down on, told when it comes up. Weak for the same reason as
+  /// `hoveredViews`.
+  private weak var pressedView: (any Hittable)?
 
   public init(position: float2, size: int2, cellSize: Float) {
     let cellCount: Int = size.x * size.y
@@ -77,12 +81,15 @@ public struct HittableGridCell {
         continue
       }
 
-      if !pointInAABBoxTopLeftOrigin(point: input.mousePosition, position: view.position, size: view.size) {
+      if !view.hitTest(input.mousePosition) {
         view.isHovered = false
         view.onHover?(false, input)
         self.hoveredViews.removeValue(forKey: id)
       }
     }
+
+    // After the press below, so a click whose down and up land in one frame still ends.
+    defer { self.endPress(input) }
 
     guard let cell = self.cell(at: input.mousePositionFromCenter) else { return }
 
@@ -93,13 +100,20 @@ public struct HittableGridCell {
     // the pointer is hovered, but a tap goes only to the topmost view that handles one — the
     // one drawn over the others — so a view underneath cannot take a click aimed at what covers it.
     var tapHandled = false
-    for view in cell.hittableViews where view.mounted {
-      let result = pointInAABBoxTopLeftOrigin(point: input.mousePosition, position: view.position, size: view.size)
-      if result {
+    var pressHandled = false
+    for view in cell.hittableViews where view.mounted && view.handlesEvents {
+      if view.hitTest(input.mousePosition) {
         if let hoverHandler = view.onHover, !view.isHovered {
           view.isHovered = true
           hoverHandler(true, input)
           self.hoveredViews[ObjectIdentifier(view)] = HoveredView(view: view)
+        }
+
+        if !pressHandled, let pressHandler = view.onPress, input.leftMouseDown {
+          pressHandled = true
+          self.pressedView = view
+          view.isPressed = true
+          pressHandler(true, input)
         }
 
         if !tapHandled, let tapHandler = view.onTap, input.mouseDown {
@@ -110,13 +124,23 @@ public struct HittableGridCell {
     }
   }
   
-  public func mapViewToGrid(_ view: HittableView, _ renderer: Graphics2D) {
+  private func endPress(_ input: Input) {
+    guard input.leftMouseUp, let view = self.pressedView else { return }
+    self.pressedView = nil
+    // Dropped silently when gone: calling into a component mid-teardown is what `hoveredViews`
+    // guards against too.
+    guard view.isPressed, view.mounted else { return }
+    view.isPressed = false
+    view.onPress?(false, input)
+  }
+
+  public func mapViewToGrid(_ view: any Hittable, _ renderer: Graphics2D) {
     let gridTopLeft = self.bounds.topLeft
     let gridBottomRight = self.bounds.bottomRight
     
     // origin -> top left
-    let newPosition = view.position - renderer.size * 0.5 + view.size * 0.5
-    let box = BoundingBox2D(center: newPosition, size: view.size)
+    let newPosition = view.hitPosition - renderer.size * 0.5 + view.hitSize * 0.5
+    let box = BoundingBox2D(center: newPosition, size: view.hitSize)
     let boxTopLeft = box.topLeft
     let boxBottomRight = box.bottomRight
 

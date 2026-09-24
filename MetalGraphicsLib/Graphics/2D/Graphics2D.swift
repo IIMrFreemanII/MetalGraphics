@@ -17,6 +17,9 @@ private struct ShapeArgBuffer {
   var imagesCount: Int32 = 0
   /// `MTLResourceID`s of the textures `images` index.
   var textures: UInt64 = 0
+
+  var vectors: UInt64 = 0
+  var vectorsCount: Int32 = 0
 }
 
 public struct DebugData {
@@ -57,12 +60,13 @@ public struct SceneData {
     }
 
     self.shapeArgBuffer = self.device.makeBuffer(length: MemoryLayout<ShapeArgBuffer>.stride * 1)
-    self.circleBuffer = self.device.makeBuffer(length: MemoryLayout<Circle>.stride * 1)
+    self.circleBuffer = self.device.makeBuffer(length: MemoryLayout<Circle2D>.stride * 1)
     self.squareBuffer = self.device.makeBuffer(length: MemoryLayout<Square>.stride * 1)
     self.lineBuffer = self.device.makeBuffer(length: MemoryLayout<Line>.stride * 1)
     self.glyphBuffer = self.device.makeBuffer(length: MemoryLayout<Glyph>.stride * 1)
     self.imageBuffer = self.device.makeBuffer(length: MemoryLayout<ImageQuad>.stride * 1)
     self.textureTableBuffer = self.device.makeBuffer(length: MemoryLayout<MTLResourceID>.stride * 1)
+    self.vectorBuffer = self.device.makeBuffer(length: MemoryLayout<VectorItem>.stride * 1)
 
     do {
       guard let kernel = self.library.makeFunction(name: "compute2D")
@@ -82,7 +86,7 @@ public struct SceneData {
 
   private var shapeArgBuffer: MTLBuffer!
 
-  private var circles: [Circle] = []
+  private var circles: [Circle2D] = []
   private var circleBuffer: MTLBuffer!
   private var circleBufferCount: Int = 0
 
@@ -107,6 +111,10 @@ public struct SceneData {
   private var textureTableBuffer: MTLBuffer!
   private var textureTableCount: Int = 0
 
+  private var vectors: [VectorItem] = []
+  private var vectorBuffer: MTLBuffer!
+  private var vectorBufferCount: Int = 0
+
   public var sceneData = SceneData()
   /// Drawable pixels per point, the ratio `compute2D` maps pixels to points with.
   private(set) var pixelsPerPoint: Float = 1
@@ -122,6 +130,7 @@ public struct SceneData {
     self.images.removeAll(keepingCapacity: true)
     self.imageTextures.removeAll(keepingCapacity: true)
     self.imageTextureIndices.removeAll(keepingCapacity: true)
+    self.vectors.removeAll(keepingCapacity: true)
   }
 
   func endFrame() {
@@ -147,13 +156,16 @@ public struct SceneData {
     for (i, item) in self.images.enumerated() {
       self.grid.mapShapeBoundingBoxToGrid(item.bounds, Shape(index: Int32(i), shapeType: ShapeType2D.Image.rawValue))
     }
+    for (i, item) in self.vectors.enumerated() {
+      self.grid.mapShapeBoundingBoxToGrid(item.bounds, Shape(index: Int32(i), shapeType: ShapeType2D.Vector.rawValue))
+    }
 
     self.grid.updateBuffers()
 
     do {
       if self.circleBufferCount < self.circles.count {
         self.circleBufferCount += self.circles.count + 10
-        self.circleBuffer = self.device.makeBuffer(length: MemoryLayout<Circle>.stride * self.circleBufferCount)
+        self.circleBuffer = self.device.makeBuffer(length: MemoryLayout<Circle2D>.stride * self.circleBufferCount)
         self.circleBuffer.label = "Circle buffer"
       }
 
@@ -201,6 +213,16 @@ public struct SceneData {
     }
 
     do {
+      if self.vectorBufferCount < self.vectors.count {
+        self.vectorBufferCount += self.vectors.count + 10
+        self.vectorBuffer = self.device.makeBuffer(length: MemoryLayout<VectorItem>.stride * self.vectorBufferCount)
+        self.vectorBuffer.label = "Vector buffer"
+      }
+
+      self.vectorBuffer.contents().copyMemory(from: &self.vectors, byteCount: self.vectors.byteCount)
+    }
+
+    do {
       if self.textureTableCount < self.imageTextures.count {
         self.textureTableCount += self.imageTextures.count + 10
         self.textureTableBuffer = self.device.makeBuffer(length: MemoryLayout<MTLResourceID>.stride * self.textureTableCount)
@@ -225,6 +247,8 @@ public struct SceneData {
     shapeArgPointer.pointee.images = self.imageBuffer.gpuAddress
     shapeArgPointer.pointee.imagesCount = Int32(self.images.count)
     shapeArgPointer.pointee.textures = self.textureTableBuffer.gpuAddress
+    shapeArgPointer.pointee.vectors = self.vectorBuffer.gpuAddress
+    shapeArgPointer.pointee.vectorsCount = Int32(self.vectors.count)
 
     self.renderer.input.endFrame()
   }
@@ -239,6 +263,7 @@ public struct SceneData {
     // Glyphs and icons first laid out this frame are baked, and images first drawn uploaded,
     // before `compute2D` samples them.
     SDFBaker.shared.encodePendingBakes(into: commandBuffer)
+    VectorBaker.shared.encodePendingBakes(into: commandBuffer)
     ImageManager.shared.encodePendingUploads(into: commandBuffer)
     guard let commandEncoder = commandBuffer.makeComputeCommandEncoder() else {
       // the bakes are already dequeued, so they still have to run
@@ -246,7 +271,7 @@ public struct SceneData {
       return
     }
 
-    commandEncoder.useResources([self.grid.cellBuffer, self.grid.shapeBuffer, self.circleBuffer, self.squareBuffer, self.lineBuffer, self.glyphBuffer, self.imageBuffer, self.textureTableBuffer], usage: .read)
+    commandEncoder.useResources([self.grid.cellBuffer, self.grid.shapeBuffer, self.circleBuffer, self.squareBuffer, self.lineBuffer, self.glyphBuffer, self.imageBuffer, self.textureTableBuffer, self.vectorBuffer], usage: .read)
     if !self.imageTextures.isEmpty {
       commandEncoder.useResources(self.imageTextures, usage: .read)
     }
@@ -255,6 +280,7 @@ public struct SceneData {
     let texture = drawable.texture
     commandEncoder.setTexture(texture, index: 0)
     commandEncoder.setTexture(SDFBaker.shared.atlas.texture, index: 1)
+    commandEncoder.setTexture(VectorBaker.shared.atlas.texture, index: 2)
 
     self.sceneData.windowSize = SIMD2<Int32>(Int32(self.renderer.windowSize.x), Int32(self.renderer.windowSize.y))
     self.sceneData.time = self.renderer.time
@@ -285,6 +311,7 @@ public struct SceneData {
 
     commandBuffer.commit()
     commandBuffer.waitUntilCompleted()
+    VectorBaker.shared.frameCompleted(gpuTime: commandBuffer.gpuEndTime - commandBuffer.gpuStartTime)
 
     if commandBuffer.status == .error, !self.reportedFrameError {
       self.reportedFrameError = true
@@ -304,6 +331,8 @@ public struct SceneData {
       self.glyphs[Int(shape.index)].depth
     case .Image:
       self.images[Int(shape.index)].depth
+    case .Vector:
+      self.vectors[Int(shape.index)].depth
     default:
       fatalError("Unsupported Shape: \(shape)")
     }
@@ -322,7 +351,7 @@ public struct SceneData {
     self.drawData(at: view)
   }
 
-  public func draw(circle: Circle) {
+  public func draw(circle: Circle2D) {
     var temp = circle
     temp.depth = self.depth
     self.circles.append(temp)
@@ -425,6 +454,14 @@ public struct SceneData {
       ))
       self.depth += 1
     }
+  }
+
+  /// Draws one shape of a `VectorCanvas` above everything drawn so far.
+  func draw(vector: VectorItem) {
+    var item = vector
+    item.depth = self.depth
+    self.vectors.append(item)
+    self.depth += 1
   }
 
   /// Draws `text` with its top left corner at `position`, and returns the size it occupies.

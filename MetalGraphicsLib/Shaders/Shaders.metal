@@ -69,6 +69,28 @@ struct ImageQuad {
   float lod;
 };
 
+struct VectorItem {
+  // local = (dot(row0.xy, p) + row0.z, dot(row1.xy, p) + row1.z) for p in points
+  // row0.w - points per local unit, row1.w - depth
+  float4 row0;
+  float4 row1;
+  // baked: local bounds of the region | ellipse: center, radii | rounded box: center, half size
+  float4 params0;
+  // baked: atlas uv of the region | rounded box: corner radius in x
+  float4 params1;
+  float4 color;
+  // min x, min y, max x, max y in points
+  float4 clip;
+  // half width, trim from, trim to, length of the path
+  float4 stroke;
+  // 0 - baked fill, 1 - baked stroke, 2 - ellipse, 3 - rounded box
+  uint kind;
+  // bit 0 - closed path, bit 1 - stroke
+  uint flags;
+  float padding0;
+  float padding1;
+};
+
 struct TextureHandle {
   texture2d<float> texture;
 };
@@ -104,6 +126,9 @@ struct ShapeArgBuffer {
   int imagesCount [[id(9)]];
   // premultiplied bitmaps, indexed by `ImageQuad.textureIndex`
   device TextureHandle* textures [[id(10)]];
+
+  device VectorItem* vectors [[id(11)]];
+  int vectorsCount [[id(12)]];
 };
 
 struct DebugData {
@@ -117,6 +142,165 @@ struct SceneData {
   DebugData debug;
 };
 
+constant const float kVectorOutside = 1e4;
+
+// Distance to a stroke of half width stroke.x, trimmed to stroke.y...stroke.z of a path
+// stroke.w long, for a point `centerDistance` from its centerline, nearest to position `along`
+// (0...1) of it. Past a trimmed end the distance is to the end's point, which rounds its cap.
+static float trimmedStroke(float centerDistance, float along, float4 stroke, bool closed) {
+  float from = stroke.y;
+  float to = stroke.z;
+  if (from <= 0 && to >= 1) {
+    return centerDistance - stroke.x;
+  }
+  if (to <= from) {
+    return kVectorOutside;
+  }
+  float past = 0;
+  if (along < from || along > to) {
+    if (closed) {
+      // the gap between the ends wraps round the path's start
+      float toFrom = along < from ? from - along : 1 - along + from;
+      float fromTo = along > to ? along - to : along + 1 - to;
+      past = min(toFrom, fromTo);
+    } else {
+      past = along < from ? from - along : along - to;
+    }
+  }
+  return length(float2(past * stroke.w, centerDistance)) - stroke.x;
+}
+
+// Signed distance to an ellipse centered at the origin, negative inside.
+// https://iquilezles.org/articles/ellipsedist/
+static float sdEllipse(float2 p, float2 ab) {
+  if (abs(ab.x - ab.y) <= 1e-4 * max(ab.x, ab.y)) {
+    return length(p) - ab.x;
+  }
+  p = abs(p);
+  if (p.x > p.y) {
+    p = p.yx;
+    ab = ab.yx;
+  }
+  float l = ab.y * ab.y - ab.x * ab.x;
+  float m = ab.x * p.x / l;
+  float m2 = m * m;
+  float n = ab.y * p.y / l;
+  float n2 = n * n;
+  float c = (m2 + n2 - 1.0) / 3.0;
+  float c3 = c * c * c;
+  float q = c3 + m2 * n2 * 2.0;
+  float d = c3 + m2 * n2;
+  float g = m + m * n2;
+  float co;
+  if (d < 0.0) {
+    float h = acos(clamp(q / c3, -1.0, 1.0)) / 3.0;
+    float s = cos(h);
+    float t = sin(h) * sqrt(3.0);
+    float rx = sqrt(max(-c * (s + t + 2.0) + m2, 0.0));
+    float ry = sqrt(max(-c * (s - t + 2.0) + m2, 0.0));
+    co = (ry + sign(l) * rx + abs(g) / max(rx * ry, 1e-12) - m) / 2.0;
+  } else {
+    float h = 2.0 * m * n * sqrt(d);
+    float s = sign(q + h) * pow(abs(q + h), 1.0 / 3.0);
+    float u = sign(q - h) * pow(abs(q - h), 1.0 / 3.0);
+    float rx = -s - u - c * 4.0 + 2.0 * m2;
+    float ry = (s - u) * sqrt(3.0);
+    float rm = sqrt(rx * rx + ry * ry);
+    co = (ry / sqrt(max(rm - rx, 1e-12)) + 2.0 * g / max(rm, 1e-12) - m) / 2.0;
+  }
+  co = saturate(co);
+  float2 r = ab * float2(co, sqrt(1.0 - co * co));
+  return length(r - p) * sign(p.y - r.y);
+}
+
+// Position along an ellipse's outline, 0...1, from its rightmost point clockwise (y down).
+static float ellipseAlong(float2 p, float2 radii) {
+  float angle = atan2(p.y / radii.y, p.x / radii.x);
+  return fract(angle / (2.0 * M_PI_F) + 1.0);
+}
+
+// Position along a rounded box's outline, 0...1, clockwise from where its top edge starts.
+static float roundedBoxAlong(float2 q, float2 halfSize, float r) {
+  float2 inner = max(halfSize - r, 0.0);
+  float width = 2 * inner.x;
+  float height = 2 * inner.y;
+  float arc = 0.5 * M_PI_F * r;
+  float total = 2 * width + 2 * height + 4 * arc;
+  if (total <= 0) {
+    return 0;
+  }
+  float2 k = clamp(q, -inner, inner);
+  float2 e = q - k;
+  if (e.x == 0 && e.y == 0) {
+    // inside the straight part: the nearest side
+    if (halfSize.x - abs(q.x) < halfSize.y - abs(q.y)) {
+      e = float2(q.x >= 0 ? 1 : -1, 0);
+    } else {
+      e = float2(0, q.y >= 0 ? 1 : -1);
+    }
+  }
+  float along;
+  if (e.x == 0 && e.y < 0) {
+    along = k.x + inner.x;
+  } else if (e.x > 0 && e.y < 0) {
+    along = width + atan2(e.x, -e.y) * r;
+  } else if (e.x > 0 && e.y == 0) {
+    along = width + arc + k.y + inner.y;
+  } else if (e.x > 0 && e.y > 0) {
+    along = width + arc + height + atan2(e.y, e.x) * r;
+  } else if (e.x == 0 && e.y > 0) {
+    along = width + 2 * arc + height + inner.x - k.x;
+  } else if (e.x < 0 && e.y > 0) {
+    along = 2 * width + 2 * arc + height + atan2(-e.x, e.y) * r;
+  } else if (e.x < 0 && e.y == 0) {
+    along = 2 * width + 3 * arc + height + inner.y - k.y;
+  } else {
+    along = 2 * width + 3 * arc + 2 * height + atan2(-e.y, -e.x) * r;
+  }
+  return along / total;
+}
+
+// Signed distance from a point in a vector item's local units, negative inside.
+static float vectorDistance(VectorItem item, float2 p, texture2d<float> atlas, sampler atlasSampler) {
+  bool closed = (item.flags & 1) != 0;
+  bool isStroke = (item.flags & 2) != 0;
+  switch (item.kind) {
+    case 0:
+    case 1: {
+      float2 extent = item.params0.zw - item.params0.xy;
+      if (any(extent <= 0)) {
+        return kVectorOutside;
+      }
+      float2 t = (p - item.params0.xy) / extent;
+      if (any(t < 0) || any(t > 1)) {
+        return kVectorOutside;
+      }
+      float2 value = atlas.sample(atlasSampler, mix(item.params1.xy, item.params1.zw, t)).rg;
+      return item.kind == 0 ? value.x : trimmedStroke(value.x, value.y, item.stroke, closed);
+    }
+    case 2: {
+      float2 q = p - item.params0.xy;
+      float d = sdEllipse(q, item.params0.zw);
+      if (!isStroke) {
+        return d;
+      }
+      bool trimmed = item.stroke.y > 0 || item.stroke.z < 1;
+      return trimmedStroke(abs(d), trimmed ? ellipseAlong(q, item.params0.zw) : 0, item.stroke, true);
+    }
+    case 3: {
+      float2 q = p - item.params0.xy;
+      float r = item.params1.x;
+      float d = sdRoundedBox(q, item.params0.zw, float4(r));
+      if (!isStroke) {
+        return d;
+      }
+      bool trimmed = item.stroke.y > 0 || item.stroke.z < 1;
+      return trimmedStroke(abs(d), trimmed ? roundedBoxAlong(q, item.params0.zw, r) : 0, item.stroke, true);
+    }
+  }
+  return kVectorOutside;
+}
+
 // Hard cap on the shapes a pixel walks, so a corrupt cell can never stall the GPU.
 constant const int kMaxShapesPerCell = 512;
 
@@ -126,6 +310,7 @@ kernel void compute2D(
                       constant ShapeArgBuffer *buffers [[buffer(1)]],
                       constant GridArgBuffer *gridBuffer [[buffer(2)]],
                       texture2d<float> glyphAtlas [[texture(1)]],
+                      texture2d<float> vectorAtlas [[texture(2)]],
                       uint2 gid [[thread_position_in_grid]]
                       )
 {
@@ -268,6 +453,23 @@ kernel void compute2D(
             // stored premultiplied, composited straight
             shapeColor = float4(texel.rgb / max(texel.a, 1e-6), texel.a * item.tint.a);
           }
+          
+          break;
+        }
+          // vector shape
+        case 5: {
+          if (shape.index < 0 || shape.index >= buffer.vectorsCount) {
+            break;
+          }
+          VectorItem item = buffer.vectors[shape.index];
+          if (uv.x < item.clip.x || uv.y < item.clip.y || uv.x > item.clip.z || uv.y > item.clip.w) {
+            break;
+          }
+          float2 local = float2(dot(item.row0.xy, uv) + item.row0.z, dot(item.row1.xy, uv) + item.row1.z);
+          float dist = vectorDistance(item, local, vectorAtlas, atlasSampler);
+          // one pixel wide anti-aliasing at any scale
+          coverage = saturate(0.5 - dist * item.row0.w * pixelsPerPoint);
+          shapeColor = item.color;
           
           break;
         }

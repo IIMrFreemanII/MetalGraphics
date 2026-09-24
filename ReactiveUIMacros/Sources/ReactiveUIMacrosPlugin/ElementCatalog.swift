@@ -112,11 +112,19 @@ struct ModifierSpec {
   /// and typed as the receiver — so everything positional, like which `.animation` scope covers
   /// it, works as for any link.
   let inPlaceOn: Set<String>?
+  /// With `inPlaceOn`: called on anything else, the modifier wraps it in `produces` as usual
+  /// instead of being an error. `.offset`, `.opacity` and the handlers set a vector shape's own
+  /// property, and wrap every other element.
+  let wrapsOtherwise: Bool
+  /// Binds each argument to a setter of its own, found by label, instead of combining them into
+  /// one value for `setter`: `.stroke(color, lineWidth:)` updates the color and the width apart.
+  let argSetters: [ArgSpec]?
 
   init(
     name: String, labels: [String?], produces: String,
     setter: String?, combine: ArgCombine, handler: HandlerSpec? = nil,
-    animatable: Bool = false, isScope: Bool = false, inPlaceOn: Set<String>? = nil
+    animatable: Bool = false, isScope: Bool = false, inPlaceOn: Set<String>? = nil,
+    wrapsOtherwise: Bool = false, argSetters: [ArgSpec]? = nil
   ) {
     self.name = name
     self.labels = labels
@@ -127,10 +135,15 @@ struct ModifierSpec {
     self.animatable = animatable
     self.isScope = isScope
     self.inPlaceOn = inPlaceOn
+    self.wrapsOtherwise = wrapsOtherwise
+    self.argSetters = argSetters
   }
 }
 
 enum ElementCatalog {
+  /// The shapes a `VectorCanvas` draws.
+  static let vectorShapes: Set<String> = ["Circle", "Ellipse", "RoundedRectangle", "Capsule", "Path"]
+
   static let types: [String: TypeSpec] = [
     "Rectangle": TypeSpec(name: "Rectangle", args: [ArgSpec(nil, "setColor", animatable: true)], arity: .single),
     "Background": TypeSpec(name: "Background", args: [ArgSpec(nil, "setColor", animatable: true)], arity: .single),
@@ -180,6 +193,36 @@ enum ElementCatalog {
              ArgSpec("nsImage", "setNSImage", animatable: true), ArgSpec("svg", "setSVG", animatable: true)],
       arity: .leaf
     ),
+    "VectorCanvas": TypeSpec(
+      name: "VectorCanvas", args: [ArgSpec("width", nil), ArgSpec("height", nil)], arity: .multi
+    ),
+    "Circle": TypeSpec(
+      name: "Circle",
+      args: [ArgSpec("center", "setCenter", animatable: true), ArgSpec("radius", "setRadius", animatable: true)],
+      arity: .leaf
+    ),
+    "Ellipse": TypeSpec(
+      name: "Ellipse",
+      args: [ArgSpec("center", "setCenter", animatable: true), ArgSpec("radii", "setRadii", animatable: true)],
+      arity: .leaf
+    ),
+    "RoundedRectangle": TypeSpec(
+      name: "RoundedRectangle",
+      args: [ArgSpec("origin", "setOrigin", animatable: true), ArgSpec("size", "setSize", animatable: true),
+             ArgSpec("cornerRadius", "setCornerRadius", animatable: true)],
+      arity: .leaf
+    ),
+    "Capsule": TypeSpec(
+      name: "Capsule",
+      args: [ArgSpec("origin", "setOrigin", animatable: true), ArgSpec("size", "setSize", animatable: true)],
+      arity: .leaf
+    ),
+    // A trailing builder closure is opaque and stays in the constructor: `takesContent` is false.
+    "Path": TypeSpec(
+      name: "Path",
+      args: [ArgSpec(nil, "setValue", animatable: true), ArgSpec("d", "setD", animatable: true)],
+      arity: .leaf, takesContent: false
+    ),
     "Spacer": TypeSpec(name: "Spacer", args: [], arity: .leaf),
     "EmptyElement": TypeSpec(name: "EmptyElement", args: [], arity: .leaf),
   ]
@@ -199,11 +242,38 @@ enum ElementCatalog {
     ),
     "opacity": ModifierSpec(
       name: "opacity", labels: [nil],
-      produces: "EffectElement", setter: "setOpacity", combine: .identity, animatable: true
+      produces: "EffectElement", setter: "setOpacity", combine: .identity, animatable: true,
+      inPlaceOn: vectorShapes, wrapsOtherwise: true
     ),
     "offset": ModifierSpec(
       name: "offset", labels: [nil],
-      produces: "EffectElement", setter: "setOffset", combine: .identity, animatable: true
+      produces: "EffectElement", setter: "setOffset", combine: .identity, animatable: true,
+      inPlaceOn: vectorShapes, wrapsOtherwise: true
+    ),
+    // How a vector shape is painted and moved.
+    "fill": ModifierSpec(
+      name: "fill", labels: [nil],
+      produces: "Path", setter: "setColor", combine: .identity, animatable: true, inPlaceOn: vectorShapes
+    ),
+    "stroke": ModifierSpec(
+      name: "stroke", labels: [nil, "lineWidth"],
+      produces: "Path", setter: nil, combine: .identity, inPlaceOn: vectorShapes,
+      argSetters: [ArgSpec(nil, "setColor", animatable: true), ArgSpec("lineWidth", "setLineWidth", animatable: true)]
+    ),
+    "trim": ModifierSpec(
+      name: "trim", labels: ["from", "to"],
+      produces: "Path", setter: nil, combine: .identity, inPlaceOn: vectorShapes,
+      argSetters: [ArgSpec("from", "setTrimFrom", animatable: true), ArgSpec("to", "setTrimTo", animatable: true)]
+    ),
+    "rotationEffect": ModifierSpec(
+      name: "rotationEffect", labels: [nil, "anchor"],
+      produces: "Path", setter: nil, combine: .identity, inPlaceOn: vectorShapes,
+      argSetters: [ArgSpec(nil, "setRotation", animatable: true), ArgSpec("anchor", "setRotationAnchor")]
+    ),
+    "scaleEffect": ModifierSpec(
+      name: "scaleEffect", labels: [nil, "anchor"],
+      produces: "Path", setter: nil, combine: .identity, inPlaceOn: vectorShapes,
+      argSetters: [ArgSpec(nil, "setScale", animatable: true), ArgSpec("anchor", "setScaleAnchor")]
     ),
     // Only `trigger` is reactive: the tracks are built once, with the element.
     "keyframes": ModifierSpec(
@@ -222,7 +292,8 @@ enum ElementCatalog {
     ),
     // How an image is sized and drawn: constant, built once with it.
     "resizable": ModifierSpec(
-      name: "resizable", labels: [], produces: "Image", setter: nil, combine: .identity, inPlaceOn: ["Image"]
+      name: "resizable", labels: [], produces: "Image", setter: nil, combine: .identity,
+      inPlaceOn: ["Image", "VectorCanvas"]
     ),
     "aspectRatio": ModifierSpec(
       name: "aspectRatio", labels: [nil, "contentMode"],
@@ -252,15 +323,24 @@ enum ElementCatalog {
       produces: "", setter: nil, combine: .identity, isScope: true
     ),
     // The handler is opaque: closure bodies are never dependency sites.
+    // On a vector shape, hit only inside its outline.
     "onTap": ModifierSpec(
       name: "onTap", labels: [nil],
       produces: "HittableView", setter: nil, combine: .identity,
-      handler: HandlerSpec(property: "onTap", placeholder: "{ _ in }")
+      handler: HandlerSpec(property: "onTap", placeholder: "{ _ in }"),
+      inPlaceOn: vectorShapes, wrapsOtherwise: true
     ),
     "onHover": ModifierSpec(
       name: "onHover", labels: [nil],
       produces: "HittableView", setter: nil, combine: .identity,
-      handler: HandlerSpec(property: "onHover", placeholder: "{ _, _ in }")
+      handler: HandlerSpec(property: "onHover", placeholder: "{ _, _ in }"),
+      inPlaceOn: vectorShapes, wrapsOtherwise: true
+    ),
+    "onPress": ModifierSpec(
+      name: "onPress", labels: [nil],
+      produces: "HittableView", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "onPress", placeholder: "{ _, _ in }"),
+      inPlaceOn: vectorShapes, wrapsOtherwise: true
     ),
   ]
 }

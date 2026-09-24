@@ -8,6 +8,7 @@ enum Demo : Identifiable {
   case layout
   case animation
   case image
+  case vector
 
   var id: Self { self }
 
@@ -19,6 +20,7 @@ enum Demo : Identifiable {
     case .layout: "Layout"
     case .animation: "Animation"
     case .image: "Image"
+    case .vector: "Vector"
     }
   }
 
@@ -30,6 +32,7 @@ enum Demo : Identifiable {
     case .layout: LayoutDemo()
     case .animation: AnimationDemo()
     case .image: ImageDemo()
+    case .vector: VectorDemo()
     }
   }
 }
@@ -93,6 +96,13 @@ final class Demos : SingleChildElement {
           .background(self.selected == .image ? Self.activeTabColor : Self.inactiveTabColor)
           .animation(Self.tabAnimation, value: self.selected)
           .onTap { _ in self.select(.image) }
+        Text(Demo.vector.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .vector ? .white : .black)
+          .padding(Self.tabInset)
+          .background(self.selected == .vector ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
+          .onTap { _ in self.select(.vector) }
         Spacer()
       }
       VList(alignment: .leading, items: self.shown) { demo in

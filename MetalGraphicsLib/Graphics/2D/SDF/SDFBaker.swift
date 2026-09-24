@@ -243,6 +243,10 @@ struct SDFPathBuilder {
   private let bakePipelineState: MTLComputePipelineState
   private var pendingBakes: [PendingBake] = []
   private var reportedAtlasFull = false
+  // Reused from bake to bake, and only grown: `Graphics2D` waits for each frame to complete.
+  private var pathElementBuffer: MTLBuffer?
+  private var subPathBuffer: MTLBuffer?
+  private var shapeBuffer: MTLBuffer?
 
   private init() {
     self.device = GPUDevice.main
@@ -368,16 +372,13 @@ struct SDFPathBuilder {
     if shapes.isEmpty { shapes.append(SDFShape()) }
 
     guard
-      let pathElementBuffer = self.device.makeBuffer(bytes: &pathElements, length: pathElements.byteCount),
-      let subPathBuffer = self.device.makeBuffer(bytes: &subPaths, length: subPaths.byteCount),
-      let shapeBuffer = self.device.makeBuffer(bytes: &shapes, length: shapes.byteCount),
+      let pathElementBuffer = self.upload(pathElements, into: &self.pathElementBuffer, label: "SDF path elements"),
+      let subPathBuffer = self.upload(subPaths, into: &self.subPathBuffer, label: "SDF subpaths"),
+      let shapeBuffer = self.upload(shapes, into: &self.shapeBuffer, label: "SDF shapes"),
       let encoder = commandBuffer.makeComputeCommandEncoder()
     else {
       fatalError("Could not encode the SDF bakes")
     }
-    pathElementBuffer.label = "SDF path elements"
-    subPathBuffer.label = "SDF subpaths"
-    shapeBuffer.label = "SDF shapes"
     encoder.label = "SDF bake"
 
     encoder.setComputePipelineState(self.bakePipelineState)
@@ -400,5 +401,19 @@ struct SDFPathBuilder {
       )
     }
     encoder.endEncoding()
+  }
+
+  /// Copies `values` into `buffer`, growing it first when they do not fit.
+  private func upload<T>(_ values: [T], into buffer: inout MTLBuffer?, label: String) -> MTLBuffer? {
+    let byteCount = values.byteCount
+    if (buffer?.length ?? 0) < byteCount {
+      buffer = self.device.makeBuffer(length: max(byteCount * 2, 4096), options: .storageModeShared)
+      buffer?.label = label
+    }
+    guard let buffer else { return nil }
+    values.withUnsafeBytes { bytes in
+      buffer.contents().copyMemory(from: bytes.baseAddress!, byteCount: bytes.count)
+    }
+    return buffer
   }
 }

@@ -1,4 +1,5 @@
-public struct Circle {
+/// A filled circle `Graphics2D` draws. Named apart from the `Circle` shape of `VectorCanvas`.
+public struct Circle2D {
   public var position = float2()
   public var radius = Float()
   public var depth = Float()

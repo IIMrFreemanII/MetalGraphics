@@ -6,6 +6,7 @@ enum ShapeType2D: Int32 {
   case Line
   case Glyph
   case Image
+  case Vector
 }
 
 struct Shape {
