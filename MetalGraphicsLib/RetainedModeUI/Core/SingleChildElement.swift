@@ -17,8 +17,18 @@ open class SingleChildElement : UIElement {
     return child?.getSize() ?? .init()
   }
 
-  open override func calcSize(_ availableSize: float2) -> float2 {
-    return child?.calcSize(availableSize) ?? .init()
+  // A wrapper that changes no size by default: it takes its child's.
+  open override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
+    child?.measure(proposal) ?? .zero
+  }
+
+  open override func calcSize(_ proposal: ProposedSize) -> float2 {
+    return child?.calcSize(proposal) ?? .init()
+  }
+
+  // A wrapper that moves and resizes nothing passes on its child's guides.
+  open override func guideValue(_ key: AlignmentKey, _ proposal: ProposedSize, _ size: float2) -> Float? {
+    self.explicitGuide(key, size) ?? self.child?.guideValue(key, proposal, size)
   }
 
   open override func calcPosition(_ position: float2) {

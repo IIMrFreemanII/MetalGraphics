@@ -45,6 +45,10 @@ struct StateMacroTests {
 
         private var _color: float4
 
+        var $color: Binding<float4> {
+          Binding(unowned: self, \\.color)
+        }
+
         private func __requiresComponent_color() {
           let _: any ReactiveComponent = self
         }
@@ -83,6 +87,10 @@ struct StateMacroTests {
         }
 
         private var _selected: Item?
+
+        var $selected: Binding<Item?> {
+          Binding(unowned: self, \\.selected)
+        }
 
         private func __requiresComponent_selected() {
           let _: any ReactiveComponent = self

@@ -19,3 +19,17 @@ public struct Axis : Sendable {
   public static let vertical: Self = .init(0.0, 1.0)
   public static let both: Self = .init(1.0, 1.0)
 }
+
+extension Axis : Equatable, ExpressibleByArrayLiteral {
+  /// `[.vertical, .horizontal]`, as SwiftUI spells `Axis.Set`: every axis any element names.
+  public init(arrayLiteral elements: Axis...) {
+    self.init(
+      elements.map(\.horizontal).max() ?? 0,
+      elements.map(\.vertical).max() ?? 0
+    )
+  }
+
+  public func contains(_ other: Axis) -> Bool {
+    (other.horizontal == 0 || self.horizontal != 0) && (other.vertical == 0 || self.vertical != 0)
+  }
+}

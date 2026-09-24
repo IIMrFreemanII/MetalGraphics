@@ -9,9 +9,11 @@
 //   uidrive activate                     bring the app to the front (hover needs the key window)
 //   uidrive bounds                       print the window id and frame
 //   uidrive move X Y
-//   uidrive click X Y [COUNT]            COUNT 2 for a double click
+//   uidrive click X Y [COUNT] [MODS]     COUNT 2 for a double click; MODS cmd|shift|alt|ctrl
 //   uidrive rightclick X Y
 //   uidrive drag X1 Y1 X2 Y2
+//   uidrive scroll X Y DX DY [STEPS]     wheel over X Y, DX DY points in STEPS events (default 10);
+//                                        positive DY moves content down, as a trackpad swipe down
 //   uidrive key TEXT                     types TEXT (letters, digits, space, return)
 //   uidrive keycode CODE [cmd|shift|alt|ctrl ...]   one kVK_* key, with modifiers held
 //   uidrive shot FILE [X Y W H]          screenshot of the window, optionally cropped
@@ -64,25 +66,68 @@ func screenPoint(_ x: String, _ y: String) -> CGPoint {
 
 // MARK: - Mouse
 
-func post(_ type: CGEventType, _ point: CGPoint, button: CGMouseButton = .left, clickState: Int64 = 1) {
+func post(
+  _ type: CGEventType, _ point: CGPoint, button: CGMouseButton = .left, clickState: Int64 = 1, flags: CGEventFlags = []
+) {
   guard let event = CGEvent(mouseEventSource: nil, mouseType: type, mouseCursorPosition: point, mouseButton: button)
   else { fail("cannot create mouse event") }
   event.setIntegerValueField(.mouseEventClickState, value: clickState)
+  event.flags = flags
   event.post(tap: .cghidEventTap)
 }
 
 // Not `pause`: that name is libc's wait-for-a-signal, which a no-argument call resolves to.
+/// Precise (pixel) wheel events, as a trackpad sends, split into `steps` about 16 ms apart.
+func scroll(at point: CGPoint, dx: Int32, dy: Int32, steps: Int) {
+  post(.mouseMoved, point)
+  sleepMs(50)
+  let steps = max(steps, 1)
+  for i in 0..<steps {
+    // Spread the remainder so the steps add up to exactly dx, dy.
+    let stepX = dx * Int32(i + 1) / Int32(steps) - dx * Int32(i) / Int32(steps)
+    let stepY = dy * Int32(i + 1) / Int32(steps) - dy * Int32(i) / Int32(steps)
+    guard let event = CGEvent(
+      scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 2, wheel1: stepY, wheel2: stepX, wheel3: 0
+    ) else { fail("could not create a scroll event") }
+    event.location = point
+    event.post(tap: .cghidEventTap)
+    sleepMs(16)
+  }
+}
+
 func sleepMs(_ ms: UInt32 = 50) {
   usleep(ms * 1000)
 }
 
-func click(_ point: CGPoint, count: Int, right: Bool = false) {
+/// kVK_Command, kVK_Shift, kVK_Option, kVK_Control, for the flags that hold them down.
+let modifierKeys: [(CGEventFlags, CGKeyCode)] = [
+  (.maskCommand, 0x37), (.maskShift, 0x38), (.maskAlternate, 0x3A), (.maskControl, 0x3B),
+]
+
+/// Presses (or releases) the keys for `flags`, as `flagsChanged` events carrying the flags held
+/// once each has changed: what the app sees when a person holds modifiers around a click.
+func holdModifiers(_ flags: CGEventFlags, down: Bool) {
+  var held: CGEventFlags = down ? [] : flags
+  for (flag, code) in modifierKeys where flags.contains(flag) {
+    guard let event = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: down)
+    else { fail("cannot create key event") }
+    if down { held.insert(flag) } else { held.remove(flag) }
+    event.type = .flagsChanged
+    event.flags = held
+    event.post(tap: .cghidEventTap)
+    sleepMs(30)
+  }
+}
+
+func click(_ point: CGPoint, count: Int, right: Bool = false, flags: CGEventFlags = []) {
+  holdModifiers(flags, down: true)
+  defer { holdModifiers(flags, down: false) }
   post(.mouseMoved, point)
   sleepMs()
   for n in 1 ... max(count, 1) {
-    post(right ? .rightMouseDown : .leftMouseDown, point, button: right ? .right : .left, clickState: Int64(n))
+    post(right ? .rightMouseDown : .leftMouseDown, point, button: right ? .right : .left, clickState: Int64(n), flags: flags)
     sleepMs()
-    post(right ? .rightMouseUp : .leftMouseUp, point, button: right ? .right : .left, clickState: Int64(n))
+    post(right ? .rightMouseUp : .leftMouseUp, point, button: right ? .right : .left, clickState: Int64(n), flags: flags)
     sleepMs()
   }
 }
@@ -208,11 +253,17 @@ case "bounds":
 case "move" where rest.count == 2:
   post(.mouseMoved, screenPoint(rest[0], rest[1]))
 case "click" where rest.count >= 2:
-  click(screenPoint(rest[0], rest[1]), count: rest.count > 2 ? Int(rest[2]) ?? 1 : 1)
+  // `click X Y [COUNT] [cmd|shift|alt|ctrl ...]`: the modifiers are held for the click.
+  let count = rest.count > 2 ? Int(rest[2]) : nil
+  click(screenPoint(rest[0], rest[1]), count: count ?? 1,
+        flags: modifierFlags(rest.dropFirst(count == nil ? 2 : 3)))
 case "rightclick" where rest.count == 2:
   click(screenPoint(rest[0], rest[1]), count: 1, right: true)
 case "drag" where rest.count == 4:
   drag(from: screenPoint(rest[0], rest[1]), to: screenPoint(rest[2], rest[3]))
+case "scroll" where rest.count == 4 || rest.count == 5:
+  guard let dx = Int32(rest[2]), let dy = Int32(rest[3]) else { fail("DX and DY must be whole numbers") }
+  scroll(at: screenPoint(rest[0], rest[1]), dx: dx, dy: dy, steps: rest.count == 5 ? Int(rest[4]) ?? 10 : 10)
 case "key" where rest.count == 1:
   type(rest[0])
 case "keycode" where rest.count >= 1:

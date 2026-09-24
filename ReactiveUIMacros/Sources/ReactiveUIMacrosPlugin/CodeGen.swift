@@ -13,7 +13,7 @@ struct CodeGen {
   /// Where a child list is attached: the component itself, or a container node.
   private enum Owner {
     case component
-    case node(field: String, arity: Arity)
+    case node(field: String, attach: ChildList.Attach)
   }
 
   func generate() -> [DeclSyntax] {
@@ -147,11 +147,11 @@ struct CodeGen {
       lines.append("self.\(link.field) = \(link.local)")
     }
 
-    for child in element.children {
-      lines.append(contentsOf: buildLines(child))
-    }
-    if !element.children.isEmpty {
-      lines.append("self.\(Naming.applyChildren(element.path))(context, animation: nil)")
+    for list in element.childLists {
+      for child in list.children {
+        lines.append(contentsOf: buildLines(child))
+      }
+      lines.append("self.\(Naming.applyChildren(list.path))(context, animation: nil)")
     }
     return lines
   }
@@ -183,7 +183,9 @@ struct CodeGen {
     guard !armed.isEmpty else { return [] }
 
     let arm = armed.map { entry in
-      "self.\(entry.field)?.\(entry.handler.property) = \(entry.handler.closure.trimmedDescription)"
+      let closure = entry.handler.closure.trimmedDescription
+      let value = entry.handler.adapter.map { "\($0)(\(closure))" } ?? closure
+      return "self.\(entry.field)?.\(entry.handler.property) = \(value)"
     }
     let disarm = armed.map { entry in
       "self.\(entry.field)?.\(entry.handler.property) = nil"
@@ -209,7 +211,7 @@ struct CodeGen {
     var armed: [(field: String, handler: BoundHandler)] = []
     forEachElement { element in
       for link in element.chain {
-        if let handler = link.handler { armed.append((link.field, handler)) }
+        for handler in link.handlers { armed.append((link.field, handler)) }
       }
     }
     return armed
@@ -228,7 +230,9 @@ struct CodeGen {
       switch owner {
       case .component:
         lines.append("self.setChild(children.first ?? EmptyElement(), context, animation: animation)")
-      case .node(let field, let arity):
+      case .node(let field, .door(let door)):
+        lines.append("if let owner = self.\(field) { owner.\(door)(children, context, animation: animation) }")
+      case .node(let field, .arity(let arity)):
         switch arity {
         case .single:
           lines.append("if let owner = self.\(field) { owner.setChild(children.first ?? EmptyElement(), context, animation: animation) }")
@@ -253,14 +257,10 @@ struct CodeGen {
         if case .branch(let branch) = node { branch.arms.forEach { $0.forEach(walk) } }
         return
       }
-      if !element.children.isEmpty {
-        decls.append(applier(
-          path: element.path,
-          owner: .node(field: element.innermost.field, arity: element.arity),
-          children: element.children
-        ))
+      for list in element.childLists {
+        decls.append(applier(path: list.path, owner: .node(field: list.ownerField, attach: list.attach), children: list.children))
       }
-      element.children.forEach(walk)
+      element.allChildren.forEach(walk)
     }
 
     // The component's own child list, so a branch at the root can swap too.
@@ -325,7 +325,7 @@ struct CodeGen {
           switch node {
           case .element(let element):
             fields.append(contentsOf: element.chain.map { "self.\($0.field) = nil" })
-            element.children.forEach(walk)
+            element.allChildren.forEach(walk)
           case .branch(let nested):
             fields.append("self.\(Naming.tag(nested.path)) = -1")
             fields.append("self.\(Naming.slot(nested.path)) = []")
@@ -462,9 +462,12 @@ struct CodeGen {
           }
         }
 
-        // Every scope on an element covers its children.
-        let childScope = own.first ?? inherited
-        element.children.forEach { walk($0, inherited: childScope) }
+        // Every scope on an element covers its children; a content modifier's, only the scopes
+        // after it in the chain.
+        for list in element.childLists {
+          let scope = list.link.map { link in own.first { $0.upToLink > link } ?? inherited } ?? (own.first ?? inherited)
+          list.children.forEach { walk($0, inherited: scope) }
+        }
 
       case .branch(let branch):
         if branch.reads.contains(stateName) {
@@ -667,18 +670,46 @@ struct CodeGen {
     // A handler's real closure is assigned in `__armHandlers`; the chain only needs something of
     // the right arity to produce the element with.
     if let handler = spec.handler {
-      return ".\(member.declName.baseName.text)\(handler.placeholder)"
+      // Any other arguments are kept, as written; only the handler is swapped for a placeholder.
+      // An `action:` closure is the handler too, when it is not written trailing.
+      let others = call.arguments.filter { argument in
+        !(argument.expression.is(ClosureExprSyntax.self)
+          && (argument.label == nil || (argument.label?.text == "action" && call.trailingClosure == nil)))
+      }
+      guard !others.isEmpty else {
+        return ".\(member.declName.baseName.text)\(handler.placeholder)"
+      }
+      let arguments = others.map { argument in
+        var a = argument
+        a.expression = StateRewriter.scan(argument.expression, states: stateNames).expr
+        a.trailingComma = nil
+        return a.trimmedDescription
+      }
+      return ".\(member.declName.baseName.text)(\(arguments.joined(separator: ", ")))\(handler.placeholder)"
     }
 
     var copy = call
     var newMember = member
     newMember.base = nil
     copy.calledExpression = ExprSyntax(newMember)
-    copy.arguments = LabeledExprListSyntax(copy.arguments.map { argument in
+    // Content is built and attached apart, like a container's.
+    let kept = copy.arguments.filter { argument in
+      !(spec.takesContent && argument.label?.text == "content" && argument.expression.is(ClosureExprSyntax.self))
+    }
+    if spec.takesContent {
+      copy.trailingClosure = nil
+      copy.additionalTrailingClosures = []
+    }
+    copy.arguments = LabeledExprListSyntax(kept.enumerated().map { index, argument in
       var a = argument
       a.expression = StateRewriter.scan(argument.expression, states: stateNames).expr
+      a.trailingComma = index == kept.count - 1 ? nil : a.trailingComma
       return a
     })
+    if copy.arguments.isEmpty {
+      copy.leftParen = .leftParenToken()
+      copy.rightParen = .rightParenToken()
+    }
     return copy.trimmedDescription
   }
 
@@ -692,7 +723,7 @@ struct CodeGen {
       switch node {
       case .element(let element):
         body(element)
-        element.children.forEach(walk)
+        element.allChildren.forEach(walk)
       case .branch(let branch):
         branch.arms.forEach { $0.forEach(walk) }
       }
@@ -713,7 +744,9 @@ struct CodeGen {
         switch node {
         case .element(let element):
           // A new container: its branches re-apply it, not the one outside.
-          walk(element.children, enclosing: [])
+          for list in element.childLists {
+            walk(list.children, enclosing: [])
+          }
         case .branch(let branch):
           if !enclosing.isEmpty { result[branch.path] = enclosing }
           branch.arms.forEach { walk($0, enclosing: [branch] + enclosing) }
@@ -731,7 +764,9 @@ struct CodeGen {
       for node in nodes {
         switch node {
         case .element(let element):
-          walk(element.children, parent: element.path)
+          for list in element.childLists {
+            walk(list.children, parent: list.path)
+          }
         case .branch(let branch):
           body(branch, parent)
           // An arm's own contents sit in the same container as the branch.

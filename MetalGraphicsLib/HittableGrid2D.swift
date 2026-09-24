@@ -7,6 +7,8 @@
 
 public struct HittableGridCell {
   var hittableViews: [any Hittable] = []
+  /// The clip each of `hittableViews` is hit inside, nil for none. Parallel to it.
+  var clips: [ClipRect?] = []
 }
 
 @MainActor public class HittableGrid2D {
@@ -27,6 +29,7 @@ public struct HittableGridCell {
   /// move would call that view's handler against freed memory.
   private struct HoveredView {
     weak var view: (any Hittable)?
+    var clip: ClipRect?
   }
 
   private var hoveredViews: [ObjectIdentifier : HoveredView] = [:]
@@ -46,7 +49,10 @@ public struct HittableGridCell {
   }
   
   public func reset() {
-    self.cells.forEach { $0.hittableViews.removeAll(keepingCapacity: true)}
+    for index in self.cells.indices {
+      self.cells[index].hittableViews.removeAll(keepingCapacity: true)
+      self.cells[index].clips.removeAll(keepingCapacity: true)
+    }
   }
   
   /// The cell under a point in centered coordinates, or nil when the point is off the grid.
@@ -74,18 +80,24 @@ public struct HittableGridCell {
     // Over a snapshot of the keys: the loop mutates the dictionary, and a handler it calls may
     // mutate it again by removing part of the tree.
     for id in Array(self.hoveredViews.keys) {
-      guard let view = self.hoveredViews[id]?.view, view.mounted else {
+      guard let hovered = self.hoveredViews[id], let view = hovered.view, view.mounted else {
         // Gone, or on its way out. Dropped without an `onHover(false)`: there is nothing left
         // to tell, and calling into a component mid-teardown is the bug this guards against.
         self.hoveredViews.removeValue(forKey: id)
         continue
       }
 
-      if !view.hitTest(input.mousePosition) {
+      if !Self.hits(view, hovered.clip, input.mousePosition) {
         view.isHovered = false
         view.onHover?(false, input)
         self.hoveredViews.removeValue(forKey: id)
       }
+    }
+
+    // Before looking for a cell: a drag goes on wherever the pointer goes, off the view and off
+    // the grid included.
+    if input.mouseMoved, input.leftMousePressed, let view = self.pressedView, view.isPressed, view.mounted {
+      view.onDrag?(input)
     }
 
     // After the press below, so a click whose down and up land in one frame still ends.
@@ -101,19 +113,20 @@ public struct HittableGridCell {
     // one drawn over the others — so a view underneath cannot take a click aimed at what covers it.
     var tapHandled = false
     var pressHandled = false
-    for view in cell.hittableViews where view.mounted && view.handlesEvents {
-      if view.hitTest(input.mousePosition) {
+    for (view, clip) in zip(cell.hittableViews, cell.clips) where view.mounted && view.handlesEvents {
+      if Self.hits(view, clip, input.mousePosition) {
         if let hoverHandler = view.onHover, !view.isHovered {
           view.isHovered = true
           hoverHandler(true, input)
-          self.hoveredViews[ObjectIdentifier(view)] = HoveredView(view: view)
+          self.hoveredViews[ObjectIdentifier(view)] = HoveredView(view: view, clip: clip)
         }
 
-        if !pressHandled, let pressHandler = view.onPress, input.leftMouseDown {
+        // A view that only drags is pressed too: that is what later drags go to.
+        if !pressHandled, view.onPress != nil || view.onDrag != nil, input.leftMouseDown {
           pressHandled = true
           self.pressedView = view
           view.isPressed = true
-          pressHandler(true, input)
+          view.onPress?(true, input)
         }
 
         if !tapHandled, let tapHandler = view.onTap, input.mouseDown {
@@ -124,6 +137,10 @@ public struct HittableGridCell {
     }
   }
   
+  private static func hits(_ view: any Hittable, _ clip: ClipRect?, _ point: float2) -> Bool {
+    (clip?.contains(point) ?? true) && view.hitTest(point)
+  }
+
   private func endPress(_ input: Input) {
     guard input.leftMouseUp, let view = self.pressedView else { return }
     self.pressedView = nil
@@ -134,13 +151,21 @@ public struct HittableGridCell {
     view.onPress?(false, input)
   }
 
-  public func mapViewToGrid(_ view: any Hittable, _ renderer: Graphics2D) {
+  /// Files `view` under the cells its hit rect covers, cut to `clip`: none, when it is clipped
+  /// away entirely.
+  public func mapViewToGrid(_ view: any Hittable, _ clip: ClipRect?, _ renderer: Graphics2D) {
     let gridTopLeft = self.bounds.topLeft
     let gridBottomRight = self.bounds.bottomRight
-    
+
+    var rect = ClipRect(position: view.hitPosition, size: view.hitSize)
+    if let clip {
+      rect = rect.intersection(clip)
+      if rect.isEmpty { return }
+    }
+    let size = rect.max - rect.min
     // origin -> top left
-    let newPosition = view.hitPosition - renderer.size * 0.5 + view.hitSize * 0.5
-    let box = BoundingBox2D(center: newPosition, size: view.hitSize)
+    let newPosition = rect.min - renderer.size * 0.5 + size * 0.5
+    let box = BoundingBox2D(center: newPosition, size: size)
     let boxTopLeft = box.topLeft
     let boxBottomRight = box.bottomRight
 
@@ -169,6 +194,7 @@ public struct HittableGridCell {
             
             if index < self.cells.count {
               self.cells[index].hittableViews.append(view)
+              self.cells[index].clips.append(clip)
             }
           }
         }

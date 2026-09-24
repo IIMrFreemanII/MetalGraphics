@@ -47,7 +47,7 @@ read a position off the image and pass it to `click`/`move` unchanged. A cropped
 by its crop origin — add it back.
 
 Commands: `activate`, `bounds`, `move X Y`, `click X Y [COUNT]`, `rightclick X Y`,
-`drag X1 Y1 X2 Y2`, `key TEXT`, `keycode CODE [cmd|shift|alt|ctrl ...]`, `shot FILE [X Y W H]`.
+`drag X1 Y1 X2 Y2`, `scroll X Y DX DY [STEPS]`, `key TEXT`, `keycode CODE [cmd|shift|alt|ctrl ...]`, `shot FILE [X Y W H]`.
 The header of `Tools/uidrive/main.swift` documents each.
 
 ## Notes
@@ -67,3 +67,15 @@ The header of `Tools/uidrive/main.swift` documents each.
   nothing and `bounds` works, that permission is the first thing to check.
 - In zsh, a glob that matches nothing aborts the whole line. Don't start a script with
   `rm $S/shot_*.png`; use `rm -f` on explicit names or `find -delete`.
+- Hot reload (`MetalGraphicsLib/docs/HotReload.md`): with a Debug build running, saving a file in
+  `MetalGraphicsLib/Shaders/` recompiles and swaps the shaders in ~1 s (watch `$S/run.log` for
+  `🔥 HotReload: shaders reloaded`), so a shader tweak needs no rebuild or relaunch — edit, wait,
+  `shot`. Swift and macro edits reload too when InjectionNext is running, but only for a build in
+  the *default* DerivedData (InjectionNext reads its build logs): build without
+  `-derivedDataPath`, and launch with
+  `open -n <app> --env INJECTION_PROJECT_ROOT=$PWD --env NSUnbufferedIO=YES --stdout $S/run.log --stderr $S/run.log`
+  (via `open`, so neither the app nor InjectionNext inherits the shell's sandbox). Save with a
+  rename (`sed -i ''`, or write a temp file and `mv`); InjectionNext ignores in-place writes, and
+  may miss the first save after launch. Look for `✅ Hot reload complete` then
+  `🔥 HotReload: rebuilding the UI tree` before taking the shot. The selected demo tab is restored
+  from `UIStorage`, so after a rebuild or relaunch the app opens on the last tab rather than Text.

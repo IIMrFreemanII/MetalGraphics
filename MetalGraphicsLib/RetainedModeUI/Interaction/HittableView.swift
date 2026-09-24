@@ -15,6 +15,8 @@ public class HittableView: SingleChildElement, Hittable {
   /// Called with true when the left button goes down on it, and with false when it comes up,
   /// wherever the pointer is by then.
   public var onPress: ((Bool, Input) -> Void)?
+  /// Called as the pointer moves while the left button is held, after it went down on this view.
+  public var onDrag: ((Input) -> Void)?
 
   public var hitPosition: float2 { self.position }
   public var hitSize: float2 { self.size }
@@ -39,11 +41,13 @@ public class HittableView: SingleChildElement, Hittable {
   
   init(
     onTap: ((Input) -> Void)? = nil, onHover: ((Bool, Input) -> Void)? = nil,
-    onPress: ((Bool, Input) -> Void)? = nil, @UIElementBuilder content: () -> [UIElement]
+    onPress: ((Bool, Input) -> Void)? = nil, onDrag: ((Input) -> Void)? = nil,
+    @UIElementBuilder content: () -> [UIElement]
   ) {
     self.onTap = onTap
     self.onHover = onHover
     self.onPress = onPress
+    self.onDrag = onDrag
     
     super.init()
     
@@ -54,8 +58,19 @@ public class HittableView: SingleChildElement, Hittable {
     self.size
   }
   
-  public override func calcSize(_ availableSize: float2) -> float2 {
-    let contentSize = child?.calcSize(availableSize) ?? availableSize
+  /// The child, unless it is the `EmptyElement` that `applyContent` puts in for `{}`, which
+  /// would size to zero and leave nothing to hit.
+  private var content: UIElement? {
+    self.child is EmptyElement ? nil : self.child
+  }
+
+  // Without content, the space it is offered.
+  public override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
+    self.content?.measure(proposal) ?? proposal.replacingUnspecified(with: .zero)
+  }
+
+  public override func calcSize(_ proposal: ProposedSize) -> float2 {
+    let contentSize = self.content?.calcSize(proposal) ?? proposal.replacingUnspecified(with: .zero)
     self.size = contentSize
     
     return contentSize

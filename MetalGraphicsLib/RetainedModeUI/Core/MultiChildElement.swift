@@ -29,6 +29,22 @@ open class MultiChildElement : UIElement {
     self.children.forEach(body)
   }
 
+  // Sorted only when some child has a z-index, which is rare; and only when the tree order is
+  // rebuilt, never per frame.
+  override func forEachChildInPaintOrder(_ body: (UIElement) -> Void) {
+    guard self.children.contains(where: { $0.zIndex != 0 }) else {
+      self.children.forEach(body)
+      return
+    }
+    let sorted = self.children.enumerated().sorted { a, b in
+      let (za, zb) = (a.element.zIndex, b.element.zIndex)
+      return za != zb ? za < zb : a.offset < b.offset
+    }
+    for (_, child) in sorted {
+      body(child)
+    }
+  }
+
   override func applyContent(_ elements: [UIElement]) -> Void {
     self.children = elements
   }

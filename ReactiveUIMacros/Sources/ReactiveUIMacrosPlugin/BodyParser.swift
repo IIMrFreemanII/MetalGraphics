@@ -187,10 +187,11 @@ struct BodyParser {
   private func handlerClosure(_ call: FunctionCallExprSyntax, _ spec: ModifierSpec) -> BoundHandler? {
     guard let handler = spec.handler else { return nil }
     let closure = call.trailingClosure
+      ?? call.arguments.first(where: { $0.label?.text == "action" })?.expression.as(ClosureExprSyntax.self)
       ?? call.arguments.compactMap { $0.expression.as(ClosureExprSyntax.self) }.first
     guard let closure else { return nil }
 
-    return BoundHandler(property: handler.property, closure: ExprSyntax(closure))
+    return BoundHandler(property: handler.property, closure: ExprSyntax(closure), adapter: handler.adapter)
   }
 
   private func parseElement(_ expr: ExprSyntax, path: String) -> ElementIR? {
@@ -250,6 +251,7 @@ struct BodyParser {
 
     var chain: [ChainLink] = []
     var scopes: [AnimationScope] = []
+    var contents: [LinkContent] = []
 
     // A generic element (`VList<T>`) needs its argument spelled out in the node field's type,
     // and the macro can only get it from the written annotation of the @State being passed.
@@ -260,23 +262,34 @@ struct BodyParser {
       fieldType = "\(typeSpec.name)<\(element)>"
     }
 
-    let (ctorBound, contentClosure) = parseConstructorArgs(ctorCall, typeSpec)
+    // Bindings and callbacks come out of the call first, so what is left binds as usual: a
+    // lowered `isOn: self.wifi` is then just a reactive argument.
+    guard let (loweredCall, ctorHandlers, namedContents) = lowerConstructor(ctorCall, typeSpec) else { return nil }
+    let (ctorBound, contentClosure) = parseConstructorArgs(loweredCall, typeSpec)
     chain.append(
       ChainLink(
         field: Naming.node(path, 0), local: Naming.local(path, 0),
-        type: fieldType, kind: .constructor(call: ctorCall, type: typeSpec), bound: ctorBound
+        type: fieldType, kind: .constructor(call: loweredCall, type: typeSpec), bound: ctorBound,
+        handlers: ctorHandlers
       )
     )
+
+    // `header: { … }` and the like: content of the constructor's element, applied through its
+    // own door. Pathed apart from the element's children, like a content modifier's.
+    for (index, named) in namedContents.enumerated() {
+      let contentPath = "\(path)k\(index)"
+      guard let parsed = parse(named.closure.statements, path: contentPath) else { return nil }
+      contents.append(LinkContent(link: 0, door: named.door, path: contentPath, children: parsed))
+    }
 
     for call in calls.dropFirst() {
       guard let member = call.calledExpression.as(MemberAccessExprSyntax.self) else { return nil }
       let name = member.declName.baseName.text
-      guard let spec = ElementCatalog.modifiers[name] else {
-        context.error(
-          "F4",
-          "'.\(name)' is not a modifier known to @Component. Add it to ElementCatalog.swift.",
-          at: member.declName
-        )
+      guard let spec = ElementCatalog.modifier(named: name, labels: call.arguments.map { $0.label?.text }) else {
+        let message = ElementCatalog.modifierOverloads[name] != nil
+          ? "'.\(name)' is not known to @Component with these arguments. Add the overload to ElementCatalog.swift."
+          : "'.\(name)' is not a modifier known to @Component. Add it to ElementCatalog.swift."
+        context.error("F4", message, at: member.declName)
         return nil
       }
       if spec.isScope {
@@ -287,7 +300,8 @@ struct BodyParser {
       }
       // F13: an in-place modifier sets a property of what it is called on, so it has to be
       // called on one of its types, not on a wrapper around it — unless it wraps anything else.
-      let inPlace = spec.inPlaceOn.map { targets in chain.last.map { targets.contains($0.type) } ?? false } ?? false
+      let inPlace = spec.inPlaceOnAny
+        || (spec.inPlaceOn.map { targets in chain.last.map { targets.contains($0.type) } ?? false } ?? false)
       if let targets = spec.inPlaceOn, !inPlace, !spec.wrapsOtherwise, let receiver = chain.last {
         let target = targets.sorted().joined(separator: " or ")
         context.error(
@@ -297,13 +311,23 @@ struct BodyParser {
         )
         return nil
       }
+      if spec.takesContent {
+        // Its own path, lettered by the link, so its nodes never collide with the element's.
+        let contentPath = "\(path)o\(chain.count)"
+        let closure = call.trailingClosure
+          ?? call.arguments.first(where: { $0.label?.text == "content" })?.expression.as(ClosureExprSyntax.self)
+        if let closure {
+          guard let parsed = parse(closure.statements, path: contentPath) else { return nil }
+          contents.append(LinkContent(link: chain.count, door: "replaceContent", path: contentPath, children: parsed))
+        }
+      }
       // Named by position among the links, so a scope marker leaves no gap in the lettering.
       chain.append(
         ChainLink(
           field: Naming.node(path, chain.count), local: Naming.local(path, chain.count),
-          type: inPlace ? chain.last?.type ?? spec.produces : spec.produces,
+          type: inPlace ? chain.last?.type ?? spec.produces : self.linkType(call, spec),
           kind: .modifier(call: call, spec: spec),
-          bound: parseModifierArgs(call, spec), handler: handlerClosure(call, spec)
+          bound: parseModifierArgs(call, spec), handlers: handlerClosure(call, spec).map { [$0] } ?? []
         )
       )
     }
@@ -322,7 +346,7 @@ struct BodyParser {
       }
     }
 
-    return ElementIR(path: path, chain: chain, children: children, arity: typeSpec.arity, scopes: scopes)
+    return ElementIR(path: path, chain: chain, children: children, arity: typeSpec.arity, scopes: scopes, contents: contents)
   }
 
   // MARK: - Animation scopes
@@ -433,6 +457,139 @@ struct BodyParser {
     return nil
   }
 
+  /// The type of a modifier link's node: what the modifier produces, specialised by a `T.self`
+  /// argument when the spec says so.
+  private func linkType(_ call: FunctionCallExprSyntax, _ spec: ModifierSpec) -> String {
+    guard let label = spec.genericOverTypeOf,
+          let argument = call.arguments.first(where: { $0.label?.text == label }),
+          let member = argument.expression.as(MemberAccessExprSyntax.self),
+          member.declName.baseName.text == "self", let base = member.base
+    else { return spec.produces }
+    return "\(spec.produces)<\(base.trimmedDescription)>"
+  }
+
+  // MARK: - Bindings and callbacks
+
+  /// The constructor call with its binding arguments lowered to values and its callbacks taken
+  /// out, plus the handlers those become. Nil when a binding could not be lowered (F14).
+  ///
+  /// `Toggle("Wi-Fi", isOn: $wifi)` becomes `Toggle("Wi-Fi", isOn: self.wifi)`, which then binds
+  /// to `setIsOn` like any argument, and the handler `onIsOnChange = { self.wifi = $0 }`.
+  /// `Button("OK") { self.save() }` becomes `Button("OK")` and the handler `action`.
+  private func lowerConstructor(
+    _ call: FunctionCallExprSyntax, _ spec: TypeSpec
+  ) -> (call: FunctionCallExprSyntax, handlers: [BoundHandler], named: [(door: String, closure: ClosureExprSyntax)])? {
+    guard spec.args.contains(where: { $0.binding != nil || $0.handler != nil }) || !spec.namedContents.isEmpty
+    else { return (call, [], []) }
+
+    var handlers: [BoundHandler] = []
+    var named: [(door: String, closure: ClosureExprSyntax)] = []
+    var kept: [LabeledExprSyntax] = []
+    for (position, argument) in call.arguments.enumerated() {
+      if let label = argument.label?.text, let door = spec.namedContents[label],
+         let closure = argument.expression.as(ClosureExprSyntax.self)
+      {
+        named.append((door, closure))
+        continue
+      }
+      guard let argSpec = spec.spec(forLabel: argument.label?.text, position: position) else {
+        kept.append(argument)
+        continue
+      }
+      if let handler = argSpec.handler, argument.expression.is(ClosureExprSyntax.self) {
+        handlers.append(BoundHandler(property: handler.property, closure: argument.expression, adapter: handler.adapter))
+        continue
+      }
+      if let binding = argSpec.binding {
+        guard let (value, handler) = lowerBinding(argument.expression, binding, label: argument.label?.text)
+        else { return nil }
+        var lowered = argument
+        lowered.expression = value.with(\.leadingTrivia, argument.expression.leadingTrivia)
+          .with(\.trailingTrivia, argument.expression.trailingTrivia)
+        kept.append(lowered)
+        if let handler { handlers.append(handler) }
+        continue
+      }
+      kept.append(argument)
+    }
+
+    // Trailing ones, `} header: { … }`. `constructorExpr` drops these when it strips content.
+    for trailing in call.additionalTrailingClosures {
+      if let door = spec.namedContents[trailing.label.text] {
+        named.append((door, trailing.closure))
+      }
+    }
+
+    var copy = call
+    // Where the element takes no content, a trailing closure is its callback.
+    if let trailing = call.trailingClosure, !spec.takesContent,
+       let handler = spec.args.lazy.compactMap(\.handler).first
+    {
+      handlers.append(BoundHandler(property: handler.property, closure: ExprSyntax(trailing), adapter: handler.adapter))
+      copy.trailingClosure = nil
+    }
+    copy.arguments = LabeledExprListSyntax(kept.enumerated().map { index, argument in
+      var a = argument
+      a.trailingComma = index == kept.count - 1 ? nil : .commaToken(trailingTrivia: .space)
+      return a
+    })
+    if copy.leftParen == nil {
+      // `Section {` had its space before the brace: `Section()`, not `Section ()`.
+      copy.calledExpression = copy.calledExpression.with(\.trailingTrivia, [])
+      copy.leftParen = .leftParenToken()
+      copy.rightParen = .rightParenToken()
+    }
+    return (copy, handlers, named)
+  }
+
+  /// `$wifi` -> (`self.wifi`, `{ self.wifi = $0 }`); `$settings.volume` and `self.$settings.volume`
+  /// likewise, through the member path; `.constant(v)` -> (`v`, none).
+  private func lowerBinding(
+    _ expr: ExprSyntax, _ spec: HandlerSpec, label: String?
+  ) -> (value: ExprSyntax, handler: BoundHandler?)? {
+    if let call = expr.as(FunctionCallExprSyntax.self),
+       let member = call.calledExpression.as(MemberAccessExprSyntax.self),
+       member.declName.baseName.text == "constant",
+       member.base == nil || member.base?.as(DeclReferenceExprSyntax.self)?.baseName.text == "Binding",
+       call.arguments.count == 1, let value = call.arguments.first?.expression
+    {
+      return (value.trimmed, nil)
+    }
+
+    // Peel `.member`s off the outside until the `$state` at the root.
+    var members: [String] = []
+    var current = expr
+    var root: String? = nil
+    while root == nil {
+      if let reference = current.as(DeclReferenceExprSyntax.self) {
+        root = reference.baseName.text
+        break
+      }
+      guard let member = current.as(MemberAccessExprSyntax.self), let base = member.base else { break }
+      let name = member.declName.baseName.text
+      if base.as(DeclReferenceExprSyntax.self)?.baseName.tokenKind == .keyword(.self) {
+        root = name
+        break
+      }
+      members.insert(name, at: 0)
+      current = base
+    }
+
+    guard let root, root.hasPrefix("$"), states.contains(String(root.dropFirst())) else {
+      let argument = label.map { "'\($0):'" } ?? "this argument"
+      context.error(
+        "F14",
+        "\(argument) is a binding, lowered at compile time: write '$<state>' for a @State property "
+          + "(or a member of one, '$<state>.<member>'), or '.constant(<value>)'.",
+        at: expr
+      )
+      return nil
+    }
+
+    let path = (["self", String(root.dropFirst())] + members).joined(separator: ".")
+    return ("\(raw: path)", BoundHandler(property: spec.property, closure: "{ \(raw: path) = $0 }", adapter: spec.adapter))
+  }
+
   // MARK: - Arguments
 
   /// Reactive constructor arguments, plus the content closure if there is one.
@@ -503,6 +660,8 @@ struct BodyParser {
       // `.frame(width:height:)` collapses into the single property `Frame.size`.
       guard rewritten.count == 2 else { return [] }
       value = "float2(\(rewritten[0]), \(rewritten[1]))"
+    case .construct(let type):
+      value = "\(raw: type)(\(raw: rewritten.map(\.trimmedDescription).joined(separator: ", ")))"
     }
     return [BoundArg(setter: setter, value: value, reads: reads, animatable: spec.animatable)]
   }

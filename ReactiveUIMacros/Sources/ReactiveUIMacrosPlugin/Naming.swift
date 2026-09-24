@@ -13,6 +13,10 @@ enum Naming {
   /// `@Component` must emit one for *every* `@State`, including states no node reads.
   static func update(_ property: String) -> String { "__update_\(property)" }
 
+  /// The `Binding` `@State` declares beside the property: `$wifi`. `@Component` recognises the
+  /// spelling in a binding argument and lowers it, so it never reads this declaration.
+  static func binding(_ property: String) -> String { "$\(property)" }
+
   /// Turns a missing `@Component` into a readable conformance error instead of
   /// "cannot find '__update_x' in scope".
   static func requiresComponent(_ property: String) -> String { "__requiresComponent_\(property)" }

@@ -22,7 +22,7 @@ public struct TextFont {
 public class Text : UIRenderableElement {
   public var text: String {
     didSet {
-      if self.text != oldValue { self.layoutMaxSize = nil }
+      if self.text != oldValue { self.shaped.removeAll(keepingCapacity: true) }
     }
   }
   /// Set by `.font(_:)`.
@@ -40,20 +40,23 @@ public class Text : UIRenderableElement {
 
   public var position: SIMD2<Float> = .init()
   public var size: SIMD2<Float> = .init()
-  // Made by `calcSize` for the space layout offered, and drawn as is every frame.
+  // Picked by `calcSize` for the space layout offered, and drawn as is every frame.
   private var layout = TextLayout()
-  // What `layout` was shaped for; `layoutMaxSize` is nil once the text changed. Shaping is the
-  // expensive part of layout, and a relayout caused by anything else — a sibling's animated
-  // size, say, or this text's own animated size — shapes the same thing again, so it reuses the
-  // layout instead of reshaping.
-  private var layoutMaxSize: float2? = nil
-  private var layoutFontSize: Float = 0
-  private var layoutFace: SDFFont? = nil
+  // The last few layouts shaped, and the space each was shaped for, most recent last; emptied
+  // when the text changes. Shaping is the expensive part of layout. A stack measures a text at
+  // its narrowest and widest before it settles on a width, and a relayout caused by anything
+  // else — a sibling's animated size, say, or this text's own animated size — asks for the same
+  // shapes again, so they are kept rather than reshaped.
+  private var shaped: [(maxSize: float2, layout: TextLayout)] = []
+  private var shapedFontSize: Float = 0
+  private var shapedFace: SDFFont? = nil
+  private static let shapedCapacity = 3
 
   public init(_ text: String) {
     self.text = text
 
     super.init()
+    self.shaped.reserveCapacity(Self.shapedCapacity)
   }
 
   // MARK: - Style
@@ -119,23 +122,57 @@ public class Text : UIRenderableElement {
     self.size
   }
 
-  public override func calcSize(_ availableSize: float2) -> float2 {
-    let fontSize = self.font.size
-    let face = self.font.font
-    if self.layoutMaxSize != availableSize || self.layoutFontSize != fontSize || self.layoutFace !== face {
-      let style = TextStyle(color: self.color, fontSize: fontSize, font: face)
-      self.layout = layoutText(self.text, style: style, maxSize: availableSize)
-      self.layoutMaxSize = availableSize
-      self.layoutFontSize = fontSize
-      self.layoutFace = face
-    }
+  // Wraps at the width offered, and as one line when asked for its ideal size. Lines past the
+  // height offered are dropped, but the first line always stays, as SwiftUI's does.
+  public override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
+    self.shape(for: proposal).size * self.fontScale
+  }
+
+  public override func calcSize(_ proposal: ProposedSize) -> float2 {
+    self.layout = self.shape(for: proposal)
     self.size = self.layout.size * self.fontScale
 
     return self.size
   }
 
+  private func shape(for proposal: ProposedSize) -> TextLayout {
+    let maxSize = proposal.replacingUnspecified(with: float2(repeating: .infinity))
+    let fontSize = self.font.size
+    let face = self.font.font
+    if self.shapedFontSize != fontSize || self.shapedFace !== face {
+      self.shaped.removeAll(keepingCapacity: true)
+      self.shapedFontSize = fontSize
+      self.shapedFace = face
+    }
+    if let index = self.shaped.firstIndex(where: { $0.maxSize == maxSize }) {
+      let entry = self.shaped[index]
+      if index != self.shaped.count - 1 {
+        self.shaped.remove(at: index)
+        self.shaped.append(entry)
+      }
+      return entry.layout
+    }
+
+    let style = TextStyle(color: self.color, fontSize: fontSize, font: face)
+    let layout = layoutText(self.text, style: style, maxSize: maxSize, keepsFirstLine: true)
+    if self.shaped.count == Self.shapedCapacity {
+      self.shaped.removeFirst()
+    }
+    self.shaped.append((maxSize, layout))
+    return layout
+  }
+
   public override func calcPosition(_ position: float2) {
     self.position = position
+  }
+
+  public override func guideValue(_ key: AlignmentKey, _ proposal: ProposedSize, _ size: float2) -> Float? {
+    if let own = self.explicitGuide(key, size) { return own }
+    switch key.kind {
+    case .firstTextBaseline: return self.shape(for: proposal).lines.first.map { $0.baseline * self.fontScale }
+    case .lastTextBaseline: return self.shape(for: proposal).lines.last.map { $0.baseline * self.fontScale }
+    default: return nil
+    }
   }
 
   public override func render(_ renderer: Graphics2D, _ effect: EffectState) {

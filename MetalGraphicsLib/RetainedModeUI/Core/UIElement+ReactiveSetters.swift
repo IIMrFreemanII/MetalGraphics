@@ -47,8 +47,232 @@ extension Frame {
     }
   }
 
+  /// Animates between two widths; to or from nil — the child's width — it snaps, and what the
+  /// new layout moves slides.
+  public func setWidth(_ value: Float?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard let value, let old = self.width else {
+      context.animator.cancel(self, .width)
+      self.width = value
+      context.invalidate(.layout, animation: animation)
+      return
+    }
+    context.animator.set(self, .width, from: old, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: Frame.self).width = value.x
+      context.invalidate(.layout)
+    }
+  }
+
+  /// See `setWidth`.
+  public func setHeight(_ value: Float?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard let value, let old = self.height else {
+      context.animator.cancel(self, .height)
+      self.height = value
+      context.invalidate(.layout, animation: animation)
+      return
+    }
+    context.animator.set(self, .height, from: old, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: Frame.self).height = value.x
+      context.invalidate(.layout)
+    }
+  }
+
   public func setAlignment(_ value: Alignment, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
     self.alignment = value
+    context.invalidate(.layout, animation: animation)
+  }
+}
+
+// A bound snaps; what the new layout moves slides.
+extension FlexFrame {
+  public func setMinWidth(_ value: Float?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.minWidth = value
+    context.invalidate(.layout, animation: animation)
+  }
+
+  public func setIdealWidth(_ value: Float?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.idealWidth = value
+    context.invalidate(.layout, animation: animation)
+  }
+
+  public func setMaxWidth(_ value: Float?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.maxWidth = value
+    context.invalidate(.layout, animation: animation)
+  }
+
+  public func setMinHeight(_ value: Float?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.minHeight = value
+    context.invalidate(.layout, animation: animation)
+  }
+
+  public func setIdealHeight(_ value: Float?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.idealHeight = value
+    context.invalidate(.layout, animation: animation)
+  }
+
+  public func setMaxHeight(_ value: Float?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.maxHeight = value
+    context.invalidate(.layout, animation: animation)
+  }
+
+  public func setAlignment(_ value: Alignment, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.alignment = value
+    context.invalidate(.layout, animation: animation)
+  }
+}
+
+extension AspectRatioElement {
+  /// A new ratio snaps; what the new layout moves slides.
+  public func setRatio(_ value: Float?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.ratio = value
+    context.invalidate(.layout, animation: animation)
+  }
+
+  public func setContentMode(_ value: ContentMode, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.contentMode = value
+    context.invalidate(.layout, animation: animation)
+  }
+}
+
+extension PositionElement {
+  public func setPoint(_ value: float2, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    context.animator.set(self, .origin, from: self.point, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: PositionElement.self).point = float2(packed: value)
+      context.invalidate(.layout)
+    }
+  }
+}
+
+extension Spacer {
+  public func setMinLength(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    context.animator.set(self, .size, from: self.minLength, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: Spacer.self).minLength = value.x
+      context.invalidate(.layout)
+    }
+  }
+}
+
+extension Grid {
+  public func setAlignment(_ value: Alignment, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.alignment = value
+    context.invalidate(.layout, animation: animation)
+  }
+
+  public func setHorizontalSpacing(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    context.animator.set(self, .spacing, from: self.horizontalSpacing, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: Grid.self).horizontalSpacing = value.x
+      context.invalidate(.layout)
+    }
+  }
+
+  public func setVerticalSpacing(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    context.animator.set(self, .lineSpacing, from: self.verticalSpacing, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: Grid.self).verticalSpacing = value.x
+      context.invalidate(.layout)
+    }
+  }
+}
+
+extension GridRow {
+  public func setAlignment(_ value: VerticalAlignment?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.alignment = value
+    context.invalidate(.layout, animation: animation)
+  }
+}
+
+extension LazyGridElement {
+  /// New tracks snap; what the new layout moves slides.
+  public func setItems(_ value: [GridItem], _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.items = value
+    context.invalidate(.layout, animation: animation)
+  }
+
+  public func setSpacing(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    context.animator.set(self, .spacing, from: self.spacing, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: LazyGridElement.self).spacing = value.x
+      context.invalidate(.layout)
+    }
+  }
+}
+
+extension LazyVGrid {
+  public func setAlignment(_ value: HorizontalAlignment, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.alignment = value
+    context.invalidate(.layout, animation: animation)
+  }
+}
+
+extension LazyHGrid {
+  public func setAlignment(_ value: VerticalAlignment, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.alignment = value
+    context.invalidate(.layout, animation: animation)
+  }
+}
+
+extension LayoutView {
+  /// Keeps the children; with an animation, each slides to where the new layout puts it.
+  public func setLayout<L: Layout>(_ value: L, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.setLayout(AnyLayout(value))
+    context.invalidate(.layout, animation: animation)
+  }
+}
+
+extension ViewThatFits {
+  public func setAxes(_ value: Axis, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.axes = value
+    context.invalidate(.layout, animation: animation)
+  }
+}
+
+extension ZStack {
+  public func setAlignment(_ value: Alignment, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.alignment = value
+    context.invalidate(.layout, animation: animation)
+  }
+}
+
+extension OverlayElement {
+  public func setAlignment(_ value: Alignment, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.alignment = value
+    context.invalidate(.layout, animation: animation)
+  }
+}
+
+extension UIElement {
+  /// Grid cell options snap; what the new layout moves slides.
+  public func setGridCellColumns(_ value: Int, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.setGridCell(context, animation) { $0.columns = value }
+  }
+
+  public func setGridColumnAlignment(_ value: HorizontalAlignment, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.setGridCell(context, animation) { $0.columnAlignment = value }
+  }
+
+  public func setGridCellAnchor(_ value: Alignment, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.setGridCell(context, animation) { $0.anchor = value }
+  }
+
+  public func setGridCellUnsizedAxes(_ value: Axis, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.setGridCell(context, animation) { $0.unsizedAxes = value }
+  }
+
+  private func setGridCell(_ context: UIContext, _ animation: UIAnimation?, _ edit: (inout GridCellOptions) -> Void) {
+    var cell = self.ownGridCell ?? GridCellOptions()
+    edit(&cell)
+    self.ownGridCell = cell
+    context.invalidate(.layout, animation: animation)
+  }
+
+  /// Reorders what is drawn and hit; nothing moves.
+  public func setZIndex(_ value: Float, _ context: UIContext) -> Void {
+    guard self.ownZIndex != value else { return }
+    self.ownZIndex = value
+    context.invalidate(.treeOrder)
+  }
+
+  /// A new priority snaps; what the new layout moves slides.
+  public func setLayoutPriority(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard self.ownLayoutPriority != value else { return }
+    self.ownLayoutPriority = value
     context.invalidate(.layout, animation: animation)
   }
 }
@@ -59,6 +283,16 @@ extension Padding {
       unsafeDowncast(element, to: Padding.self).inset = Inset(packed: value)
       context.invalidate(.layout)
     }
+  }
+
+  /// `.padding(length)`: the same length on every edge.
+  public func setInset(_ length: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.setInset(Inset(all: length), context, animation: animation)
+  }
+
+  /// `.padding(edges)`: the default length on those edges.
+  public func setInset(_ edges: Edge.Set, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.setInset(Inset(edges), context, animation: animation)
   }
 }
 
@@ -93,11 +327,6 @@ extension HStack {
 extension ExpandedFrame {
   public func setAxis(_ value: Axis, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
     self.axis = value
-    context.invalidate(.layout, animation: animation)
-  }
-
-  public func setAlignment(_ value: Alignment, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
-    self.alignment = value
     context.invalidate(.layout, animation: animation)
   }
 }
@@ -157,6 +386,54 @@ extension EffectElement {
       unsafeDowncast(element, to: EffectElement.self).offset = float2(packed: value)
       context.invalidate()
     }
+  }
+}
+
+extension ShadowElement {
+  public func setColor(_ value: float4, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    context.animator.set(self, .color, from: self.color, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: ShadowElement.self).color = float4(packed: value)
+      context.invalidate()
+    }
+  }
+
+  public func setRadius(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    context.animator.set(self, .radius, from: self.radius, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: ShadowElement.self).radius = value.x
+      context.invalidate()
+    }
+  }
+
+  public func setX(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    context.animator.set(self, .offsetX, from: self.x, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: ShadowElement.self).x = value.x
+      context.invalidate()
+    }
+  }
+
+  public func setY(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    context.animator.set(self, .offsetY, from: self.y, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: ShadowElement.self).y = value.x
+      context.invalidate()
+    }
+  }
+}
+
+extension BlurElement {
+  public func setRadius(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    context.animator.set(self, .radius, from: self.radius, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: BlurElement.self).radius = value.x
+      context.invalidate()
+    }
+  }
+}
+
+extension GlassBackground {
+  /// Snaps: a material has more to it than one animatable value holds.
+  public func setMaterial(_ value: GlassMaterial, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.material else { return }
+    self.material = value
+    context.invalidate()
   }
 }
 
@@ -305,6 +582,92 @@ extension Path {
       let path = unsafeDowncast(element, to: Path.self)
       path.value = value
       path.outlineChanged = true
+      context.invalidate()
+    }
+  }
+}
+
+extension ScrollView {
+  public func setAxes(_ value: Axis, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.axes = value
+    context.invalidate(.layout, animation: animation)
+  }
+
+  public func setShowsIndicators(_ value: Bool, _ context: UIContext) -> Void {
+    self.showsIndicators = value
+    context.invalidate()
+  }
+
+  public func setIndicatorVisibility(_ value: ScrollIndicatorVisibility, _ context: UIContext) -> Void {
+    self.indicatorVisibility = value
+    context.invalidate()
+  }
+
+  /// Only the wheel reads it, so nothing needs redrawing.
+  public func setScrollDisabled(_ value: Bool, _ context: UIContext) -> Void {
+    self.isScrollDisabled = value
+  }
+}
+
+// Shapes fitted to an element's bounds. Their corner radii animate; a change of kind —
+// `.rect(cornerRadius: 8)` to `.capsule` — snaps, since the two resolve their radii differently.
+// Only what is drawn changes, except where a clip's kind moves its bounds, which hit-testing uses.
+
+extension ClipElement {
+  public func setShape(_ value: UIShape, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    let snapsKind = value.kind != self.shape.kind
+    context.animator.set(self, .shape, from: self.shape.radii, to: value.radii, snapsKind ? nil : animation, context) { element, value, context in
+      unsafeDowncast(element, to: ClipElement.self).shape.radii = value
+      context.invalidate()
+    }
+    if snapsKind {
+      self.shape = value
+      context.invalidate([.render, .hitGrid])
+    }
+  }
+
+  public func setCornerRadius(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.setShape(.rect(cornerRadius: value), context, animation: animation)
+  }
+}
+
+extension Background {
+  public func setShape(_ value: UIShape, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    let snapsKind = value.kind != self.shape.kind
+    context.animator.set(self, .shape, from: self.shape.radii, to: value.radii, snapsKind ? nil : animation, context) { element, value, context in
+      unsafeDowncast(element, to: Background.self).shape.radii = value
+      context.invalidate()
+    }
+    if snapsKind {
+      self.shape = value
+      context.invalidate()
+    }
+  }
+}
+
+extension BorderElement {
+  public func setColor(_ value: float4, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    context.animator.set(self, .color, from: self.color, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: BorderElement.self).color = float4(packed: value)
+      context.invalidate()
+    }
+  }
+
+  public func setLineWidth(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    context.animator.set(self, .lineWidth, from: self.lineWidth, to: value, animation, context) { element, value, context in
+      unsafeDowncast(element, to: BorderElement.self).lineWidth = value.x
+      context.invalidate()
+    }
+  }
+
+  public func setShape(_ value: UIShape, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    let snapsKind = value.kind != self.shape.kind
+    context.animator.set(self, .shape, from: self.shape.radii, to: value.radii, snapsKind ? nil : animation, context) { element, value, context in
+      unsafeDowncast(element, to: BorderElement.self).shape.radii = value
+      context.invalidate()
+    }
+    if snapsKind {
+      self.shape = value
       context.invalidate()
     }
   }

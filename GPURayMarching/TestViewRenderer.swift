@@ -13,6 +13,11 @@ class TestViewRenderer: ViewRenderer {
     
     self.root.setChild(Demos(), self.uiContext)
   }
+
+  // New code only runs in a fresh tree; `Demos` reopens the stored tab.
+  override func hotReload() {
+    self.root.setChild(Demos(), self.uiContext)
+  }
   
   //  override func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
   //    super.mtkView(view, drawableSizeWillChange: size)

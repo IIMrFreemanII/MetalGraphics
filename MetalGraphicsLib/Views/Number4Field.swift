@@ -3,7 +3,7 @@ import simd
 
 public struct Number4Field<T: SIMDScalar> : View {
   public var label: String
-  @Binding public var value: SIMD4<T>
+  @SwiftUI.Binding public var value: SIMD4<T>
   
   public var body: some View {
     SwiftUI.VStack(alignment: .leading, spacing: 4) {

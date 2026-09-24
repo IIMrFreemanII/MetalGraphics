@@ -21,12 +21,40 @@ public class MyMTKView: MTKView {
       self.input.keysDown.insert(key)
       self.input.keysPressed.insert(key)
     }
+
+    self.queueKeyPress(event, event.isARepeat ? .repeat : .down)
   }
 
   override public func keyUp(with event: NSEvent) {
+    self.queueKeyPress(event, .up)
     guard let key = GCKeyCode(macKeyCode: event.keyCode) else { return }
     self.input.keysPressed.remove(key)
     self.input.keysUp.insert(key)
+  }
+
+  /// Keys whose last `.down` has had no `.up` yet, by virtual key code, with what they were
+  /// pressed as, so the `.up` sent for one AppKit never sends a `keyUp` for matches its `.down`.
+  private var pressesDown: [UInt16: KeyPress] = [:]
+
+  private func queueKeyPress(_ event: NSEvent, _ phase: KeyPress.Phases) {
+    // `charactersIgnoringModifiers` keeps shift: shift-a is "A". A letter's key is its lowercase
+    // one, so `.onKeyPress("a")` sees both; `characters` still says which was typed.
+    guard var character = event.charactersIgnoringModifiers?.lowercased().first else { return }
+    // Shift-Tab reports a back-tab; it is the Tab key, with shift in the modifiers.
+    if character == "\u{19}" {
+      character = "\t"
+    }
+    let press = KeyPress(
+      key: KeyEquivalent(character), characters: event.characters ?? "",
+      modifiers: event.modifierFlags.intersection(.deviceIndependentFlagsMask), phase: phase,
+      keyCode: GCKeyCode(macKeyCode: event.keyCode)
+    )
+    self.input.keyPresses.append(press)
+    if phase == .up {
+      self.pressesDown.removeValue(forKey: event.keyCode)
+    } else if phase == .down {
+      self.pressesDown[event.keyCode] = press
+    }
   }
 
   // Modifiers send no key events, only this, with the flags as they are after the change.
@@ -44,6 +72,13 @@ public class MyMTKView: MTKView {
         self.input.keysPressed.remove(key)
         self.input.keysUp.insert(key)
       }
+      for press in self.pressesDown.values {
+        self.input.keyPresses.append(
+          KeyPress(key: press.key, characters: press.characters, modifiers: flags.intersection(.deviceIndependentFlagsMask),
+                   phase: .up, keyCode: press.keyCode)
+        )
+      }
+      self.pressesDown.removeAll(keepingCapacity: true)
     }
 
     guard let key = GCKeyCode(macKeyCode: event.keyCode),
@@ -102,6 +137,9 @@ public class MyMTKView: MTKView {
   override public func scrollWheel(with event: NSEvent) {
     let scroll = float2(Float(event.deltaX), Float(event.deltaY))
     self.input.mouseScroll += scroll
+    // A wheel reports lines; a trackpad or Magic Mouse points.
+    let pointsPerLine: Float = event.hasPreciseScrollingDeltas ? 1 : 12
+    self.input.scrollDelta += float2(Float(event.scrollingDeltaX), Float(event.scrollingDeltaY)) * pointsPerLine
 
     let momentumPhase = event.momentumPhase
     let phase = event.phase

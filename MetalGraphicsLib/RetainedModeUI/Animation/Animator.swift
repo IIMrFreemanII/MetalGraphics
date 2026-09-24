@@ -9,8 +9,13 @@ import simd
 public enum AnimatedProperty: UInt8, Sendable {
   case color
   case size
+  /// One side of a `Frame` whose other side may be unset.
+  case width
+  case height
   case inset
   case spacing
+  /// A grid's spacing between rows, apart from `spacing` between columns.
+  case lineSpacing
   case opacity
   case offset
   /// A `TransitionElement`'s progress between two effect states.
@@ -35,6 +40,14 @@ public enum AnimatedProperty: UInt8, Sendable {
   case morph
   /// The value a `Path` builds its outline from.
   case pathValue
+  /// A `UIShape`'s corner radii: of a clip, a border or a background.
+  case shape
+  /// A shadow's offset, one axis each, since `.shadow(x:y:)` binds them apart.
+  case offsetX
+  case offsetY
+  /// A form control's position between two states: a toggle's knob, a slider's fill, a
+  /// disclosure chevron's turn.
+  case progress
 }
 
 /// Drives every running animation, once per frame, from `UIContext.update`.

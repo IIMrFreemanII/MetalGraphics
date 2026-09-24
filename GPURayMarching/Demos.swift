@@ -1,7 +1,7 @@
 import MetalGraphicsLib
 import ReactiveUI
 
-enum Demo : Identifiable {
+enum Demo : String, Identifiable {
   case conditional
   case list
   case text
@@ -9,6 +9,14 @@ enum Demo : Identifiable {
   case animation
   case image
   case vector
+  case scroll
+  case containers
+  case grids
+  case shapes
+  case glass
+  case table
+  case keyboard
+  case form
 
   var id: Self { self }
 
@@ -21,6 +29,14 @@ enum Demo : Identifiable {
     case .animation: "Animation"
     case .image: "Image"
     case .vector: "Vector"
+    case .scroll: "Scroll"
+    case .containers: "Containers"
+    case .grids: "Grids"
+    case .shapes: "Shapes"
+    case .glass: "Glass"
+    case .table: "Table"
+    case .keyboard: "Keyboard"
+    case .form: "Form"
     }
   }
 
@@ -33,6 +49,14 @@ enum Demo : Identifiable {
     case .animation: AnimationDemo()
     case .image: ImageDemo()
     case .vector: VectorDemo()
+    case .scroll: ScrollDemo()
+    case .containers: ContainersDemo()
+    case .grids: GridsDemo()
+    case .shapes: ShapesDemo()
+    case .glass: GlassDemo()
+    case .table: TableDemo()
+    case .keyboard: KeyboardDemo()
+    case .form: FormDemo()
     }
   }
 }
@@ -47,9 +71,12 @@ final class Demos : SingleChildElement {
   private static let tabFont = TextFont.system(size: 14)
   private static let tabAnimation = UIAnimation.easeOut(0.15)
 
-  @State var selected: Demo = .text
+  // Restored from `UIStorage`, so a hot reload or a relaunch reopens the tab you were on.
+  private static let selectedKey = "Demos.selected"
+
+  @State var selected: Demo = UIStorage.value(Demos.selectedKey, default: Demo.text)
   // Always `[selected]`: the list needs a `@State` array of its own (F10).
-  @State var shown: [Demo] = [.text]
+  @State var shown: [Demo] = [UIStorage.value(Demos.selectedKey, default: Demo.text)]
 
   @UIElementBuilder var body: [UIElement] {
     VStack(alignment: .leading) {
@@ -103,6 +130,62 @@ final class Demos : SingleChildElement {
           .background(self.selected == .vector ? Self.activeTabColor : Self.inactiveTabColor)
           .animation(Self.tabAnimation, value: self.selected)
           .onTap { _ in self.select(.vector) }
+        Text(Demo.scroll.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .scroll ? .white : .black)
+          .padding(Self.tabInset)
+          .background(self.selected == .scroll ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
+          .onTap { _ in self.select(.scroll) }
+        Text(Demo.containers.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .containers ? .white : .black)
+          .padding(Self.tabInset)
+          .background(self.selected == .containers ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
+          .onTap { _ in self.select(.containers) }
+        Text(Demo.grids.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .grids ? .white : .black)
+          .padding(Self.tabInset)
+          .background(self.selected == .grids ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
+          .onTap { _ in self.select(.grids) }
+        Text(Demo.shapes.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .shapes ? .white : .black)
+          .padding(Self.tabInset)
+          .background(self.selected == .shapes ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
+          .onTap { _ in self.select(.shapes) }
+        Text(Demo.glass.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .glass ? .white : .black)
+          .padding(Self.tabInset)
+          .background(self.selected == .glass ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
+          .onTap { _ in self.select(.glass) }
+        Text(Demo.table.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .table ? .white : .black)
+          .padding(Self.tabInset)
+          .background(self.selected == .table ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
+          .onTap { _ in self.select(.table) }
+        Text(Demo.keyboard.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .keyboard ? .white : .black)
+          .padding(Self.tabInset)
+          .background(self.selected == .keyboard ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
+          .onTap { _ in self.select(.keyboard) }
+        Text(Demo.form.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .form ? .white : .black)
+          .padding(Self.tabInset)
+          .background(self.selected == .form ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
+          .onTap { _ in self.select(.form) }
         Spacer()
       }
       VList(alignment: .leading, items: self.shown) { demo in
@@ -120,5 +203,6 @@ final class Demos : SingleChildElement {
     guard demo != self.selected else { return }
     self.selected = demo
     self.shown = [demo]
+    UIStorage.set(demo, for: Self.selectedKey)
   }
 }
