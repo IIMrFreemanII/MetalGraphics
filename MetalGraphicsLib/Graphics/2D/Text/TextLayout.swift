@@ -26,9 +26,12 @@ struct Glyph {
   var depth = Float()
   /// Scales an em distance from the atlas to points.
   var fontSize = Float()
+  /// A shadow's blur, as a standard deviation in points; 0 for a glyph drawn sharp.
+  var blur = Float()
 
   var bounds: BoundingBox2D {
-    BoundingBox2D(center: self.position + self.size * 0.5, size: self.size)
+    // A blurred glyph reaches past its quad; `compute2D` extends its distance field there.
+    BoundingBox2D(center: self.position + self.size * 0.5, size: self.size + 2 * self.blur * ShadowState.reach)
   }
 }
 
@@ -53,8 +56,11 @@ public struct TextLayout {
 }
 
 /// Shapes `text` with CoreText (kerning, ligatures, combining marks, font fallback) and wraps it
-/// at words to fit `maxSize.x`. Lines that would not fit in `maxSize.y` are dropped.
-@MainActor public func layoutText(_ text: String, style: TextStyle = TextStyle(), maxSize: float2? = nil) -> TextLayout {
+/// at words to fit `maxSize.x`. Lines that would not fit in `maxSize.y` are dropped — all but the
+/// first when `keepsFirstLine` is set.
+@MainActor public func layoutText(
+  _ text: String, style: TextStyle = TextStyle(), maxSize: float2? = nil, keepsFirstLine: Bool = false
+) -> TextLayout {
   let maxSize = maxSize ?? float2(repeating: .greatestFiniteMagnitude)
   var layout = TextLayout(fontSize: style.fontSize)
   guard style.fontSize > 0, style.fontSize.isFinite else {
@@ -65,7 +71,7 @@ public struct TextLayout {
   let ascent = Float(CTFontGetAscent(font))
   let lineHeight = ascent + Float(CTFontGetDescent(font)) + Float(CTFontGetLeading(font))
   // a line whose bottom lands a hair past the limit through float error still fits
-  let fitsHeight = { (height: Float) in height <= maxSize.y + 1e-3 }
+  let fitsHeight = { (height: Float) in height <= maxSize.y + 1e-3 || (keepsFirstLine && height == lineHeight) }
 
   let string = NSAttributedString(string: text, attributes: [.init(kCTFontAttributeName as String): font])
   let typesetter = CTTypesetterCreateWithAttributedString(string)
@@ -117,4 +123,22 @@ public struct TextLayout {
 
 @MainActor public func measureText(_ text: String, style: TextStyle = TextStyle(), maxSize: float2? = nil) -> float2 {
   layoutText(text, style: style, maxSize: maxSize).size
+}
+
+/// Where a caret goes in `text` set on one line: before each character, then after the last —
+/// `text.count + 1` offsets from the leading edge, in points. One CoreText line, so it costs one
+/// shaping however many offsets are read. Unlike `measureText`, trailing spaces count.
+@MainActor public func caretOffsets(_ text: String, style: TextStyle = TextStyle()) -> [Float] {
+  var offsets: [Float] = [0]
+  guard !text.isEmpty, style.fontSize > 0, style.fontSize.isFinite else { return offsets }
+  offsets.reserveCapacity(text.count + 1)
+  let font = (style.font ?? FontManager.shared.defaultFont).ctFont(size: style.fontSize)
+  let string = NSAttributedString(string: text, attributes: [.init(kCTFontAttributeName as String): font])
+  let line = CTLineCreateWithAttributedString(string)
+  var utf16 = 0
+  for character in text {
+    utf16 += character.utf16.count
+    offsets.append(Float(CTLineGetOffsetForStringIndex(line, utf16, nil)))
+  }
+  return offsets
 }

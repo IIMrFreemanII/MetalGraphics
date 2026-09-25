@@ -15,11 +15,14 @@ import simd
   var onTap: ((Input) -> Void)? { get }
   var onHover: ((Bool, Input) -> Void)? { get }
   var onPress: ((Bool, Input) -> Void)? { get }
+  /// Called as the pointer moves while the left button is held, after it went down on this view,
+  /// wherever the pointer is by then.
+  var onDrag: ((Input) -> Void)? { get }
 
   /// Whether `point` — window top left origin, y down, in points — hits it.
   func hitTest(_ point: float2) -> Bool
 }
 
 extension Hittable {
-  var handlesEvents: Bool { self.onTap != nil || self.onHover != nil || self.onPress != nil }
+  var handlesEvents: Bool { self.onTap != nil || self.onHover != nil || self.onPress != nil || self.onDrag != nil }
 }

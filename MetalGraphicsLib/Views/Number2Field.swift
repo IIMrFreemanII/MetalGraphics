@@ -3,7 +3,7 @@ import simd
 
 public struct Number2Field<T: SIMDScalar> : View {
   public var label: String
-  @Binding public var value: SIMD2<T>
+  @SwiftUI.Binding public var value: SIMD2<T>
   
   
   public var body: some View {

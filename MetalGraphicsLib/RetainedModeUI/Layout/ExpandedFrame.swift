@@ -1,47 +1,22 @@
 import simd
 
-public class ExpandedFrame : SingleChildElement {
-  public var axis: Axis
-  public var alignment: Alignment
-  
-  private var size: float2 = .init()
-  
+/// Takes all the space it is offered along `axis`, and its content's size across it: SwiftUI's
+/// `.frame(maxWidth: .infinity)`, `.frame(maxHeight: .infinity)` or both, spelled by axis.
+public class ExpandedFrame : FlexFrame {
+  public var axis: Axis {
+    didSet { self.applyAxis() }
+  }
+
   public init(_ axis: Axis, _ alignment: Alignment = .center, @UIElementBuilder content: () -> [UIElement] = { [] }) {
-    // These are non-optional stored properties, so they must be set before `super.init`.
     self.axis = axis
-    self.alignment = alignment
 
-    super.init()
+    super.init(alignment: alignment, content: content)
 
-    self.applyContent(content())
+    self.applyAxis()
   }
-  
-  public override func getSize() -> float2 {
-    self.size
-  }
-  
-  public override func debugHierarchy(_ offset: String) {
-    print(offset + "\(self)".split(separator: ".").last! + "(size: \(size))")
-    child?.debugHierarchy(offset + "  ")
-  }
-  
-  public override func calcSize(_ availableSize: float2) -> float2 {
-    let contentSize = child?.calcSize(availableSize) ?? availableSize
-    // the offered size along the expanded axes, the content's size along the others
-    let size = availableSize * axis.size + contentSize * (1 - axis.size)
 
-    self.size = size
-    
-    return size
-  }
-  
-  public override func calcPosition(_ position: float2) {
-    if let child = child {
-      let childSize = child.getSize()
-      let availableSize = max(self.size - childSize, float2())
-      let offset = lerp(min: float2(), max: availableSize, t: self.alignment.offset)
-      
-      self.place(child, at: position + offset, in: position)
-    }
+  private func applyAxis() {
+    self.maxWidth = self.axis.horizontal != 0 ? .infinity : nil
+    self.maxHeight = self.axis.vertical != 0 ? .infinity : nil
   }
 }

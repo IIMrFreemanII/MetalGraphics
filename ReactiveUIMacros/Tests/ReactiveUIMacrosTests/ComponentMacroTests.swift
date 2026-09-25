@@ -1074,4 +1074,147 @@ struct ComponentMacroTests {
       macros: ["Component": ComponentMacro.self]
     )
   }
+
+  // Focus and keys: `.focused` binds like any reactive argument, in place on the focusable
+  // element; `.onFocusChange` and `.onKeyPress` are handlers. A key handler is assigned through
+  // `KeyPressElement.adapt`, so a closure with no parameter fits `action` too, and one passed as
+  // `action:` rather than trailing leaves the chain like a trailing one.
+  @Test("focus and key handlers: in-place focus binding, adapted key actions")
+  func focusAndKeys() {
+    assertMacroExpansion(
+      """
+      @Component
+      final class C: SingleChildElement {
+        @State var editing: Bool = false
+
+        @UIElementBuilder var body: [UIElement] {
+          Rectangle(.blue)
+            .focusable()
+            .focused(self.editing)
+            .onFocusChange { self.editing = $0 }
+            .onKeyPress(.upArrow) { .handled }
+            .onKeyPress(keys: [.delete], phases: .down, action: { press in .ignored })
+        }
+      }
+      """,
+      expandedSource: """
+      final class C: SingleChildElement {
+        @State var editing: Bool = false
+
+        @UIElementBuilder var body: [UIElement] {
+          Rectangle(.blue)
+            .focusable()
+            .focused(self.editing)
+            .onFocusChange { self.editing = $0 }
+            .onKeyPress(.upArrow) { .handled }
+            .onKeyPress(keys: [.delete], phases: .down, action: { press in .ignored })
+        }
+
+          private var __context: UIContext? = nil
+
+          private var __needsRefresh: Bool = false
+
+          private var __built: Bool = false
+
+          private var __n0a: Rectangle? = nil
+
+          private var __n0b: FocusableElement? = nil
+
+          private var __n0c: FocusableElement? = nil
+
+          private var __n0d: FocusableElement? = nil
+
+          private var __n0e: KeyPressElement? = nil
+
+          private var __n0f: KeyPressElement? = nil
+
+          public override func mount(_ context: UIContext) {
+            self.__context = context
+            if !self.__built {
+              self.__built = true
+              self.setChild(self.__build(context), context)
+            } else if self.__needsRefresh {
+              self.__needsRefresh = false
+              self.__refreshAll()
+            }
+            self.__armHandlers()
+          }
+
+          public override func unmount(_ context: UIContext) {
+            self.__disarmHandlers()
+            self.__context = nil
+          }
+
+          private func __refreshAll() {
+            self.__update_editing(false)
+          }
+
+          private func __build(_ context: UIContext) -> UIElement {
+            let n0a = Rectangle(.blue)
+            self.__n0a = n0a
+            let n0b = n0a.focusable()
+            self.__n0b = n0b
+            let n0c = n0b.focused(self._editing)
+            self.__n0c = n0c
+            let n0d = n0c.onFocusChange { _ in
+            }
+            self.__n0d = n0d
+            let n0e = n0d.onKeyPress(.upArrow) { _ in
+                .ignored
+            }
+            self.__n0e = n0e
+            let n0f = n0e.onKeyPress(keys: [.delete], phases: .down) { _ in
+                .ignored
+            }
+            self.__n0f = n0f
+            var root: [UIElement] = []
+            if let e = self.__n0f {
+                root.append(e)
+            }
+            return root.first ?? EmptyElement()
+          }
+
+          private func __armHandlers() {
+            self.__n0d?.onFocusChange = {
+                self.editing = $0
+            }
+            self.__n0e?.action = KeyPressElement.adapt({
+                    .handled
+                })
+            self.__n0f?.action = KeyPressElement.adapt({ press in
+                    .ignored
+                })
+          }
+
+          private func __disarmHandlers() {
+            self.__n0d?.onFocusChange = nil
+            self.__n0e?.action = nil
+            self.__n0f?.action = nil
+          }
+
+          private func __applyChildrenRoot(_ context: UIContext, animation: UIAnimation?) {
+            var children: [UIElement] = []
+            if let e = self.__n0f {
+                children.append(e)
+            }
+            self.setChild(children.first ?? EmptyElement(), context, animation: animation)
+          }
+
+          private func __update_editing(_ animated: Bool = true) {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            if let n = self.__n0c {
+                n.setFocused(self._editing, context)
+            }
+          }
+      }
+
+      extension C: ReactiveComponent {
+      }
+      """,
+      macros: ["Component": ComponentMacro.self]
+    )
+  }
 }

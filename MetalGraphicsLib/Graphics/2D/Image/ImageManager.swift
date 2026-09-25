@@ -39,6 +39,8 @@ struct ImageQuad {
 
   static let templateFlag: UInt32 = 1 << 0
   static let nearestFlag: UInt32 = 1 << 1
+  /// A shadow: sampled with nothing past the texture's edges, so a blurred mip fades out there.
+  static let shadowFlag: UInt32 = 1 << 2
 
   var bounds: BoundingBox2D {
     BoundingBox2D(center: self.position + self.size * 0.5, size: self.size)

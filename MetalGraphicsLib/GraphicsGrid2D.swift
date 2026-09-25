@@ -7,15 +7,23 @@ enum ShapeType2D: Int32 {
   case Glyph
   case Image
   case Vector
+  case Glass
 }
 
 struct Shape {
   public var index: Int32
   public var shapeType: Int32
+  /// Index of the clip rect the shape is drawn inside; 0 clips nothing.
+  public var clip: Int32
+  /// The shape's depth, copied here so sorting a cell and cutting it off at a glass's depth
+  /// (see `backdrop2D`) never reach into the per-type arrays.
+  public var depth: Float
 
-  public init(index: Int32, shapeType: Int32) {
+  public init(index: Int32, shapeType: Int32, clip: Int32 = 0, depth: Float) {
     self.index = index
     self.shapeType = shapeType
+    self.clip = clip
+    self.depth = depth
   }
 }
 
@@ -76,16 +84,12 @@ struct GridArgBuffer {
     }
   }
 
-  private func getDepth(of shape: Shape) -> Float {
-    self.graphics.getDepth(of: shape)
-  }
-
   private func sortShapesByDepth() {
     for i in self.shapesPerCell.indices {
       guard self.shapesPerCell[i].count > 1 else { continue }
 
       // decending order
-      self.shapesPerCell[i].sort(by: { self.getDepth(of: $0) > self.getDepth(of: $1) })
+      self.shapesPerCell[i].sort(by: { $0.depth > $1.depth })
     }
   }
 

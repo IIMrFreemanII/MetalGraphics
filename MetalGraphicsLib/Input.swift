@@ -35,6 +35,11 @@ extension Drag: CustomStringConvertible {
   public var charactersCode: UInt32?
   public var modifierFlags: NSEvent.ModifierFlags?
 
+  /// Every key event since the last frame, in order, for `UIContext` to route to `.onKeyPress`
+  /// handlers. Unlike `characters`, which keeps only the last, nothing typed between two frames
+  /// is lost.
+  public var keyPresses: [KeyPress] = []
+
   public var keysPressed: Set<GCKeyCode> = []
   public var keysDown: Set<GCKeyCode> = []
   public var keysUp: Set<GCKeyCode> = []
@@ -64,6 +69,9 @@ extension Drag: CustomStringConvertible {
 
   public var mouseDelta = float2()
   public var mouseScroll = float2()
+  /// How far the wheel or trackpad moved content this frame, in points: positive x moves it
+  /// right, positive y down. Already follows the system's scroll direction setting.
+  public var scrollDelta = float2()
 
   public var hScrollTimer: Timer?
   public var vScrollTimer: Timer?
@@ -109,7 +117,9 @@ extension Drag: CustomStringConvertible {
 
     self.mouseDelta = float2()
     self.mouseScroll = float2()
+    self.scrollDelta = float2()
 
+    self.keyPresses.removeAll(keepingCapacity: true)
     self.keysDown.removeAll(keepingCapacity: true)
     self.keysUp.removeAll(keepingCapacity: true)
 

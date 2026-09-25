@@ -28,11 +28,19 @@ public class Rectangle : UIRenderableElement {
     self.size
   }
   
-  public override func calcSize(_ availableSize: float2) -> float2 {
-    _ = child?.calcSize(availableSize)
-    self.size = availableSize
-    
-    return availableSize
+  /// What a rectangle takes when asked for its ideal size, as SwiftUI's shapes do.
+  public static let idealSize = float2(10, 10)
+
+  // Fills whatever it is offered; its content is laid out in that space.
+  public override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
+    proposal.replacingUnspecified(with: Self.idealSize)
+  }
+
+  public override func calcSize(_ proposal: ProposedSize) -> float2 {
+    self.size = proposal.replacingUnspecified(with: Self.idealSize)
+    _ = child?.calcSize(ProposedSize(self.size))
+
+    return self.size
   }
   
   public override func calcPosition(_ position: float2) {

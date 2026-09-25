@@ -11,8 +11,11 @@
 /// which nodes those are was decided at compile time by `@Component`.
 ///
 /// Requires an explicit type annotation — a macro sees syntax only and cannot infer one.
+///
+/// Also declares `$name`, a `Binding` to the property. In a `@Component` body it is only a
+/// spelling, lowered at compile time; see `Binding`.
 @attached(accessor, names: named(init), named(get), named(set), named(_modify))
-@attached(peer, names: prefixed(_), prefixed(__requiresComponent_))
+@attached(peer, names: prefixed(_), prefixed(__requiresComponent_), prefixed(`$`))
 public macro State() =
   #externalMacro(module: "ReactiveUIMacrosPlugin", type: "StateMacro")
 

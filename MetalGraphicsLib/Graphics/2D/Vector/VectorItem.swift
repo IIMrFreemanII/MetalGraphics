@@ -15,7 +15,7 @@ struct VectorItem {
     case bakedStroke = 1
     /// `params0`: center, radii.
     case ellipse = 2
-    /// `params0`: center, half size. `params1.x`: corner radius.
+    /// `params0`: center, half size. `params1`: corner radii, as `UIShape.radii` orders them.
     case roundedBox = 3
   }
 
@@ -36,7 +36,9 @@ struct VectorItem {
   var stroke = float4()
   var kind: UInt32 = 0
   var flags: UInt32 = 0
-  private var padding0: Float = 0
+  /// A shadow's blur, as a standard deviation in points; 0 for a shape drawn sharp. A baked
+  /// path's distance is extended past its atlas region when it is blurred.
+  var blur: Float = 0
   private var padding1: Float = 0
 
   var depth: Float {

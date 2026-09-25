@@ -46,4 +46,13 @@ public struct Inset: Equatable {
   public func deflate(size: float2) -> float2 {
     size - float2(self.horizontal, self.vertical)
   }
+
+  /// A proposal smaller by the inset along each axis it names a length for, never below zero.
+  /// An ideal size stays an ideal size.
+  public func deflate(_ proposal: ProposedSize) -> ProposedSize {
+    ProposedSize(
+      width: proposal.width.map { max($0 - self.horizontal, 0) },
+      height: proposal.height.map { max($0 - self.vertical, 0) }
+    )
+  }
 }

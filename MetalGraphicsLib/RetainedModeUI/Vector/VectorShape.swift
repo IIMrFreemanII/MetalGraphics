@@ -35,6 +35,7 @@ open class VectorShape: UIElement, Hittable {
   public var onTap: ((Input) -> Void)?
   public var onHover: ((Bool, Input) -> Void)?
   public var onPress: ((Bool, Input) -> Void)?
+  public var onDrag: ((Input) -> Void)? { nil }
   public var isHovered = false
   public var isPressed = false
   /// The canvas's laid-out rect: the grid files every shape of a canvas under all of it, and
@@ -221,6 +222,10 @@ open class VectorShape: UIElement, Hittable {
     return self
   }
 
+  public func offset(x: Float = 0, y: Float = 0) -> Self {
+    self.offset(float2(x, y))
+  }
+
   public func opacity(_ opacity: Float) -> Self {
     self.opacity = opacity
     return self
@@ -340,7 +345,7 @@ public class RoundedRectangle: VectorShape {
     let center = self.origin + self.size * 0.5
     item.kind = VectorItem.Kind.roundedBox.rawValue
     item.params0 = float4(center.x, center.y, self.size.x * 0.5, self.size.y * 0.5)
-    item.params1 = float4(self.effectiveRadius, 0, 0, 0)
+    item.params1 = float4(repeating: self.effectiveRadius)
     item.stroke.w = self.length
     item.flags |= VectorItem.closedFlag
   }

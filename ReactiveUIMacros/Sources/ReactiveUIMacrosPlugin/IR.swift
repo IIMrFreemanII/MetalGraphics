@@ -51,6 +51,8 @@ struct AnimationScope {
 struct BoundHandler {
   let property: String
   let closure: ExprSyntax
+  /// See `HandlerSpec.adapter`.
+  let adapter: String?
 }
 
 /// One link in a modifier chain. The root link is a constructor call; the rest are modifiers
@@ -68,20 +70,52 @@ struct ChainLink {
   let type: String        // the Swift type of the node field
   let kind: Kind
   let bound: [BoundArg]
-  /// Set only for `.onTap`/`.onHover` links.
-  let handler: BoundHandler?
+  /// A handler modifier's closure (`.onTap`), or a constructor's callbacks and binding
+  /// write-backs (`Button { … }`, `isOn: $wifi`).
+  let handlers: [BoundHandler]
 
   init(
     field: String, local: String, type: String,
-    kind: Kind, bound: [BoundArg], handler: BoundHandler? = nil
+    kind: Kind, bound: [BoundArg], handlers: [BoundHandler] = []
   ) {
     self.field = field
     self.local = local
     self.type = type
     self.kind = kind
     self.bound = bound
-    self.handler = handler
+    self.handlers = handlers
   }
+}
+
+/// A content closure other than the constructor's own — a modifier's, `.overlay { … }`, or a
+/// named one, `Section { … } header: { … }` — parsed like a container's children and applied to
+/// that link's element through `door`.
+struct LinkContent {
+  /// The chain link whose element owns the content.
+  let link: Int
+  /// The method the children are applied with: `replaceContent`, `replaceHeader`, …
+  let door: String
+  /// Its own path, so its nodes, branches and applier are named apart from the element's.
+  let path: String
+  let children: [NodeIR]
+}
+
+/// One list of children under an element, and how it is attached.
+struct ChildList {
+  enum Attach {
+    /// The constructor's content, through `setChild` or `replaceChildren` by arity.
+    case arity(Arity)
+    /// Any other content closure's, through the method named: a content modifier's
+    /// `replaceContent`, a section's `replaceHeader`.
+    case door(String)
+  }
+
+  let path: String
+  let ownerField: String
+  let attach: Attach
+  let children: [NodeIR]
+  /// The index of the link the children hang from: scopes before it do not cover them.
+  let link: Int?
 }
 
 struct ElementIR {
@@ -90,6 +124,26 @@ struct ElementIR {
   let children: [NodeIR]
   let arity: Arity
   let scopes: [AnimationScope]
+  var contents: [LinkContent] = []
+
+  /// Every non-empty list of children under this element: the constructor's content, then each
+  /// content modifier's, in chain order.
+  var childLists: [ChildList] {
+    var lists: [ChildList] = []
+    if !children.isEmpty {
+      lists.append(ChildList(path: path, ownerField: innermost.field, attach: .arity(arity), children: children, link: nil))
+    }
+    for content in contents where !content.children.isEmpty {
+      lists.append(ChildList(
+        path: content.path, ownerField: chain[content.link].field, attach: .door(content.door),
+        children: content.children, link: content.link
+      ))
+    }
+    return lists
+  }
+
+  /// Every child node, from every list.
+  var allChildren: [NodeIR] { childLists.flatMap(\.children) }
 
   /// What the parent attaches — the outermost link of the chain.
   var outermost: ChainLink { chain[chain.count - 1] }

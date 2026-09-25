@@ -81,6 +81,14 @@ extension StateMacro: PeerMacro {
 
     return [
       "private var \(raw: storage): \(property.type)",
+      // What `$name` spells. A `@Component` body never evaluates it — the macro lowers a binding
+      // argument to a setter line and an armed write handler — so this only runs when written
+      // outside a body, e.g. passed to a hand-built control.
+      """
+      var \(raw: Naming.binding(property.name)): Binding<\(property.type.trimmed)> {
+        Binding(unowned: self, \\.\(raw: property.name))
+      }
+      """,
       // Without this, forgetting @Component fails with "cannot find '__update_x' in scope".
       // With it, the error names the actual problem.
       """

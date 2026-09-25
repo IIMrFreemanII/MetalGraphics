@@ -17,7 +17,7 @@ private func stringToSIMDScalar<T: SIMDScalar>(_ str: String, _ type: T.Type) ->
 
 public struct NumberField<T : SIMDScalar> : View {
   public var label: String
-  @Binding public var value: T
+  @SwiftUI.Binding public var value: T
   
   @SwiftUI.State private var text: String = "0"
   @SwiftUI.State private var isValid: Bool = true
@@ -37,7 +37,7 @@ public struct NumberField<T : SIMDScalar> : View {
       SwiftUI.HStack(spacing: 0) {
         SwiftUI.Text(self.label)
         SwiftUI.Text(" ")
-        TextField("", text: $text, onEditingChanged: { _ in validateNumber() })
+        SwiftUI.TextField("", text: $text, onEditingChanged: { _ in validateNumber() })
           .textFieldStyle(.roundedBorder)
           .background(SwiftUI.RoundedRectangle(cornerRadius: 5)
             .stroke(isValid ? SwiftUI.Color.clear : SwiftUI.Color.red, lineWidth: 1)

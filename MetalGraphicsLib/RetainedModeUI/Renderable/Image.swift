@@ -129,49 +129,48 @@ public final class Image : UIRenderableElement {
     self.size
   }
 
-  public override func calcSize(_ availableSize: float2) -> float2 {
+  public override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
+    self.fit(proposal).size
+  }
+
+  public override func calcSize(_ proposal: ProposedSize) -> float2 {
+    (self.size, self.imageOrigin, self.imageSize) = self.fit(proposal)
+    return self.size
+  }
+
+  /// The size the image takes when offered `proposal`, and where within it the image is drawn.
+  private func fit(_ proposal: ProposedSize) -> (size: float2, imageOrigin: float2, imageSize: float2) {
     let natural = self.naturalSize
-    // an axis offered no bound takes the image's own length
+    // an axis offered no bound, or asked for its ideal, takes the image's own length
+    let available = proposal.replacingUnspecified(with: natural)
     let offered = float2(
-      availableSize.x.isFinite && availableSize.x < 1e7 ? max(availableSize.x, 0) : natural.x,
-      availableSize.y.isFinite && availableSize.y < 1e7 ? max(availableSize.y, 0) : natural.y
+      available.x.isFinite && available.x < 1e7 ? max(available.x, 0) : natural.x,
+      available.y.isFinite && available.y < 1e7 ? max(available.y, 0) : natural.y
     )
 
     guard self.isResizable else {
-      self.size = natural
-      self.imageOrigin = .zero
-      self.imageSize = natural
-      return self.size
+      return (natural, .zero, natural)
     }
 
     guard let contentMode = self.contentMode else {
-      self.size = offered
-      self.imageOrigin = .zero
-      self.imageSize = offered
-      return self.size
+      return (offered, .zero, offered)
     }
 
     let ratio = self.aspectRatio ?? (natural.y > 0 ? natural.x / natural.y : 1)
     guard ratio > 0, ratio.isFinite, offered.x > 0, offered.y > 0 else {
-      self.size = .zero
-      self.imageOrigin = .zero
-      self.imageSize = .zero
-      return self.size
+      return (.zero, .zero, .zero)
     }
     let widthFirst = float2(offered.x, offered.x / ratio)
     let heightFirst = float2(offered.y * ratio, offered.y)
     switch contentMode {
     case .fit:
-      self.size = widthFirst.y <= offered.y ? widthFirst : heightFirst
-      self.imageOrigin = .zero
-      self.imageSize = self.size
+      let size = widthFirst.y <= offered.y ? widthFirst : heightFirst
+      return (size, .zero, size)
     case .fill:
       // Takes the space offered, and draws the image covering it, centered and cropped.
-      self.imageSize = widthFirst.y >= offered.y ? widthFirst : heightFirst
-      self.size = offered
-      self.imageOrigin = (offered - self.imageSize) * 0.5
+      let imageSize = widthFirst.y >= offered.y ? widthFirst : heightFirst
+      return (offered, (offered - imageSize) * 0.5, imageSize)
     }
-    return self.size
   }
 
   public override func calcPosition(_ position: float2) {

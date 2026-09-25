@@ -89,7 +89,7 @@ struct ToggleView: View {
   @ObservedObject var state: WindowState
   
   var body: some View {
-    Toggle("\(self.state.name)", isOn: Binding(get: { self.state.open }, set: { value in self.state.open = value }))
+    SwiftUI.Toggle("\(self.state.name)", isOn: SwiftUI.Binding(get: { self.state.open }, set: { value in self.state.open = value }))
   }
 }
 

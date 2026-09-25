@@ -15,6 +15,7 @@ store plus a dirty flag.
 | `ElementCatalog` | `Sources/ReactiveUIMacrosPlugin/ElementCatalog.swift` | Which constructor/modifier argument feeds which property. The macro resolves *spellings*, not types. |
 | `UIElement+ReactiveSetters.swift` | `RetainedModeUI/Core/` | `setColor`, `setSize`, `setSpacing`… Each one knows whether it invalidates layout or only render. |
 | `UIElementBuilder` | `RetainedModeUI/Core/` | Now only a type-checking surface for `body`, plus the builder for hand-written trees. Yields elements directly. |
+| `Binding` | `RetainedModeUI/Core/` | What `$state` spells. Lowered at compile time in a body (§5, *Bindings*); a real get/set pair elsewhere. |
 | `ListRows` | `RetainedModeUI/Layout/` | A row cache keyed by `T.ID`, plus the three doors a list is driven through. Memoization, not reactivity — it is told what changed, never asked. |
 | `Animator`, `UIAnimation`, `withAnimation` | `RetainedModeUI/Animation/` | Per-frame driving of animated setters, the curves, and the transaction `withAnimation` sets. See §9. |
 | `EffectElement`, `TransitionElement` | `RetainedModeUI/Animation/` | Visual-only opacity/offset/scale, and the insert/remove transitions built on them. |
@@ -153,6 +154,39 @@ Because a `@State` array is owned by exactly one component, a collection can no 
 by reference between components. A child receives rows by value and is not reactive to the
 parent's array; it calls back instead, as `RowView(onRemove:)` does.
 
+### Bindings are lowered, not passed
+
+`Toggle("Wi-Fi", isOn: $wifi)` passes no binding at runtime. A binding argument (an `ArgSpec` with
+`binding:` in the catalog) is split at compile time into its two directions:
+
+```swift
+let n0a = Toggle("Wi-Fi", isOn: self._wifi)                        // built with the value
+if let n = self.__n0a { n.setIsOn(self._wifi, context, animation: transaction) }  // in __update_wifi
+self.__n0a?.onIsOnChange = { self.wifi = $0 }                      // in __armHandlers
+```
+
+A member path lowers the same way (`$audio.volume` reads `self._audio.volume` and writes
+`self.audio.volume = $0`), and `.constant(v)` lowers to the value with no write-back. A numeric or
+selection binding is wrapped in the control's `adapt`, which converts between the control's
+`Double` or `AnyHashable` and the state's own type.
+
+A control never changes its own value on input: it calls its change handler, and the value comes
+back through the setter within the same event. The state stays the only source of truth, and a
+control given a constant keeps it. `@State` still declares `$name` — a real `Binding` over the
+property — for hand-built trees, but a body never evaluates it.
+
+Constructor callbacks (`Button("OK") { … }`) are handlers too (`ArgSpec.handler`): dropped from
+the constructor and armed on mount, so they never capture `self` for good.
+
+### Named content closures
+
+`Section { rows } header: { Text("Account") } footer: { … }` has three content closures. The
+constructor's own is attached by arity as always; the others are listed in the catalog's
+`namedContents` (`"header": "replaceHeader"`), taken out of the constructor, parsed like any
+content under a path of their own (`0k0`, `0k1`), and applied through the method named. A branch
+inside a header swaps and re-applies through that same method, like a content modifier's
+`replaceContent`, which is now just one more such door.
+
 ## 6. Composition, not helper methods
 
 The macro cannot see inside a method, so a helper that returns an element is a compile error
@@ -186,6 +220,7 @@ From the outside `RowView(item:onRemove:)` is an ordinary constructor call, opaq
 | F11 | a generated mutation method colliding with one the component declares |
 | F12 | `.animation(_:value:)` whose `value:` reads no `@State`, or written without `value:` |
 | F13 | an in-place modifier (`.font`, `.foregroundColor`, `.resizable`, `.fill`, `.trim`, …) called on something other than the element it styles |
+| F14 | a binding argument (`isOn:`, `text:`, `selection:`, …) that is neither `$state[.member…]` nor `.constant(v)` |
 
 F9 is retired, not missing: it warned that a handler capturing `self` strongly leaks, which stopped
 being true once the macro started clearing handlers on unmount. The numbers are not reused.
@@ -327,6 +362,51 @@ Every update method takes `_ animated: Bool = true`. The remount replay (`__refr
 - A parent finds a child's transition by walking down through wrappers that draw nothing (frames,
   paddings, hittables, components), so `.transition(.opacity).onTap { … }` still transitions.
 
+**Shadows.** `.shadow(color:radius:x:y:)` wraps content in a `ShadowElement` (color defaults to
+black at 0.33; every argument is bound and animates on its own). Like SwiftUI without a
+`compositingGroup`, every shape under it casts its own shadow just beneath itself, so text on a
+shadowed card shadows the card; put the shadow on the background to avoid that. It is drawn from
+each shape's distance field in the same pass — a Gaussian of standard deviation `radius`
+reaching 3σ past the shape — so there is no offscreen pass.
+
+- Clips *above* the shadow cut it; a clip *below* it (`.cornerRadius(12).shadow(...)`) shapes it
+  without cutting it: the shadow is drawn under a soft clip, the innermost clip's rounded rect
+  blurred with it. Clips between that one and the shadow do not shape it.
+- Nested shadows each cast one, outermost beneath; a shadow of a shadow is not drawn.
+- `UIContext` resolves shadows once per frame, parents first, scaled by the effects above them;
+  `Graphics2D` emits the copies, so renderables know nothing about shadows.
+- Approximations: text and baked paths extend their distance field past its baked padding, so a
+  large blur is slightly off far from the outline; a bitmap's blur is its alpha sampled at a
+  coarser mip level; a cropped (`scaledToFill`) bitmap casts its visible rect's shadow.
+
+**Blur.** `.blur(radius:)` wraps content in a `BlurElement` (the radius is bound and animates).
+It works the way a shadow does: every shape under it is drawn with a Gaussian edge of standard
+deviation `radius`, straight from its distance field, so no pass is added. Overlapping shapes
+each blur on their own instead of blurring as one composite, which is close to a true blur but
+not exact. Nested blurs combine as Gaussians do, `√(σ₁² + σ₂²)`, and scale with the effects
+above them. A blurred shape's shadow is blurred by both. A whole bitmap blurs by sampling a
+coarser mip level over a quad grown by 3σ; a cropped one blurs only inside its rect, so its edge
+stays hard. Circles and lines, which are debug primitives, stay sharp.
+
+**Glass.** `.glass(_ material:, in: shape)` puts a frosted `GlassBackground` behind content,
+fitted to it like `.background`: what is drawn below it, blurred, made more vivid, under a
+tint, with grain. The presets are `.ultraThin`, `.thin`, `.regular` and `.thick`, or build a
+`GlassMaterial(blurRadius:tint:saturation:noise:)`. The material is bound, but it snaps instead
+of animating; the shape animates.
+
+- Each glass costs three compute passes over its own area before the frame, plus how far its
+  blur reaches: `backdrop2D` renders everything below it, then `glassBlur` blurs that along x
+  and then along y into the glass's region of the glass atlas. The main pass then samples that
+  region. The backdrop is rendered at a lower resolution (up to 1/8) chosen so the blur stays at
+  about 3 to 6 texels, so a large radius is no more expensive than a small one.
+- Glass stacks. Passes run lowest glass first, so a glass above another sees the lower one
+  already frosted.
+- A frame without glass runs a main-pass pipeline compiled without the glass branch: glass costs
+  nothing until one is drawn.
+- Limits: the panel's own edge is never blurred, even under `.blur`. A rounded clip cuts the
+  panel, not its backdrop. If the atlas cannot grow any taller (16384 texels), the extra glass
+  is drawn as its tint alone.
+
 **Leaving children.** Removed with an animation, a child with a transition stays in its parent
 until the transition ends, marked `isLeaving`: still drawn, no longer hit, and not counted by the
 logical indices `insertChild`/`remove(at:)` take. That keeps a list's children index-for-index
@@ -451,4 +531,7 @@ change alone no longer reshapes at all.
 - Starting a slide on an element not already sliding rebuilds the tree order once, so the effect
   pass picks it up. Slides themselves only redraw.
 - `repeatForever` keeps rendering every frame for as long as it runs.
+- A shadow doubles the shapes it covers, and each copy spans 3σ more on every side, so it lands
+  in more grid cells. Many large-radius shadows over one area fill cells toward
+  `kMaxShapesPerCell`. Animating a shadow only redraws.
 

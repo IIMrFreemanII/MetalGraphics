@@ -55,6 +55,10 @@ struct AnimationMacroTests {
 
         private var _c: float4
 
+        var $c: Binding<float4> {
+          Binding(unowned: self, \\.c)
+        }
+
         private func __requiresComponent_c() {
           let _: any ReactiveComponent = self
         }
@@ -77,6 +81,10 @@ struct AnimationMacroTests {
         }
 
         private var _w: Float
+
+        var $w: Binding<Float> {
+          Binding(unowned: self, \\.w)
+        }
 
         private func __requiresComponent_w() {
           let _: any ReactiveComponent = self
@@ -226,6 +234,10 @@ struct AnimationMacroTests {
 
         private var _on: Bool
 
+        var $on: Binding<Bool> {
+          Binding(unowned: self, \\.on)
+        }
+
         private func __requiresComponent_on() {
           let _: any ReactiveComponent = self
         }
@@ -248,6 +260,10 @@ struct AnimationMacroTests {
         }
 
         private var _title: String
+
+        var $title: Binding<String> {
+          Binding(unowned: self, \\.title)
+        }
 
         private func __requiresComponent_title() {
           let _: any ReactiveComponent = self
@@ -421,6 +437,10 @@ struct AnimationMacroTests {
 
         private var _on: Bool
 
+        var $on: Binding<Bool> {
+          Binding(unowned: self, \\.on)
+        }
+
         private func __requiresComponent_on() {
           let _: any ReactiveComponent = self
         }
@@ -443,6 +463,10 @@ struct AnimationMacroTests {
         }
 
         private var _fast: Bool
+
+        var $fast: Binding<Bool> {
+          Binding(unowned: self, \\.fast)
+        }
 
         private func __requiresComponent_fast() {
           let _: any ReactiveComponent = self
@@ -644,6 +668,10 @@ struct AnimationMacroTests {
 
         private var _rows: [Row]
 
+        var $rows: Binding<[Row]> {
+          Binding(unowned: self, \\.rows)
+        }
+
         private func __requiresComponent_rows() {
           let _: any ReactiveComponent = self
         }
@@ -826,6 +854,10 @@ struct AnimationMacroTests {
 
         private var _big: Bool
 
+        var $big: Binding<Bool> {
+          Binding(unowned: self, \\.big)
+        }
+
         private func __requiresComponent_big() {
           let _: any ReactiveComponent = self
         }
@@ -951,6 +983,10 @@ struct AnimationMacroTests {
 
         private var _shakes: Int
 
+        var $shakes: Binding<Int> {
+          Binding(unowned: self, \\.shakes)
+        }
+
         private func __requiresComponent_shakes() {
           let _: any ReactiveComponent = self
         }
@@ -1068,6 +1104,10 @@ struct AnimationMacroTests {
         }
 
         private var _color: float4
+
+        var $color: Binding<float4> {
+          Binding(unowned: self, \\.color)
+        }
 
         private func __requiresComponent_color() {
           let _: any ReactiveComponent = self

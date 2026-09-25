@@ -59,27 +59,33 @@ public final class VectorCanvas: UIRenderableElement {
     self.size
   }
 
-  public override func calcSize(_ availableSize: float2) -> float2 {
-    let natural = self.canvasSize
-    guard natural.x > 0, natural.y > 0 else {
-      self.size = .zero
-      return self.size
-    }
-    guard self.isResizable else {
-      self.size = natural
-      self.unitScale = 1
-      self.contentOrigin = .zero
-      return self.size
-    }
-    // an axis offered no bound takes the canvas's own length
-    let offered = float2(
-      availableSize.x.isFinite && availableSize.x < 1e7 ? max(availableSize.x, 0) : natural.x,
-      availableSize.y.isFinite && availableSize.y < 1e7 ? max(availableSize.y, 0) : natural.y
-    )
-    self.unitScale = min(offered.x / natural.x, offered.y / natural.y)
-    self.size = natural * self.unitScale
+  public override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
+    self.fit(proposal).size
+  }
+
+  public override func calcSize(_ proposal: ProposedSize) -> float2 {
+    (self.size, self.unitScale) = self.fit(proposal)
     self.contentOrigin = .zero
     return self.size
+  }
+
+  /// The size the canvas takes when offered `proposal`, and points per canvas unit.
+  private func fit(_ proposal: ProposedSize) -> (size: float2, unitScale: Float) {
+    let natural = self.canvasSize
+    guard natural.x > 0, natural.y > 0 else {
+      return (.zero, 1)
+    }
+    guard self.isResizable else {
+      return (natural, 1)
+    }
+    // an axis offered no bound, or asked for its ideal, takes the canvas's own length
+    let available = proposal.replacingUnspecified(with: natural)
+    let offered = float2(
+      available.x.isFinite && available.x < 1e7 ? max(available.x, 0) : natural.x,
+      available.y.isFinite && available.y < 1e7 ? max(available.y, 0) : natural.y
+    )
+    let unitScale = min(offered.x / natural.x, offered.y / natural.y)
+    return (natural * unitScale, unitScale)
   }
 
   public override func calcPosition(_ position: float2) {

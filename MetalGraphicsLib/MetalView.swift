@@ -51,7 +51,7 @@ public typealias ViewRepresentable = UIViewRepresentable
 #endif
 
 public struct MetalViewRepresentable: ViewRepresentable {
-  @Binding var metalView: MyMTKView
+  @SwiftUI.Binding var metalView: MyMTKView
   
 #if os(macOS)
   public func makeNSView(context: Context) -> some NSView {

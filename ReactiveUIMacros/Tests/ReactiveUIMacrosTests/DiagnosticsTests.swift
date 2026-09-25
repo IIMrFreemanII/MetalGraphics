@@ -91,6 +91,23 @@ struct DiagnosticsTests {
     )
   }
 
+  @Test("F4: a modifier overload that is not in the catalog")
+  func unknownModifierOverload() {
+    assertMacroExpansion(
+      component("    Rectangle(.red).frame(width: 10, depth: 3)"),
+      expandedSource: stubsOnly("    Rectangle(.red).frame(width: 10, depth: 3)"),
+      diagnostics: [
+        DiagnosticSpec(
+          message: "'.frame' is not known to @Component with these arguments. "
+            + "Add the overload to ElementCatalog.swift.",
+          line: 6, column: 21
+        )
+      ],
+      macros: ["Component": ComponentMacro.self],
+      applyFixIts: [], fixedSource: nil
+    )
+  }
+
   @Test("F8: generated storage is not something to write in a body")
   func backingStorage() {
     assertMacroExpansion(

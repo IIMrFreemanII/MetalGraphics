@@ -34,11 +34,11 @@ import SwiftUI
       SwiftUI.VStack(alignment: .leading) {
         SwiftUI.Text("Inspector")
           .font(.title)
-        Divider()
+        SwiftUI.Divider()
         SwiftUI.Text("Window size: \(String(describing: self.windowSize).split(separator: ">").last!)")
-        Divider()
-        Number2Field(label: "Position:", value: Binding(get: {self.temp}, set: { self.temp = $0 }))
-        Divider()
+        SwiftUI.Divider()
+        Number2Field(label: "Position:", value: SwiftUI.Binding(get: {self.temp}, set: { self.temp = $0 }))
+        SwiftUI.Divider()
         SwiftUI.Text("Mouse position: \(String(describing: self.mousePosition).split(separator: ">").last!)")
         SwiftUI.Spacer()
       }
@@ -95,9 +95,17 @@ import SwiftUI
     // cell and the compute pass rasterizes nothing. The result was a blank first frame that
     // stayed blank until a window resize happened to run this code again.
     self.resizeRenderGrid(for: self.input.windowSize)
+
+#if DEBUG
+    HotReload.start(renderer: self)
+#endif
   }
 
   open func start() {}
+
+  /// Called after InjectionNext injects edited Swift code (Debug only). The retained tree was
+  /// built by the old code, so a subclass rebuilds it here for the new code to take effect.
+  open func hotReload() {}
 }
 
 extension ViewRenderer: MTKViewDelegate {

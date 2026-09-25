@@ -69,6 +69,10 @@ struct ListMacroTests {
 
         private var _rows: [Item]
 
+        var $rows: Binding<[Item]> {
+          Binding(unowned: self, \\.rows)
+        }
+
         private func __requiresComponent_rows() {
           let _: any ReactiveComponent = self
         }
@@ -370,6 +374,10 @@ struct ListMacroTests {
 
         private var _tags: [String]
 
+        var $tags: Binding<[String]> {
+          Binding(unowned: self, \\.tags)
+        }
+
         private func __requiresComponent_tags() {
           let _: any ReactiveComponent = self
         }
@@ -483,6 +491,235 @@ struct ListMacroTests {
       }
 
       extension N: ReactiveComponent {
+      }
+      """,
+      macros: ["Component": ComponentMacro.self, "State": StateMacro.self]
+    )
+  }
+
+  // A table is a list too: its node field is specialised from `items:` — `Table<Person>` — so
+  // an append reaches it as one `insertRow`. Selection and sort order are ordinary reactive
+  // arguments, and the trailing columns closure is copied as written, like a list's `onCreate`.
+  @Test("a table over a @State array, with selection and sort order")
+  func tableComponent() {
+    assertMacroExpansion(
+      """
+      @Component
+      final class T: SingleChildElement {
+        @State var people: [Person] = []
+        @State var selection: Set<Person.ID> = []
+
+        @UIElementBuilder var body: [UIElement] {
+          Table(items: self.people, selection: self.selection,
+                onSelectionChange: { self.selection = $0 }) {
+            TableColumn("Name", value: \\.name)
+          }
+        }
+      }
+      """,
+      expandedSource: """
+      final class T: SingleChildElement {
+        var people: [Person] {
+            @storageRestrictions(initializes: _people)
+            init(initialValue) {
+              _people = initialValue
+            }
+            get {
+              _people
+            }
+            set {
+              _people = newValue
+              self.__update_people()
+            }
+            _modify {
+              yield &_people
+              self.__update_people()
+            }
+        }
+
+        private var _people: [Person]
+
+        var $people: Binding<[Person]> {
+          Binding(unowned: self, \\.people)
+        }
+
+        private func __requiresComponent_people() {
+          let _: any ReactiveComponent = self
+        }
+        var selection: Set<Person.ID> {
+            @storageRestrictions(initializes: _selection)
+            init(initialValue) {
+              _selection = initialValue
+            }
+            get {
+              _selection
+            }
+            set {
+              _selection = newValue
+              self.__update_selection()
+            }
+            _modify {
+              yield &_selection
+              self.__update_selection()
+            }
+        }
+
+        private var _selection: Set<Person.ID>
+
+        var $selection: Binding<Set<Person.ID>> {
+          Binding(unowned: self, \\.selection)
+        }
+
+        private func __requiresComponent_selection() {
+          let _: any ReactiveComponent = self
+        }
+
+        @UIElementBuilder var body: [UIElement] {
+          Table(items: self.people, selection: self.selection,
+                onSelectionChange: { self.selection = $0 }) {
+            TableColumn("Name", value: \\.name)
+          }
+        }
+
+          private var __context: UIContext? = nil
+
+          private var __needsRefresh: Bool = false
+
+          private var __built: Bool = false
+
+          private var __n0a: Table<Person>? = nil
+
+          public override func mount(_ context: UIContext) {
+            self.__context = context
+            if !self.__built {
+              self.__built = true
+              self.setChild(self.__build(context), context)
+            } else if self.__needsRefresh {
+              self.__needsRefresh = false
+              self.__refreshAll()
+            }
+          }
+
+          public override func unmount(_ context: UIContext) {
+            self.__context = nil
+          }
+
+          private func __refreshAll() {
+            self.__update_people(false)
+            self.__update_selection(false)
+          }
+
+          private func __build(_ context: UIContext) -> UIElement {
+            let n0a = Table(items: self._people, selection: self._selection,
+                    onSelectionChange: {
+                    self.selection = $0
+                }) {
+                TableColumn("Name", value: \\.name)
+              }
+            self.__n0a = n0a
+            var root: [UIElement] = []
+            if let e = self.__n0a {
+                root.append(e)
+            }
+            return root.first ?? EmptyElement()
+          }
+
+          private func __applyChildrenRoot(_ context: UIContext, animation: UIAnimation?) {
+            var children: [UIElement] = []
+            if let e = self.__n0a {
+                children.append(e)
+            }
+            self.setChild(children.first ?? EmptyElement(), context, animation: animation)
+          }
+
+          private func __update_people(_ animated: Bool = true) {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            let transaction = animated ? UITransaction.animation : nil
+            if let n = self.__n0a {
+                n.setItems(self._people, context, animation: transaction)
+            }
+          }
+
+          private func __update_selection(_ animated: Bool = true) {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            if let n = self.__n0a {
+                n.setSelection(self._selection, context)
+            }
+          }
+
+          public func appendPeople(_ element: Person) {
+            let index = self._people.count
+            self._people.append(element)
+            self.__people_didInsert(element, at: index)
+          }
+
+          public func insertPeople(_ element: Person, at position: Int) {
+            let index = Swift.min(Swift.max(position, 0), self._people.count)
+            self._people.insert(element, at: index)
+            self.__people_didInsert(element, at: index)
+          }
+
+          @discardableResult
+          public func removePeople(at index: Int) -> Person? {
+            guard self._people.indices.contains(index) else {
+                return nil
+            }
+            let removed = self._people.remove(at: index)
+            self.__people_didRemove(removed, at: index)
+            return removed
+          }
+
+          public func removePeople(where predicate: (Person) -> Bool) {
+            let matches = self._people.indices.filter {
+                predicate(self._people[$0])
+            }
+            guard matches.count == 1, let index = matches.first else {
+              guard !matches.isEmpty else {
+                  return
+              }
+              self._people.removeAll(where: predicate)
+              self.__update_people()
+              return
+            }
+            let removed = self._people.remove(at: index)
+            self.__people_didRemove(removed, at: index)
+          }
+
+          public func replacePeople(_ newValue: [Person]) {
+            self._people = newValue
+            self.__update_people()
+          }
+
+          private func __people_didInsert(_ element: Person, at index: Int, _ animated: Bool = true) {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            let transaction = animated ? UITransaction.animation : nil
+            if let n = self.__n0a {
+                n.insertRow(element, at: index, context, animation: transaction)
+            }
+          }
+
+          private func __people_didRemove(_ element: Person, at index: Int, _ animated: Bool = true) {
+            guard let context = self.__context else {
+              self.__needsRefresh = true
+              return
+            }
+            let transaction = animated ? UITransaction.animation : nil
+            if let n = self.__n0a {
+                n.removeRow(element, at: index, context, animation: transaction)
+            }
+          }
+      }
+
+      extension T: ReactiveComponent {
       }
       """,
       macros: ["Component": ComponentMacro.self, "State": StateMacro.self]
