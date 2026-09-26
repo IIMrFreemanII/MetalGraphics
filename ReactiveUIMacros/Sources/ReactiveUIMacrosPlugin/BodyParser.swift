@@ -354,6 +354,18 @@ struct BodyParser {
           contents.append(LinkContent(link: chain.count, door: "replaceContent", path: contentPath, children: parsed))
         }
       }
+      // The element's type comes from `for: X.self`; anything else could not name it.
+      if let label = spec.genericOverTypeOf,
+         let argument = call.arguments.first(where: { $0.label?.text == label }),
+         argument.expression.as(MemberAccessExprSyntax.self)?.declName.baseName.text != "self"
+      {
+        context.error(
+          "F19",
+          "'\(label):' must be written '<Type>.self': the type it names is the type of '\(spec.produces)'.",
+          at: argument.expression
+        )
+        return nil
+      }
       // Named by position among the links, so a scope marker leaves no gap in the lettering.
       chain.append(
         ChainLink(
@@ -553,9 +565,17 @@ struct BodyParser {
 
     // Trailing ones, `} header: { … }`. `constructorExpr` drops these when it strips content.
     for trailing in call.additionalTrailingClosures {
-      if let door = spec.namedContents[trailing.label.text] {
-        named.append((door, trailing.closure))
+      guard let door = spec.namedContents[trailing.label.text] else {
+        // It would be dropped from the constructor without a word.
+        context.error(
+          "F4",
+          "'\(trailing.label.text):' is not supported by \(spec.name); it takes "
+            + spec.namedContents.keys.sorted().map { "'\($0):'" }.joined(separator: ", ") + ".",
+          at: trailing.label
+        )
+        return nil
       }
+      named.append((door, trailing.closure))
     }
 
     var copy = call
@@ -564,7 +584,9 @@ struct BodyParser {
     // has its label there.
     if let trailing = call.trailingClosure,
        let handler = spec.args.lazy.compactMap(\.handler).first,
-       !spec.takesContent || !handlers.contains(where: { $0.property == handler.property })
+       !spec.takesContent
+        || (!handlers.contains(where: { $0.property == handler.property })
+          && !call.arguments.contains(where: { spec.trailingContentWith.contains($0.label?.text ?? "") }))
     {
       handlers.append(BoundHandler(property: handler.property, closure: ExprSyntax(trailing), adapter: handler.adapter))
       copy.trailingClosure = nil

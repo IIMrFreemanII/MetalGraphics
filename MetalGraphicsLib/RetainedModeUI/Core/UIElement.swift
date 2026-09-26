@@ -16,6 +16,11 @@ import simd
   /// only, like an effect: layout and hit-testing already see it in its new place.
   internal var slideOffset: float2 = .zero
 
+  /// The element that mounted this one: its container, or a popover's anchor. Set on mount and
+  /// cleared on unmount. Read only when something mounts or on input, never per frame — it is how
+  /// a navigation link or destination finds the stack it is in.
+  internal private(set) weak var parent: UIElement? = nil
+
   public init() {}
   
   /// The element's own mount behaviour. Built-in elements override this to register themselves
@@ -32,13 +37,25 @@ import simd
   
   // Mounts this element, then its children. The one mount flow for every element kind;
   // containers only differ in what `forEachChild` visits.
-  internal final func handleMount(_ context: UIContext) -> Void {
+  internal final func handleMount(_ context: UIContext, in parent: UIElement?) -> Void {
     guard !self.mounted else { return }
+    self.parent = parent
     self.mounted = true
     self.mount(context)
     self.onMount(context)
 
-    self.forEachChild { $0.handleMount(context) }
+    self.forEachChild { $0.handleMount(context, in: self) }
+  }
+
+  /// The nearest element above this one, through `parent`, that is a `T`. O(depth); for use on
+  /// mount or on input, not per frame.
+  public final func nearestAncestor<T: AnyObject>(_ type: T.Type) -> T? {
+    var current = self.parent
+    while let element = current {
+      if let match = element as? T { return match }
+      current = element.parent
+    }
+    return nil
   }
   
   /// The element's own unmount behaviour. The mirror of `mount(_:)`, and macro-owned in the same
@@ -62,6 +79,7 @@ import simd
     // A child that was leaving would otherwise come back on remount, stuck in its removal state.
     self.dropLeaving()
     self.placement = nil
+    self.parent = nil
   }
 
   /// Forgets children that were playing a removal transition. They are already unmounted.

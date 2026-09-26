@@ -11,7 +11,7 @@ here is `#if DEBUG` (see `MetalGraphicsLib/HotReload/`). Release is unaffected.
 
 After a rebuild, the app reopens on the screen you were on. Components read their navigation
 state from `UIStorage`, a store backed by `UserDefaults`, similar to SwiftUI's `@SceneStorage`.
-`Demos` keeps the selected tab there, so the tab also survives a relaunch. Anything not stored
+`Demos` keeps the selected demo there, so it also survives a relaunch. Anything not stored
 there, such as scroll offsets or text field contents, resets.
 
 ## Setup

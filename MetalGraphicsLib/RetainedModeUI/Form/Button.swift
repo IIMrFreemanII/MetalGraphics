@@ -30,16 +30,16 @@ public enum ButtonStyle : Sendable {
 /// The label's elements sit side by side. Every `Text` in the label, however deep, draws in the
 /// style's color and follows later style changes, unless it was colored on purpose; it takes the
 /// form's font unless a font was set on it or around the button.
-public final class Button : FormControl {
+public class Button : FormControl {
   /// What a tap runs. `@Component` arms it on mount and clears it on unmount, like `onTap`.
   public var action: (() -> Void)?
   public let role: ButtonRole?
   public private(set) var style: ButtonStyle = .automatic
 
   /// The title of `Button("Save")`; nil for a button built with a label.
-  private let title: Text?
+  let title: Text?
   private let press: EffectElement
-  private let face: ButtonFace
+  let face: ButtonFace
   private let label: HStack
   /// Around the label: the style's color and the form's font, for the texts in it.
   private let labelStyle: TextStyleElement
@@ -57,7 +57,7 @@ public final class Button : FormControl {
     self.init(role: role, action: action, title: nil, label: label)
   }
 
-  private init(role: ButtonRole?, action: (() -> Void)?, title: Text?, label: () -> [UIElement]) {
+  init(role: ButtonRole?, action: (() -> Void)?, title: Text?, label: () -> [UIElement]) {
     self.action = action
     self.role = role
     self.title = title
@@ -150,6 +150,10 @@ final class ButtonFace : UIRenderableElement {
   let role: ButtonRole?
   fileprivate(set) var style: ButtonStyle = .automatic
   private(set) var isPressed = false
+  /// Marked as a split view's selected sidebar link: drawn on a highlight in any style.
+  private(set) var isSelected = false
+  /// Takes the whole width it is offered, as a sidebar link does, with the bordered inset.
+  var fillsWidth = false
   private(set) var position: float2 = .zero
   private(set) var size: float2 = .zero
 
@@ -164,7 +168,18 @@ final class ButtonFace : UIRenderableElement {
   }
 
   private var inset: Inset {
-    self.style.isBordered ? Self.borderedInset : Inset()
+    self.style.isBordered || self.fillsWidth ? Self.borderedInset : Inset()
+  }
+
+  func setSelected(_ value: Bool, _ context: UIContext) {
+    guard value != self.isSelected else { return }
+    self.isSelected = value
+    context.invalidate()
+  }
+
+  private func filled(_ size: float2, _ proposal: ProposedSize) -> float2 {
+    guard self.fillsWidth, let width = proposal.width, width.isFinite else { return size }
+    return float2(max(width, size.x), size.y)
   }
 
   func setStyle(_ value: ButtonStyle, _ context: UIContext, animation: UIAnimation?) {
@@ -194,12 +209,12 @@ final class ButtonFace : UIRenderableElement {
 
   override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
     let inset = self.inset
-    return inset.inflate(size: self.child?.measure(inset.deflate(proposal)) ?? .zero)
+    return self.filled(inset.inflate(size: self.child?.measure(inset.deflate(proposal)) ?? .zero), proposal)
   }
 
   override func calcSize(_ proposal: ProposedSize) -> float2 {
     let inset = self.inset
-    self.size = inset.inflate(size: self.child?.calcSize(inset.deflate(proposal)) ?? .zero)
+    self.size = self.filled(inset.inflate(size: self.child?.calcSize(inset.deflate(proposal)) ?? .zero), proposal)
     return self.size
   }
 
@@ -210,7 +225,17 @@ final class ButtonFace : UIRenderableElement {
   }
 
   override func render(_ renderer: Graphics2D, _ effect: EffectState) {
-    guard self.style.isBordered, effect.opacity > 0 else { return }
+    guard self.style.isBordered || self.isSelected, effect.opacity > 0 else { return }
+    guard self.style.isBordered else {
+      var fill = NavigationMetrics.selectionColor
+      fill.w *= effect.opacity
+      let s = effect.scale
+      renderer.draw(
+        roundedRect: effect.apply(to: self.position) - renderer.size * 0.5, size: self.size * s,
+        radii: float4(repeating: Self.cornerRadius * s), color: fill
+      )
+      return
+    }
     let tint = Self.tint(self.role)
     var fill = self.style == .borderedProminent ? tint : float4(tint.x, tint.y, tint.z, 0.15)
     if self.isPressed {

@@ -109,7 +109,7 @@ public class UIContext {
   /// key handler above `keyOrder[i]`, or -1, and `keyNeedsFocus[i]` whether it belongs to a
   /// focusable element — is inside one, or wraps one with nothing but single-child elements in
   /// between, as `.focusable().onKeyPress` does. A press walks up from the focused element
-  /// through these indices, so no element needs a parent pointer.
+  /// through these indices, not through `UIElement.parent`.
   private var focusables: [ObjectIdentifier : FocusableElement] = [:]
   private var keyHandlers: [ObjectIdentifier : KeyPressElement] = [:]
   private var focusOrder: [FocusableElement] = []
@@ -355,6 +355,8 @@ public class UIContext {
     }
 
     if self.pending.contains(.layout) {
+      self.isLayingOut = true
+      defer { self.isLayingOut = false }
       root.size = size
       // A new pass: sizes measured in the last one may be stale.
       LayoutPass.generation &+= 1
@@ -412,6 +414,10 @@ public class UIContext {
       self.hitGrid.resolvePointerStyle()
     }
   }
+
+  /// True during the layout block of `update`. Something mounted then — a lazy stack's row —
+  /// must not change the tree it is in until `afterLayout`, or the layout it asks for is lost.
+  public internal(set) var isLayingOut = false
 
   /// Work that reads the layout and may change state, such as `.onGeometryChange`'s action. It
   /// runs at the end of this frame's `update`.
@@ -809,7 +815,7 @@ public class UIContext {
       let layer = DragPreviewLayer(preview)
       layer.pointer = start
       drag.preview = layer
-      layer.handleMount(self)
+      layer.handleMount(self, in: nil)
       self.invalidate([.layout, .treeOrder])
     }
   }

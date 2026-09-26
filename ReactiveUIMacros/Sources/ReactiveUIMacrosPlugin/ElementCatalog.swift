@@ -69,11 +69,15 @@ struct TypeSpec {
   /// through: `Section { … } header: { … }` has `["header": "replaceHeader", …]`. Written
   /// trailing or as a labeled argument, each is parsed like content and never emitted.
   let namedContents: [String: String]
+  /// Argument labels whose presence makes the trailing closure content rather than the callback:
+  /// `NavigationLink(value: r) { Text("Go") }` has its label there, `NavigationLink("Go") { … }`
+  /// its destination.
+  let trailingContentWith: Set<String>
 
   init(
     name: String, args: [ArgSpec], arity: Arity,
     fieldType: String? = nil, takesContent: Bool = true, genericOverItemsOf: String? = nil,
-    namedContents: [String: String] = [:]
+    namedContents: [String: String] = [:], trailingContentWith: Set<String> = []
   ) {
     self.name = name
     self.args = args
@@ -82,6 +86,7 @@ struct TypeSpec {
     self.takesContent = takesContent
     self.genericOverItemsOf = genericOverItemsOf
     self.namedContents = namedContents
+    self.trailingContentWith = trailingContentWith
   }
 
   func spec(forLabel label: String?, position: Int) -> ArgSpec? {
@@ -390,6 +395,34 @@ enum ElementCatalog {
              ArgSpec("action", nil, handler: HandlerSpec(property: "action", placeholder: ""))],
       arity: .multi, namedContents: ["label": "replaceChildren"]
     ),
+    // The path is a binding, adapted from the stack's type-erased values to the state's own
+    // array or `NavigationPath`. Its field stays non-generic: a path is not a list's rows, and
+    // its `append`/`remove` go through `setPath`, which diffs by prefix. The trailing closure is
+    // the root content, attached through `replaceChildren`.
+    "NavigationStack": TypeSpec(
+      name: "NavigationStack",
+      args: [ArgSpec("path", "setPath", animatable: true,
+                     binding: HandlerSpec(property: "onPathChange", placeholder: "", adapter: "NavigationStack.adapt"))],
+      arity: .multi
+    ),
+    // A button that navigates. As with `Button`, the trailing closure is the callback — here the
+    // destination view — unless it was passed by label or the link has a `value:`, and then it
+    // is the label: `NavigationLink("Go") { Detail() }`, `NavigationLink(value: r) { Text("Go") }`.
+    // The destination is armed like a handler, so it may build a component.
+    "NavigationLink": TypeSpec(
+      name: "NavigationLink",
+      args: [ArgSpec(nil, "setTitle", animatable: true), ArgSpec("value", "setValue"),
+             ArgSpec("destination", nil, handler: HandlerSpec(property: "destination", placeholder: ""))],
+      arity: .multi, namedContents: ["label": "replaceChildren"], trailingContentWith: ["value"]
+    ),
+    // `NavigationSplitView(selection: $selected) { sidebar } detail: { placeholder }`. The
+    // selection is adapted from the split view's type-erased value, as a picker's is.
+    "NavigationSplitView": TypeSpec(
+      name: "NavigationSplitView",
+      args: [ArgSpec("selection", "setSelection",
+                     binding: HandlerSpec(property: "onSelectionChange", placeholder: "", adapter: "NavigationSplitView.adapt"))],
+      arity: .multi, namedContents: ["sidebar": "replaceChildren", "detail": "replaceDetail"]
+    ),
     // A numeric binding is adapted: the control works in `Double`, the state in its own type.
     "Slider": TypeSpec(
       name: "Slider",
@@ -504,7 +537,7 @@ enum ElementCatalog {
   /// What `.disabled` can be called on.
   static let formControls: Set<String> = [
     "Toggle", "Button", "Slider", "Stepper", "TextField", "SecureField", "Picker", "DisclosureGroup",
-    "DatePicker", "ColorPicker",
+    "DatePicker", "ColorPicker", "NavigationLink",
   ]
 
   static let flexFrameArgs: [ArgSpec] = [
@@ -854,7 +887,7 @@ enum ElementCatalog {
     "pointerStyle": ModifierSpec(
       name: "pointerStyle", labels: [nil],
       produces: "HittableView", setter: "setPointerStyle", combine: .identity,
-      inPlaceOn: vectorShapes.union(["Button"]), wrapsOtherwise: true
+      inPlaceOn: vectorShapes.union(["Button", "NavigationLink"]), wrapsOtherwise: true
     ),
     "onContinuousHover": ModifierSpec(
       name: "onContinuousHover", labels: ["coordinateSpace", "perform"],
@@ -919,7 +952,22 @@ enum ElementCatalog {
     ),
     "buttonStyle": ModifierSpec(
       name: "buttonStyle", labels: [nil],
-      produces: "Button", setter: "setButtonStyle", combine: .identity, animatable: true, inPlaceOn: ["Button"]
+      produces: "Button", setter: "setButtonStyle", combine: .identity, animatable: true,
+      inPlaceOn: ["Button", "NavigationLink"]
+    ),
+    // The destination builds the page for a value, so it is a handler: armed on mount, and free
+    // to build a component. `for:` types the field, `NavigationDestinationElement<Route>`, which
+    // is what gives the armed closure its parameter type. No placeholder: built without a
+    // closure, the destination is unarmed, so a value waiting for it is not resolved to a stand-in.
+    "navigationDestination": ModifierSpec(
+      name: "navigationDestination", labels: ["for", "destination"],
+      produces: "NavigationDestinationElement", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "destination", placeholder: "", label: "destination"),
+      genericOverTypeOf: "for"
+    ),
+    "navigationTitle": ModifierSpec(
+      name: "navigationTitle", labels: [nil],
+      produces: "NavigationTitleElement", setter: "setTitle", combine: .identity
     ),
     "datePickerStyle": ModifierSpec(
       name: "datePickerStyle", labels: [nil],

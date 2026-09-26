@@ -48,6 +48,8 @@ public enum AnimatedProperty: UInt8, Sendable {
   /// A form control's position between two states: a toggle's knob, a slider's fill, a
   /// disclosure chevron's turn.
   case progress
+  /// A `NavigationStack`'s push or pop: both pages' slide, as one 0 → 1 progress.
+  case navigation
 }
 
 /// Drives every running animation, once per frame, from `UIContext.update`.
