@@ -255,6 +255,12 @@ final class UIHarness {
     return makeImage(width: pixels.width, height: pixels.height, bgra: pixels.bgra)
   }
 
+  /// The last frame drawn, as it stands in the target: BGRA bytes, rows top to bottom. Does not
+  /// step, so a frame that drew nothing leaves the one before.
+  func targetPixels() -> [UInt8] {
+    self.graphics.readPixels(self.target).bgra
+  }
+
   /// The colour at `point` (points) in the last frame drawn, RGBA 0...255.
   func pixel(at point: float2) -> SIMD4<UInt8> {
     if self.context.needsRender { self.step(0) }

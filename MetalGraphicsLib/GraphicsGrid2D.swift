@@ -27,6 +27,12 @@ struct Shape {
   }
 }
 
+/// A shape filed in a cell, with the hash of what it looks like there: its content and its clip's.
+struct FiledShape {
+  var shape: Shape
+  var contentHash: UInt64
+}
+
 struct GridCell {
   // maps into shapes buffer
   var startIndex: Int32 = 0
@@ -47,7 +53,7 @@ struct GridArgBuffer {
   public var position: float2
   public var bounds: BoundingBox2D
   public var cells: [GridCell] = []
-  public var shapesPerCell: [[Shape]] = []
+  var shapesPerCell: [[FiledShape]] = []
   public var shapesPerCellCount: Int = 0
   public var cellBuffer: MTLBuffer!
   public var cellBufferCount: Int = 0
@@ -56,6 +62,16 @@ struct GridArgBuffer {
   public var shapeBufferCount: Int = 0
 
   public var graphics: Graphics2D
+
+  /// Each cell's hash of its shapes, topmost first, as of the last `updateBuffers`; false until
+  /// there has been one, when every cell counts as changed.
+  private var cellHashes: [UInt64] = []
+  private var hasCellHashes = false
+  /// The cells whose shapes changed in the last `updateBuffers`: the only pixels that can look
+  /// different from the frame before. Grown by `Graphics2D` for what shows through glass.
+  var dirtyCells: [Int32] = []
+  /// Each of `dirtyCells`' rect, as `cellRect` gives it: what the GPU shades again.
+  var dirtyRects: [float4] = []
 
   public init(position: float2, size: int2, cellSize: Float, graphics: Graphics2D) {
     self.graphics = graphics
@@ -68,6 +84,7 @@ struct GridArgBuffer {
     self.shapesPerCell.reserveCapacity(self.cellBufferCount)
     self.cells = Array(repeating: GridCell(), count: self.cellBufferCount)
     self.shapesPerCell = Array(repeating: [], count: self.cellBufferCount)
+    self.cellHashes = Array(repeating: 0, count: self.cellBufferCount)
 
     self.cellBuffer = GPUDevice.main.makeBuffer(length: MemoryLayout<GridCell>.stride * self.cellBufferCount)
     self.cellBuffer.label = "Cell buffer"
@@ -89,8 +106,14 @@ struct GridArgBuffer {
       guard self.shapesPerCell[i].count > 1 else { continue }
 
       // decending order
-      self.shapesPerCell[i].sort(by: { $0.depth > $1.depth })
+      self.shapesPerCell[i].sort(by: Self.isAbove)
     }
+  }
+
+  // Nonisolated: a closure written in this `@MainActor` class checks it is on the main actor
+  // every time it is called, which for a sort's comparisons cost more than the sort itself.
+  nonisolated private static func isAbove(_ a: FiledShape, _ b: FiledShape) -> Bool {
+    a.shape.depth > b.shape.depth
   }
 
   public func updateBuffers() {
@@ -104,19 +127,28 @@ struct GridArgBuffer {
 
     var startIndex = Int()
     let pointer = self.shapeBuffer.contents().assumingMemoryBound(to: Shape.self)
+    self.dirtyCells.removeAll(keepingCapacity: true)
+    self.dirtyRects.removeAll(keepingCapacity: true)
     for i in self.shapesPerCell.indices {
       let count = self.shapesPerCell[i].count
 
       self.cells[i] = GridCell(startIndex: Int32(startIndex), count: Int32(count))
 
-      for shape in self.shapesPerCell[i] {
-        pointer.advanced(by: startIndex).pointee = shape
+      // In the order the shader composites them, so a change of stacking changes the hash too.
+      var hash = ContentHash()
+      for filed in self.shapesPerCell[i] {
+        pointer.advanced(by: startIndex).pointee = filed.shape
+        hash.add(filed.contentHash)
         startIndex += 1
       }
-      // another approach with memory coping
-//        pointer.advanced(by: startIndex * MemoryLayout<Shape>.stride).copyMemory(from: self.shapesPerCell[i], byteCount: self.shapesPerCell[i].byteCount)
-//        startIndex += count
+      hash.add(UInt64(count))
+      if !self.hasCellHashes || self.cellHashes[i] != hash.value {
+        self.dirtyCells.append(Int32(i))
+        self.dirtyRects.append(self.cellRect(i))
+      }
+      self.cellHashes[i] = hash.value
     }
+    self.hasCellHashes = true
 
     // to debug
 //    var tempShapes = Array(repeating: Shape(index: Int32(), shapeType: Int32()), count: self.shapesPerCellCount)
@@ -136,7 +168,7 @@ struct GridArgBuffer {
     gridBuffer.pointee.gridPosition = self.position
   }
 
-  public func mapShapeBoundingBoxToGrid(_ box: BoundingBox2D, _ shape: Shape) {
+  func mapShapeBoundingBoxToGrid(_ box: BoundingBox2D, _ shape: Shape, contentHash: UInt64) {
     // `StepSequence` never terminates on NaN or infinite bounds.
     guard
       box.center.x.isFinite, box.center.y.isFinite, box.size.x.isFinite, box.size.y.isFinite
@@ -178,11 +210,39 @@ struct GridArgBuffer {
             let index = from2DTo1DArray(coord, size)
 
             if index < self.cells.count {
-              self.shapesPerCell[index].append(shape)
+              self.shapesPerCell[index].append(FiledShape(shape: shape, contentHash: contentHash))
               self.shapesPerCellCount += 1
             }
           }
         }
+      }
+    }
+  }
+
+  /// Cell `index`'s rect: min x, min y, max x, max y, in points, as the shader places it.
+  func cellRect(_ index: Int) -> float4 {
+    let coord = float2(Float(index % Int(self.size.x)), Float(index / Int(self.size.x)))
+    let min = self.position - float2(Float(self.size.x), Float(self.size.y)) * self.cellSize * 0.5 + coord * self.cellSize
+    return float4(min.x, min.y, min.x + self.cellSize, min.y + self.cellSize)
+  }
+
+  /// The cell `point` falls in, clamped to the grid, as the shader's `gridCell` finds it.
+  func cellCoord(_ point: float2) -> int2 {
+    let half = float2(Float(self.size.x), Float(self.size.y)) * self.cellSize * 0.5
+    // Clamped while still a float: converting an infinite or huge coordinate would trap.
+    let top = float2(Float(self.size.x - 1), Float(self.size.y - 1))
+    let coord = simd_clamp(((point - self.position + half) / self.cellSize).rounded(.down), .zero, top)
+    return int2(Int(coord.x.isNaN ? 0 : coord.x), Int(coord.y.isNaN ? 0 : coord.y))
+  }
+
+  /// Calls `body` with the index of every cell `min`...`max` touches, in points.
+  func forEachCell(min: float2, max: float2, _ body: (Int) -> Void) {
+    guard min.x <= max.x, min.y <= max.y else { return }
+    let lo = self.cellCoord(min)
+    let hi = self.cellCoord(max)
+    for y in Int(lo.y) ... Int(hi.y) {
+      for x in Int(lo.x) ... Int(hi.x) {
+        body(y * Int(self.size.x) + x)
       }
     }
   }

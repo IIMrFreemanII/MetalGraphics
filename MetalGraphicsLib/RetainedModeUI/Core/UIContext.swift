@@ -176,6 +176,10 @@ public class UIContext {
   /// stepped deterministically; `update` reads it once per frame when no `time` is passed.
   public var clock: () -> Double = CACurrentMediaTime
 
+  /// The renderer the last `update` ran for: lets a control change how frames are drawn, such as
+  /// `Graphics2D.sceneData.debug`.
+  public private(set) weak var graphics: Graphics2D?
+
   public init() {}
 
   // MARK: - Invalidation
@@ -296,6 +300,7 @@ public class UIContext {
   ) -> Void {
     let time = time ?? self.clock()
     let hitInvalidationsAtStart = self.hitInvalidations
+    if self.graphics !== graphics { self.graphics = graphics }
     if size != self.lastSize {
       self.lastSize = size
       self.invalidate(.layout)
@@ -419,6 +424,7 @@ public class UIContext {
     if self.pending.contains(.treeOrder) {
       self.rebuildTreeOrder(root)
     }
+    FrameProfiler.shared.set(.elements, self.paintOrder.count)
 
     if !self.effectOrder.isEmpty {
       self.resolveEffects()

@@ -133,6 +133,9 @@ struct GPUClip: Equatable {
 public struct DebugData {
   public var drawGrid: Bool = false
   public var showFilledCells: Bool = false
+  /// Tints what was shaded again lately, over the frame as it is presented: steady where it
+  /// keeps redrawing, fading once it stops. What is shaded itself is left as it is.
+  public var showDamage: Bool = false
 }
 
 public struct SceneData {
@@ -148,7 +151,7 @@ public struct SceneData {
   var resizeCb: (() -> Void)?
   
   public var size: float2 {
-    self.renderer.windowSize
+    self.renderer.cachedWindowSize
   }
 
   public init(renderer: ViewRenderer) {
@@ -176,6 +179,7 @@ public struct SceneData {
     self.textureTableBuffer = self.device.makeBuffer(length: MemoryLayout<MTLResourceID>.stride * 1)
     self.vectorBuffer = self.device.makeBuffer(length: MemoryLayout<VectorItem>.stride * 1)
     self.clipBuffer = self.device.makeBuffer(length: MemoryLayout<GPUClip>.stride * 1)
+    self.dirtyCellBuffer = self.device.makeBuffer(length: MemoryLayout<Int32>.stride * 1)
     self.glassBuffer = self.device.makeBuffer(length: MemoryLayout<GlassItem>.stride * 1)
     self.glassAtlas = Self.makeGlassTexture(self.device, width: 1, height: 1, label: "Glass atlas")
     self.glassScratchA = Self.makeGlassTexture(self.device, width: 1, height: 1, label: "Glass scratch A")
@@ -208,16 +212,27 @@ public struct SceneData {
     }
     let pipelineState = try specialised("compute2D", hasGlass: false, cutsAtDepth: false)
     let glassPipeline = try specialised("compute2D", hasGlass: true, cutsAtDepth: false)
+    let cellPipeline = try specialised("compute2DCells", hasGlass: false, cutsAtDepth: false)
+    let glassCellPipeline = try specialised("compute2DCells", hasGlass: true, cutsAtDepth: false)
     let backdropPipeline = try specialised("backdrop2D", hasGlass: true, cutsAtDepth: true)
-    guard let blur = library.makeFunction(name: "glassBlur") else {
-      throw PipelineError(description: "No `glassBlur` function in the Metal library")
+    func plain(_ name: String) throws -> MTLComputePipelineState {
+      guard let function = library.makeFunction(name: name) else {
+        throw PipelineError(description: "No `\(name)` function in the Metal library")
+      }
+      return try self.device.makeComputePipelineState(function: function)
     }
-    let glassBlurPipeline = try self.device.makeComputePipelineState(function: blur)
+    let glassBlurPipeline = try plain("glassBlur")
+    let stampDamagePipeline = try plain("stampDamage")
+    let presentDamagePipeline = try plain("presentDamage")
 
     self.pipelineState = pipelineState
     self.glassPipeline = glassPipeline
+    self.cellPipeline = cellPipeline
+    self.glassCellPipeline = glassCellPipeline
     self.backdropPipeline = backdropPipeline
     self.glassBlurPipeline = glassBlurPipeline
+    self.stampDamagePipeline = stampDamagePipeline
+    self.presentDamagePipeline = presentDamagePipeline
   }
 
 #if DEBUG
@@ -228,6 +243,8 @@ public struct SceneData {
     let library = try self.device.makeLibrary(URL: url)
     try self.makePipelines(library)
     self.library = library
+    // What is on screen was shaded by the old code.
+    self.needsFullDamage = true
   }
 #endif
 
@@ -252,8 +269,14 @@ public struct SceneData {
   var pipelineState: MTLComputePipelineState!
   /// `pipelineState` with the glass branch, for a frame that draws glass.
   private var glassPipeline: MTLComputePipelineState!
+  /// `compute2D` over the changed grid cells only, without and with the glass branch.
+  private var cellPipeline: MTLComputePipelineState!
+  private var glassCellPipeline: MTLComputePipelineState!
   private var backdropPipeline: MTLComputePipelineState!
   private var glassBlurPipeline: MTLComputePipelineState!
+  /// `showDamage`: marks the rects a frame shaded with the time, then tints the frame by them.
+  private var stampDamagePipeline: MTLComputePipelineState!
+  private var presentDamagePipeline: MTLComputePipelineState!
 
   private var shapeArgBuffer: MTLBuffer!
 
@@ -334,6 +357,58 @@ public struct SceneData {
   private static let maxGlassDownsample = 8
   /// Largest texture edge Metal allows on every Mac.
   private static let maxTextureSize = 16384
+
+  // MARK: Damage
+  //
+  // Only the grid cells whose shapes changed since the last frame are shaded again (see
+  // `GraphicsGrid2D.dirtyCells`); every other pixel keeps what the frame before left in the
+  // target. On screen the target is `canvas`, which outlives the drawables it is copied into.
+
+  /// False shades every pixel every frame, as before damage tracking: for comparing against, and
+  /// as a fallback.
+  public var partialRendering = true
+  /// Set when the target's pixels cannot be trusted to hold the last frame: the next frame
+  /// shades all of them.
+  private var needsFullDamage = true
+  /// The texture the last frame was shaded into, and what it was shaded with.
+  private weak var lastTarget: MTLTexture?
+  private var lastDebug = DebugData()
+  /// Where frames are shaded on screen, before each is copied into its drawable.
+  private var canvas: MTLTexture?
+  private var dirtyCellBuffer: MTLBuffer!
+  private var dirtyCellBufferCount: Int = 0
+  /// Each clip's `GPUClip.contentHash`, by index into `clips`.
+  private var clipHashes: [UInt64] = []
+  /// `dirtyCells` as a mask over the grid, while glass spreads damage.
+  private var dirtyMask: [Bool] = []
+  /// Whether some glass is shaded this frame, and needs its backdrop.
+  private var glassNeedsPasses = false
+  /// Cells the last frame shaded: every cell when it shaded the whole target. For tests.
+  private(set) var lastDamagedCells = 0
+  /// Frames that reached the GPU. For tests.
+  private(set) var gpuFrames = 0
+
+  /// While `showDamage` is on: per pixel of the canvas, when it was last shaded, in seconds
+  /// since `damageEpoch` plus one, so 0 is never.
+  private var damageStamps: MTLTexture?
+  private let damageEpoch = CACurrentMediaTime()
+  private var lastDamageTime = -Double.infinity
+  /// How long the tint takes to fade once an area stops redrawing.
+  static let damageFade: Double = 0.6
+
+  /// True while the damage tint is still fading, and frames must be presented for it even
+  /// though nothing changed.
+  public var needsDamageFrames: Bool {
+    self.sceneData.debug.showDamage && CACurrentMediaTime() - self.lastDamageTime < Self.damageFade
+  }
+
+  enum Damage {
+    /// Nothing looks different: no pass runs, nothing is presented.
+    case none
+    /// Only `grid.dirtyCells` are shaded.
+    case cells
+    case full
+  }
 
   public var sceneData = SceneData()
   /// Drawable pixels per point, the ratio `compute2D` maps pixels to points with.
@@ -497,16 +572,22 @@ public struct SceneData {
 
   /// Files a shape under the grid cells its bounds cover, cut to its clip. A shape clipped away
   /// entirely is not filed at all, which is what keeps long scrolled content cheap to draw.
+  ///
+  /// `contentHash` is what the shape looks like; the clip it is drawn under is added here.
   private func mapToGrid(
-    _ bounds: BoundingBox2D, index: Int, type: ShapeType2D, depth: Float, run: inout Int
+    _ bounds: BoundingBox2D, index: Int, type: ShapeType2D, depth: Float, contentHash: UInt64, run: inout Int
   ) {
     while run + 1 < self.clipRuns.count, self.clipRuns[run + 1].depth <= depth {
       run += 1
     }
     let clipIndex = self.clipRuns[run].clip
     let shape = Shape(index: Int32(index), shapeType: type.rawValue, clip: clipIndex, depth: depth)
+    var hash = ContentHash()
+    hash.add(UInt64(UInt32(bitPattern: type.rawValue)))
+    hash.add(contentHash)
+    hash.add(self.clipHashes[Int(clipIndex)])
     guard clipIndex != 0 else {
-      self.grid.mapShapeBoundingBoxToGrid(bounds, shape)
+      self.grid.mapShapeBoundingBoxToGrid(bounds, shape, contentHash: hash.value)
       return
     }
     // Bounds are symmetric about their center, so which way y points does not matter here.
@@ -515,48 +596,117 @@ public struct SceneData {
     let lo = simd_max(bounds.center - half, float2(clip.x, clip.y))
     let hi = simd_min(bounds.center + half, float2(clip.z, clip.w))
     guard lo.x < hi.x, lo.y < hi.y else { return }
-    self.grid.mapShapeBoundingBoxToGrid(BoundingBox2D(center: (lo + hi) * 0.5, size: hi - lo), shape)
+    self.grid.mapShapeBoundingBoxToGrid(BoundingBox2D(center: (lo + hi) * 0.5, size: hi - lo), shape, contentHash: hash.value)
+  }
+
+  /// Hashes every clip once, each after the rounded clip it chains to, which comes earlier.
+  private func hashClips() {
+    self.clipHashes.removeAll(keepingCapacity: true)
+    for clip in self.clips {
+      let rounded = Int(clip.rounded)
+      let above = rounded > 0 && rounded < self.clipHashes.count ? self.clipHashes[rounded] : 0
+      self.clipHashes.append(clip.contentHash(rounded: above))
+    }
+  }
+
+  /// A glass shows the scene behind it, blurred, from as far as its backdrop reaches: when any
+  /// cell there changed, all of the glass is shaded again. Bottom glass first, so one a glass
+  /// above samples has already spread its damage.
+  private func damageGlasses() {
+    self.glassNeedsPasses = false
+    guard !self.glasses.isEmpty else { return }
+    let grid = self.grid
+    if self.dirtyMask.count != grid.cells.count {
+      self.dirtyMask = Array(repeating: false, count: grid.cells.count)
+    } else {
+      for i in self.dirtyMask.indices { self.dirtyMask[i] = false }
+    }
+    for cell in grid.dirtyCells {
+      self.dirtyMask[Int(cell)] = true
+    }
+    for glass in self.glasses {
+      let bounds = glass.bounds(pixelsPerPoint: self.pixelsPerPoint)
+      let boundsMin = bounds.center - abs(bounds.size) * 0.5
+      let boundsMax = bounds.center + abs(bounds.size) * 0.5
+      var touched = false
+      grid.forEachCell(min: boundsMin, max: boundsMax) { touched = touched || self.dirtyMask[$0] }
+      let region = glass.regionMax - glass.regionMin
+      var backdropChanged = false
+      if region.x > 0, region.y > 0 {
+        let reach = glass.sceneOrigin + region * glass.pointsPerTexel
+        grid.forEachCell(min: glass.sceneOrigin, max: reach) { backdropChanged = backdropChanged || self.dirtyMask[$0] }
+      }
+      if backdropChanged {
+        grid.forEachCell(min: boundsMin, max: boundsMax) { cell in
+          if !self.dirtyMask[cell] {
+            self.dirtyMask[cell] = true
+            grid.dirtyCells.append(Int32(cell))
+            grid.dirtyRects.append(grid.cellRect(cell))
+          }
+        }
+      }
+      if touched || backdropChanged {
+        self.glassNeedsPasses = true
+      }
+    }
   }
 
   func endFrame() {
+    let profiler = FrameProfiler.shared
+    let mappingStart = profiler.start()
     if let cb = self.resizeCb {
       cb()
       self.resizeCb = nil
     } else {
       self.grid.reset()
     }
-    
+    self.hashClips()
+
     var run = 0
     for (i, item) in self.circles.enumerated() {
-      self.mapToGrid(item.bounds, index: i, type: .Circle, depth: item.depth, run: &run)
+      self.mapToGrid(item.bounds, index: i, type: .Circle, depth: item.depth, contentHash: item.contentHash, run: &run)
     }
     run = 0
     for (i, item) in self.squares.enumerated() {
-      self.mapToGrid(item.bounds, index: i, type: .Square, depth: item.depth, run: &run)
+      self.mapToGrid(item.bounds, index: i, type: .Square, depth: item.depth, contentHash: item.contentHash, run: &run)
     }
     run = 0
     for (i, item) in self.lines.enumerated() {
-      self.mapToGrid(item.bounds, index: i, type: .Line, depth: item.depth, run: &run)
+      self.mapToGrid(item.bounds, index: i, type: .Line, depth: item.depth, contentHash: item.contentHash, run: &run)
     }
     run = 0
     for (i, item) in self.glyphs.enumerated() {
-      self.mapToGrid(item.bounds, index: i, type: .Glyph, depth: item.depth, run: &run)
+      self.mapToGrid(item.bounds, index: i, type: .Glyph, depth: item.depth, contentHash: item.contentHash, run: &run)
     }
     run = 0
     for (i, item) in self.images.enumerated() {
-      self.mapToGrid(item.bounds, index: i, type: .Image, depth: item.depth, run: &run)
+      let texture = ObjectIdentifier(self.imageTextures[Int(item.textureIndex)])
+      self.mapToGrid(item.bounds, index: i, type: .Image, depth: item.depth, contentHash: item.contentHash(texture: texture), run: &run)
     }
     run = 0
     for (i, item) in self.vectors.enumerated() {
-      self.mapToGrid(item.bounds, index: i, type: .Vector, depth: item.depth, run: &run)
+      self.mapToGrid(item.bounds, index: i, type: .Vector, depth: item.depth, contentHash: item.contentHash, run: &run)
     }
     run = 0
     for (i, item) in self.glasses.enumerated() {
-      self.mapToGrid(item.bounds(pixelsPerPoint: self.pixelsPerPoint), index: i, type: .Glass, depth: item.depth, run: &run)
+      self.mapToGrid(item.bounds(pixelsPerPoint: self.pixelsPerPoint), index: i, type: .Glass, depth: item.depth, contentHash: item.contentHash, run: &run)
     }
 
-    self.grid.updateBuffers()
+    profiler.add(.gridMapping, since: mappingStart)
 
+    let buffersStart = profiler.start()
+    self.grid.updateBuffers()
+    self.damageGlasses()
+    profiler.add(.gridBuffers, since: buffersStart)
+    if profiler.isEnabled {
+      profiler.set(.shapes, self.circles.count + self.squares.count + self.lines.count + self.glyphs.count + self.images.count + self.vectors.count + self.glasses.count)
+      profiler.set(.glyphs, self.glyphs.count)
+      profiler.set(.vectors, self.vectors.count)
+      profiler.set(.filedShapes, self.grid.shapesPerCellCount)
+      profiler.set(.dirtyCells, self.grid.dirtyCells.count)
+    }
+
+    let uploadStart = profiler.start()
     do {
       if self.circleBufferCount < self.circles.count {
         self.circleBufferCount += self.circles.count + 10
@@ -669,35 +819,195 @@ public struct SceneData {
     shapeArgPointer.pointee.clipsCount = Int32(self.clips.count)
     shapeArgPointer.pointee.glasses = self.glassBuffer.gpuAddress
     shapeArgPointer.pointee.glassesCount = Int32(self.glasses.count)
+    profiler.add(.upload, since: uploadStart)
 
     self.renderer.input.endFrame()
   }
 
+  /// Shades what changed into `canvas`, then copies all of it into a drawable and presents it.
+  /// When nothing changed, no drawable is taken: the screen keeps showing the last one.
   func drawData(at view: MTKView) {
-    guard
-      let commandBuffer = self.commandQueue.makeCommandBuffer(),
-      let drawable = view.currentDrawable
-    else {
+    let profiler = FrameProfiler.shared
+    defer { profiler.frameEnded() }
+    let encodeStart = profiler.start()
+    let canvas = self.canvas(width: Int(view.drawableSize.width), height: Int(view.drawableSize.height), format: view.colorPixelFormat)
+    guard let canvas else { return }
+    let damage = self.takeDamage(for: canvas)
+    guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
+      self.needsFullDamage = true
       return
     }
-    guard self.encodeFrame(into: drawable.texture, commandBuffer) else { return }
-    commandBuffer.present(drawable)
+    let stamps = self.damageStamps(like: canvas, commandBuffer)
+    guard damage != .none || (stamps != nil && self.needsDamageFrames) else {
+      // Bakes and uploads queued for anything not drawn yet still run.
+      self.encodePendingWork(commandBuffer)
+      commandBuffer.commit()
+      return
+    }
+    if damage == .none {
+      self.encodePendingWork(commandBuffer)
+    } else {
+      guard self.encodeFrame(into: canvas, commandBuffer, damage: damage) else { return }
+    }
+    profiler.add(.encode, since: encodeStart)
+    let drawableStart = profiler.start()
+    let drawable = view.currentDrawable
+    profiler.add(.drawable, since: drawableStart)
+    if let stamps {
+      if damage != .none {
+        self.lastDamageTime = CACurrentMediaTime()
+      }
+      // Without a drawable the stamps still land; the next frame presents them.
+      guard let encoder = commandBuffer.makeComputeCommandEncoder() else {
+        self.finishFrame(commandBuffer)
+        return
+      }
+      encoder.label = "Damage tint"
+      self.encodeDamageTint(damage, stamps: stamps, canvas: canvas, drawable: drawable, encoder)
+      encoder.endEncoding()
+      if let drawable {
+        commandBuffer.present(drawable)
+      }
+    } else if let drawable, let blit = commandBuffer.makeBlitCommandEncoder() {
+      // Without a drawable this time the canvas is still up to date; the next frame copies it.
+      let target = drawable.texture
+      blit.label = "Canvas to drawable"
+      blit.copy(
+        from: canvas, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0),
+        sourceSize: MTLSize(width: min(canvas.width, target.width), height: min(canvas.height, target.height), depth: 1),
+        to: target, destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0)
+      )
+      blit.endEncoding()
+      commandBuffer.present(drawable)
+    }
+    let waitStart = profiler.start()
     self.finishFrame(commandBuffer)
+    profiler.add(.gpuWait, since: waitStart)
   }
 
-  /// Encodes this frame's bakes and `compute2D` into `texture`, which needs `.shaderWrite`
-  /// usage. False when no encoder could be made; the bakes are committed on their own then.
-  func encodeFrame(into texture: MTLTexture, _ commandBuffer: MTLCommandBuffer) -> Bool {
-    // Glyphs and icons first laid out this frame are baked, and images first drawn uploaded,
-    // before `compute2D` samples them.
+  /// `damageStamps` for `canvas` while `showDamage` is on, made and cleared when first needed;
+  /// dropped again once it is off.
+  private func damageStamps(like canvas: MTLTexture, _ commandBuffer: MTLCommandBuffer) -> MTLTexture? {
+    guard self.sceneData.debug.showDamage else {
+      self.damageStamps = nil
+      return nil
+    }
+    if let stamps = self.damageStamps, stamps.width == canvas.width, stamps.height == canvas.height {
+      return stamps
+    }
+    let descriptor = MTLTextureDescriptor.texture2DDescriptor(
+      pixelFormat: .r32Float, width: canvas.width, height: canvas.height, mipmapped: false
+    )
+    descriptor.usage = [.shaderRead, .shaderWrite, .renderTarget]
+    descriptor.storageMode = .private
+    guard let stamps = self.device.makeTexture(descriptor: descriptor) else { return nil }
+    stamps.label = "Damage stamps"
+    let clear = MTLRenderPassDescriptor()
+    clear.colorAttachments[0].texture = stamps
+    clear.colorAttachments[0].loadAction = .clear
+    clear.colorAttachments[0].clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
+    clear.colorAttachments[0].storeAction = .store
+    commandBuffer.makeRenderCommandEncoder(descriptor: clear)?.endEncoding()
+    self.damageStamps = stamps
+    return stamps
+  }
+
+  /// Stamps what `damage` shaded with the time, then writes `canvas` into `drawable` tinted
+  /// where the stamps are recent.
+  private func encodeDamageTint(
+    _ damage: Damage, stamps: MTLTexture, canvas: MTLTexture, drawable: CAMetalDrawable?,
+    _ encoder: MTLComputeCommandEncoder
+  ) {
+    var now = Float(CACurrentMediaTime() - self.damageEpoch) + 1
+    var windowSize = SIMD2<Int32>(Int32(self.size.x), Int32(self.size.y))
+    if damage != .none {
+      encoder.setComputePipelineState(self.stampDamagePipeline)
+      encoder.setTexture(stamps, index: 0)
+      encoder.setBytes(&now, length: MemoryLayout<Float>.stride, index: 0)
+      encoder.setBytes(&windowSize, length: MemoryLayout<SIMD2<Int32>>.stride, index: 2)
+      if damage == .full {
+        let half = self.size * 0.5
+        var all = float4(-half.x, -half.y, half.x, half.y)
+        encoder.setBytes(&all, length: MemoryLayout<float4>.stride, index: 1)
+        self.dispatch(self.stampDamagePipeline, width: stamps.width, height: stamps.height, encoder)
+      } else {
+        encoder.setBuffer(self.dirtyCellBuffer, offset: 0, index: 1)
+        self.dispatchRects(self.stampDamagePipeline, span: self.dirtyRectSpan(stamps), encoder)
+      }
+    }
+    guard let target = drawable?.texture else { return }
+    encoder.setComputePipelineState(self.presentDamagePipeline)
+    encoder.setTexture(canvas, index: 0)
+    encoder.setTexture(stamps, index: 1)
+    encoder.setTexture(target, index: 2)
+    var fade = Float(Self.damageFade)
+    encoder.setBytes(&now, length: MemoryLayout<Float>.stride, index: 0)
+    encoder.setBytes(&fade, length: MemoryLayout<Float>.stride, index: 1)
+    self.dispatch(self.presentDamagePipeline, width: min(canvas.width, target.width), height: min(canvas.height, target.height), encoder)
+  }
+
+  /// A texture the size of the drawable that keeps its pixels from frame to frame. A new one
+  /// holds nothing yet, so the frame shades all of it.
+  private func canvas(width: Int, height: Int, format: MTLPixelFormat) -> MTLTexture? {
+    guard width > 0, height > 0 else { return nil }
+    if let canvas = self.canvas, canvas.width == width, canvas.height == height, canvas.pixelFormat == format {
+      return canvas
+    }
+    let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: format, width: width, height: height, mipmapped: false)
+    descriptor.usage = [.shaderRead, .shaderWrite]
+    descriptor.storageMode = .private
+    let canvas = self.device.makeTexture(descriptor: descriptor)
+    canvas?.label = "Canvas"
+    self.canvas = canvas
+    self.needsFullDamage = true
+    return canvas
+  }
+
+  /// What this frame shades of `texture`: everything when its pixels are not the last frame's
+  /// or most cells changed anyway, else the changed cells, or nothing at all.
+  func takeDamage(for texture: MTLTexture) -> Damage {
+    let debug = self.sceneData.debug
+    let debugChanged = debug.drawGrid != self.lastDebug.drawGrid
+      || debug.showFilledCells != self.lastDebug.showFilledCells
+    var full = self.needsFullDamage || !self.partialRendering || texture !== self.lastTarget || debugChanged
+    self.needsFullDamage = false
+    self.lastTarget = texture
+    self.lastDebug = debug
+    let cellCount = self.grid.cells.count
+    let dirty = self.grid.dirtyCells.count
+    // Past this, one pass over the whole target costs less than the cells' ragged edges.
+    if dirty * 10 >= cellCount * 7 {
+      full = true
+    }
+    if full {
+      self.lastDamagedCells = cellCount
+      return .full
+    }
+    self.lastDamagedCells = dirty
+    return dirty == 0 ? .none : .cells
+  }
+
+  /// Glyphs and icons first laid out this frame are baked, and images first drawn uploaded,
+  /// before `compute2D` samples them.
+  private func encodePendingWork(_ commandBuffer: MTLCommandBuffer) {
     SDFBaker.shared.encodePendingBakes(into: commandBuffer)
     VectorBaker.shared.encodePendingBakes(into: commandBuffer)
     ImageManager.shared.encodePendingUploads(into: commandBuffer)
-    guard let commandEncoder = commandBuffer.makeComputeCommandEncoder() else {
+  }
+
+  /// Encodes this frame's bakes and the shading `damage` asks for into `texture`, which needs
+  /// `.shaderWrite` usage and holds the last frame's pixels unless `damage` is `.full`. False
+  /// when no encoder could be made; the bakes are committed on their own then.
+  func encodeFrame(into texture: MTLTexture, _ commandBuffer: MTLCommandBuffer, damage: Damage) -> Bool {
+    self.encodePendingWork(commandBuffer)
+    guard damage != .none, let commandEncoder = commandBuffer.makeComputeCommandEncoder() else {
       // the bakes are already dequeued, so they still have to run
       commandBuffer.commit()
+      // What the target should hold now was never shaded.
+      if damage != .none { self.needsFullDamage = true }
       return false
     }
+    self.gpuFrames += 1
 
     commandEncoder.useResources([self.grid.cellBuffer, self.grid.shapeBuffer, self.circleBuffer, self.squareBuffer, self.lineBuffer, self.glyphBuffer, self.imageBuffer, self.textureTableBuffer, self.vectorBuffer, self.clipBuffer, self.glassBuffer], usage: .read)
     if !self.imageTextures.isEmpty {
@@ -708,7 +1018,7 @@ public struct SceneData {
     commandEncoder.setTexture(VectorBaker.shared.atlas.texture, index: 2)
     commandEncoder.setTexture(self.glassAtlas, index: 3)
 
-    self.sceneData.windowSize = SIMD2<Int32>(Int32(self.renderer.windowSize.x), Int32(self.renderer.windowSize.y))
+    self.sceneData.windowSize = SIMD2<Int32>(Int32(self.size.x), Int32(self.size.y))
     self.sceneData.time = self.renderer.time
 
     commandEncoder.setBytes(&self.sceneData, length: MemoryLayout<SceneData>.stride, index: 0)
@@ -716,19 +1026,72 @@ public struct SceneData {
     commandEncoder.setBuffer(self.grid.gridArgBuffer, offset: 0, index: 2)
 
     // Lowest glass first, so each one above finds the backdrops below it finished. The encoder
-    // dispatches serially, so every pass sees the textures the one before it wrote.
-    for pass in self.glassPasses {
-      self.encodeGlass(pass, commandEncoder)
+    // dispatches serially, so every pass sees the textures the one before it wrote. Only when
+    // some glass is shaded: nothing else samples the atlas.
+    if damage == .full || self.glassNeedsPasses {
+      for pass in self.glassPasses {
+        self.encodeGlass(pass, commandEncoder)
+      }
     }
 
-    let pipeline: MTLComputePipelineState = self.glasses.isEmpty ? self.pipelineState : self.glassPipeline
-    commandEncoder.setComputePipelineState(pipeline)
-    commandEncoder.setTexture(texture, index: 0)
-    commandEncoder.setTexture(self.glassAtlas, index: 3)
-    self.dispatch(pipeline, width: texture.width, height: texture.height, commandEncoder)
+    if damage == .full {
+      let pipeline: MTLComputePipelineState = self.glasses.isEmpty ? self.pipelineState : self.glassPipeline
+      commandEncoder.setComputePipelineState(pipeline)
+      commandEncoder.setTexture(texture, index: 0)
+      commandEncoder.setTexture(self.glassAtlas, index: 3)
+      self.dispatch(pipeline, width: texture.width, height: texture.height, commandEncoder)
+    } else {
+      self.dispatchCells(into: texture, commandEncoder)
+    }
 
     commandEncoder.endEncoding()
     return true
+  }
+
+  /// Runs `compute2DCells` over the pixels of each of `grid.dirtyRects`: one slice of threads
+  /// per rect, each as large as the largest rect's pixels and a little more, since a rect's
+  /// edges need not fall on pixel boundaries.
+  private func dispatchCells(into texture: MTLTexture, _ encoder: MTLComputeCommandEncoder) {
+    let rects = self.grid.dirtyRects
+    if self.dirtyCellBufferCount < rects.count {
+      self.dirtyCellBufferCount = rects.count + 64
+      self.dirtyCellBuffer = self.device.makeBuffer(length: MemoryLayout<float4>.stride * self.dirtyCellBufferCount)
+      self.dirtyCellBuffer.label = "Dirty rects"
+    }
+    rects.withUnsafeBytes { bytes in
+      self.dirtyCellBuffer.contents().copyMemory(from: bytes.baseAddress!, byteCount: bytes.count)
+    }
+
+    let pipeline: MTLComputePipelineState = self.glasses.isEmpty ? self.cellPipeline : self.glassCellPipeline
+    encoder.setComputePipelineState(pipeline)
+    encoder.setTexture(texture, index: 0)
+    encoder.setTexture(self.glassAtlas, index: 3)
+    encoder.setBuffer(self.dirtyCellBuffer, offset: 0, index: 3)
+    self.dispatchRects(pipeline, span: self.dirtyRectSpan(texture), encoder)
+  }
+
+  /// The pixels the largest of `grid.dirtyRects` can reach in `texture`, and a little more.
+  private func dirtyRectSpan(_ texture: MTLTexture) -> SIMD2<Int> {
+    var largest = float2.zero
+    for rect in self.grid.dirtyRects {
+      largest = simd_max(largest, float2(rect.z - rect.x, rect.w - rect.y))
+    }
+    let pixelsPerPoint = float2(Float(texture.width), Float(texture.height)) / simd_max(self.size, float2(1, 1))
+    let span = (largest * pixelsPerPoint).rounded(.up) + 2
+    return SIMD2<Int>(Int(span.x), Int(span.y))
+  }
+
+  /// One slice of `span` threads per rect of `grid.dirtyRects`.
+  private func dispatchRects(_ pipeline: MTLComputePipelineState, span: SIMD2<Int>, _ encoder: MTLComputeCommandEncoder) {
+    let groupWidth = pipeline.threadExecutionWidth
+    let groupHeight = max(1, min(8, pipeline.maxTotalThreadsPerThreadgroup / groupWidth))
+    encoder.dispatchThreadgroups(
+      MTLSize(
+        width: (span.x + groupWidth - 1) / groupWidth, height: (span.y + groupHeight - 1) / groupHeight,
+        depth: self.grid.dirtyRects.count
+      ),
+      threadsPerThreadgroup: MTLSize(width: groupWidth, height: groupHeight, depth: 1)
+    )
   }
 
   /// Commits a frame `encodeFrame` filled and waits for the GPU to finish it.
@@ -736,7 +1099,12 @@ public struct SceneData {
     commandBuffer.commit()
     commandBuffer.waitUntilCompleted()
     VectorBaker.shared.frameCompleted(gpuTime: commandBuffer.gpuEndTime - commandBuffer.gpuStartTime)
+    FrameProfiler.shared.addGPUTime(commandBuffer.gpuEndTime - commandBuffer.gpuStartTime)
 
+    if commandBuffer.status == .error {
+      // The target may hold part of this frame; shade all of it next time.
+      self.needsFullDamage = true
+    }
     if commandBuffer.status == .error, !self.reportedFrameError {
       self.reportedFrameError = true
       print("2D frame failed on the GPU: \(commandBuffer.error.map(String.init(describing:)) ?? "unknown error")")
@@ -895,9 +1263,9 @@ public struct SceneData {
   }
 
   public func context(in view: MTKView, _ cb: (Rect) -> Void) {
-    let windowRect = Rect(position: float2(), size: self.renderer.windowSize)
-    if self.renderer.windowSize.x > 0, view.drawableSize.width > 0 {
-      self.pixelsPerPoint = Float(view.drawableSize.width) / self.renderer.windowSize.x
+    let windowRect = Rect(position: float2(), size: self.size)
+    if self.size.x > 0, view.drawableSize.width > 0 {
+      self.setPixelsPerPoint(Float(view.drawableSize.width) / self.size.x)
     }
 
     self.beginFrame()
@@ -911,16 +1279,28 @@ public struct SceneData {
   /// presenting. For rendering headlessly, as tests do; `texture` needs `.shaderWrite` usage
   /// and `renderer.windowSize * pixelsPerPoint` pixels. See `makeOffscreenTarget`.
   public func render(into texture: MTLTexture, pixelsPerPoint: Float, _ cb: (Rect) -> Void) {
-    let windowRect = Rect(position: float2(), size: self.renderer.windowSize)
-    self.pixelsPerPoint = pixelsPerPoint
+    let windowRect = Rect(position: float2(), size: self.size)
+    self.setPixelsPerPoint(pixelsPerPoint)
 
     self.beginFrame()
     cb(windowRect)
     self.endFrame()
 
-    guard let commandBuffer = self.commandQueue.makeCommandBuffer() else { return }
-    guard self.encodeFrame(into: texture, commandBuffer) else { return }
+    let damage = self.takeDamage(for: texture)
+    guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
+      self.needsFullDamage = true
+      return
+    }
+    guard self.encodeFrame(into: texture, commandBuffer, damage: damage) else { return }
     self.finishFrame(commandBuffer)
+  }
+
+  /// Every shape is laid out anew for a new scale, and snapped to other pixels.
+  private func setPixelsPerPoint(_ value: Float) {
+    if value != self.pixelsPerPoint {
+      self.pixelsPerPoint = value
+      self.needsFullDamage = true
+    }
   }
 
   /// Circles and lines are hard-edged debug primitives: they cast no shadow and take no blur.
