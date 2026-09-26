@@ -191,6 +191,17 @@ content under a path of their own (`0k0`, `0k1`), and applied through the method
 inside a header swaps and re-applies through that same method, like a content modifier's
 `replaceContent`, which is now just one more such door.
 
+### Navigation
+
+`NavigationStack(path: $path)` lowers like any binding: `setPath(self._path, …)` in `__update_path`
+and `onPathChange = NavigationStack.adapt({ self.path = $0 })` armed on mount. The stack's field
+is not generic. A path is not a list's rows, so `appendPath`/`removePath(at:)` fall through to
+`setPath`, which diffs by prefix. `NavigationLink(destination:)` and the
+`.navigationDestination(for:)` closure are handlers, armed on mount, which is how they can build a
+component. `for: Route.self` types the destination's field `NavigationDestinationElement<Route>`,
+giving the armed closure its parameter type. A link with `value:` reads its trailing closure as
+its label, one without as its destination. See `docs/Navigation.md`.
+
 ## 6. Composition, not helper methods
 
 The macro cannot see inside a method, so a helper that returns an element is a compile error
@@ -215,7 +226,7 @@ From the outside `RowView(item:onRemove:)` is an ordinary constructor call, opaq
 | F1 | a helper method in element position |
 | F2 | `for` / `while` / `switch` in a body — use `VList`/`HList` |
 | F3 | a local binding (`let c = self.color`) — it captures once and never updates |
-| F4 | a constructor or modifier not in `ElementCatalog` |
+| F4 | a constructor or modifier not in `ElementCatalog`, or a labelled trailing closure (`content:`) the element has no door for |
 | F5 | `@State` on a `let`, a `static`, a computed property, or without a type annotation |
 | F6 | `@Component` on a non-class, or a missing/ill-formed `body` |
 | F7 | a component declaring `mount`/`unmount` — use `onMount`/`onUnmount` |
@@ -229,6 +240,7 @@ From the outside `RowView(item:onRemove:)` is an ordinary constructor call, opaq
 | F16 | a paragraph modifier (`.lineLimit`, `.multilineTextAlignment`, …) on an operand of `+` |
 | F17 | a literal a text modifier cannot take: `.lineLimit` below 1, `.minimumScaleFactor` outside (0, 1] |
 | F18 | *(warning)* a constant text style over a subtree with no `Text` in it |
+| F19 | a `for:` argument that types an element (`.navigationDestination`, `.onGeometryChange`, `.dropDestination`) not written `<Type>.self` |
 
 F9 is retired, not missing: it warned that a handler capturing `self` strongly leaks, which stopped
 being true once the macro started clearing handlers on unmount. The numbers are not reused.

@@ -75,7 +75,7 @@ open class MultiChildElement : UIElement {
         child.handleUnmount(context)
       }
       for child in elements where !oldIdentities.contains(ObjectIdentifier(child)) {
-        child.handleMount(context)
+        child.handleMount(context, in: self)
       }
       return
     }
@@ -173,7 +173,7 @@ open class MultiChildElement : UIElement {
   }
 
   private func mountArriving(_ element: UIElement, _ animation: UIAnimation?, _ context: UIContext) -> Void {
-    element.handleMount(context)
+    element.handleMount(context, in: self)
     if let animation, let transition = element.transitionOnSpine {
       transition.animateIn(animation, context)
     }

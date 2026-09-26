@@ -37,7 +37,7 @@ extension UIContext {
     layer.context = self
     self.overlays.append(layer)
     self.focus(nil)
-    layer.handleMount(self)
+    layer.handleMount(self, in: anchor as? UIElement)
     self.invalidate([.layout, .treeOrder])
     layer.transition.animateIn(PopoverLayer.animation, self)
     return handle

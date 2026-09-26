@@ -210,7 +210,7 @@ public class LazyStack<T: Identifiable> : MultiChildElement {
     var added = false
     for child in self.children where !self.kept.contains(ObjectIdentifier(child)) {
       added = true
-      if let context { child.handleMount(context) }
+      if let context { child.handleMount(context, in: self) }
     }
     self.dropRetired()
     context?.invalidate(.treeOrder)

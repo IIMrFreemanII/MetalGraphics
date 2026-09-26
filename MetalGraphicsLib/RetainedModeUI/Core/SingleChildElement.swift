@@ -79,7 +79,7 @@ open class SingleChildElement : UIElement {
       element.isLeaving = false
       element.transitionOnSpine?.animateBack(animation, context)
     } else {
-      element.handleMount(context)
+      element.handleMount(context, in: self)
       if let animation, let transition = element.transitionOnSpine {
         transition.animateIn(animation, context)
       }
