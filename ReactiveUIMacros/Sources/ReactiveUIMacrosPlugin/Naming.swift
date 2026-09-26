@@ -64,6 +64,7 @@ enum Naming {
   static func mutationInsert(_ property: String) -> String { "insert\(capitalized(property))" }
   static func mutationRemove(_ property: String) -> String { "remove\(capitalized(property))" }
   static func mutationReplace(_ property: String) -> String { "replace\(capitalized(property))" }
+  static func mutationMove(_ property: String) -> String { "move\(capitalized(property))" }
 
   /// The incremental appliers behind those methods. They exist only when at least one list
   /// binds the property; otherwise the mutation methods fall through to `update(_:)`.

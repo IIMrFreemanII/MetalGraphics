@@ -161,11 +161,13 @@
 		7E57A0012F00000000000108 /* LayoutDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000008 /* LayoutDemo.swift */; };
 		877BB6A2CF70ABBBC889D72B /* Picker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B77EF9B62CBFBF6DD7CC188D /* Picker.swift */; };
 		925EAEFEFC960B27880C050C /* GeometryReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3746BAE0BA2048948146A226 /* GeometryReader.swift */; };
+		95767CB04A8EA5BBCA07F1C5 /* DragAndDrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B3BA430FE19B6E3AE57A5EF /* DragAndDrop.swift */; };
 		96F5F42BE0B19FF329FFC2E9 /* Grid.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC93AA91A2F4BC10D645FD7E /* Grid.swift */; };
 		9D10EC6FB317D61A68BF0C70 /* LayoutModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2AE975F9083D1F9A9F53FC2 /* LayoutModifiers.swift */; };
 		A4AEB10083A896DA906F4F53 /* ContainersDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3F917A8B566C6616D321D5F /* ContainersDemo.swift */; };
 		A5A0EBFC752DFD04977625C5 /* Toggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41694BD945E750DA2F0B3929 /* Toggle.swift */; };
 		A7989F3092214DBFAE060A26 /* KeyboardDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 841A85879E2A4EF6BA2AEEFE /* KeyboardDemo.swift */; };
+		8B2331362D0BAEFF1440AF7F /* DragDropDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8025C1694A7F503958FE6A35 /* DragDropDemo.swift */; };
 		A7A000000000000000000100 /* UIAnimatable.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000000 /* UIAnimatable.swift */; };
 		A7A000000000000000000101 /* UIAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000001 /* UIAnimation.swift */; };
 		A7A000000000000000000102 /* UITransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000002 /* UITransaction.swift */; };
@@ -225,6 +227,7 @@
 /* Begin PBXFileReference section */
 		05C4AA6CF5DA1CF0968951C4 /* Popover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Popover.swift; sourceTree = "<group>"; };
 		06B7939C7A714887309E606D /* FormDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormDemo.swift; sourceTree = "<group>"; };
+		0B3BA430FE19B6E3AE57A5EF /* DragAndDrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragAndDrop.swift; sourceTree = "<group>"; };
 		0CE6F9F4E44D2629FB42B896 /* TextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextField.swift; sourceTree = "<group>"; };
 		150A31E9305F2D2500D14DEA /* CompileTimeState.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CompileTimeState.md; sourceTree = "<group>"; };
 		1541F3E32D00F91000FE4873 /* UIContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIContext.swift; sourceTree = "<group>"; };
@@ -382,6 +385,7 @@
 		7E57A0012F00000000000007 /* Demos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Demos.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000008 /* LayoutDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutDemo.swift; sourceTree = "<group>"; };
 		841A85879E2A4EF6BA2AEEFE /* KeyboardDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardDemo.swift; sourceTree = "<group>"; };
+		8025C1694A7F503958FE6A35 /* DragDropDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragDropDemo.swift; sourceTree = "<group>"; };
 		8A18677F9A9E1EF81386C9EC /* DatePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePicker.swift; sourceTree = "<group>"; };
 		8D864408FFDD409D856FE5AC /* KeyPress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyPress.swift; sourceTree = "<group>"; };
 		92F1C597962AF70F2150EC48 /* Section.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Section.swift; sourceTree = "<group>"; };
@@ -528,6 +532,7 @@
 				7AB1E0000000000000000004 /* TableDemo.swift */,
 				5CA65E06B15F6759676FD7CA /* ScrollDemo.swift */,
 				841A85879E2A4EF6BA2AEEFE /* KeyboardDemo.swift */,
+				8025C1694A7F503958FE6A35 /* DragDropDemo.swift */,
 				15A1B2C52C147B0E00C56203 /* ConditionalDemo.swift */,
 				7E57A0012F00000000000005 /* TextDemo.swift */,
 				1A6E00012F00000000000007 /* ImageDemo.swift */,
@@ -831,6 +836,7 @@
 				159CB8D82CFCF4CC006E74C5 /* HittableView.swift */,
 				B8AE66C8436440699CF3938E /* Focusable.swift */,
 				8D864408FFDD409D856FE5AC /* KeyPress.swift */,
+				0B3BA430FE19B6E3AE57A5EF /* DragAndDrop.swift */,
 				1A6E00022F00000000000005 /* Hittable.swift */,
 			);
 			path = Interaction;
@@ -1041,6 +1047,7 @@
 				7AB1E0000000000000000104 /* TableDemo.swift in Sources */,
 				718D373E59F078C493788C75 /* ScrollDemo.swift in Sources */,
 				A7989F3092214DBFAE060A26 /* KeyboardDemo.swift in Sources */,
+				8B2331362D0BAEFF1440AF7F /* DragDropDemo.swift in Sources */,
 				15A1B2C62C147B0E00C56203 /* ConditionalDemo.swift in Sources */,
 				7E57A0012F00000000000105 /* TextDemo.swift in Sources */,
 				1A6E00012F00000000000107 /* ImageDemo.swift in Sources */,
@@ -1140,6 +1147,7 @@
 				159CB8D92CFCF4D3006E74C5 /* HittableView.swift in Sources */,
 				4C7FC7094BFF4D8890013ED2 /* Focusable.swift in Sources */,
 				ED0071A8924E4C27A79FB79B /* KeyPress.swift in Sources */,
+				95767CB04A8EA5BBCA07F1C5 /* DragAndDrop.swift in Sources */,
 				15E455E02FCE1FFC0026C83B /* HittableGrid2D.swift in Sources */,
 				15A049D82C23220800D28009 /* GraphicsGrid2D.swift in Sources */,
 				157C8D9A2C517F89009CD7CE /* EmptyElement.swift in Sources */,

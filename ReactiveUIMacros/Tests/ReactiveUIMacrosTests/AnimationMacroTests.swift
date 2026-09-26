@@ -785,6 +785,11 @@ struct AnimationMacroTests {
             self.__update_rows()
           }
 
+          public func moveRows(fromOffsets source: IndexSet, toOffset destination: Int) {
+            self._rows.moveElements(fromOffsets: source, toOffset: destination)
+            self.__update_rows()
+          }
+
           private func __rows_didInsert(_ element: Row, at index: Int, _ animated: Bool = true) {
             guard let context = self.__context else {
               self.__needsRefresh = true

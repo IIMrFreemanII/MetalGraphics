@@ -60,10 +60,11 @@ final class ButtonTests: XCTestCase {
     let h = UIHarness { Button("Go").buttonStyle(.bordered) }
     let face = h.first(ButtonFace.self)!
     let press = h.all(EffectElement.self).last!
-    h.mouseDown(at: self.center(h.first(HittableView.self)!))
+    let point = self.center(h.first(HittableView.self)!)
+    h.mouseDown(at: point)
     XCTAssertTrue(face.isPressed)
     XCTAssertEqual(press.opacity, 1)
-    h.mouseUp()
+    h.mouseUp(at: point)
     XCTAssertFalse(face.isPressed)
   }
 
@@ -71,10 +72,11 @@ final class ButtonTests: XCTestCase {
     let h = UIHarness { Button("Go") }
     let face = h.first(ButtonFace.self)!
     let press = h.all(EffectElement.self).last!
-    h.mouseDown(at: self.center(h.first(HittableView.self)!))
+    let point = self.center(h.first(HittableView.self)!)
+    h.mouseDown(at: point)
     XCTAssertFalse(face.isPressed)
     XCTAssertLessThan(press.opacity, 1)
-    h.mouseUp()
+    h.mouseUp(at: point)
     XCTAssertEqual(press.opacity, 1)
   }
 

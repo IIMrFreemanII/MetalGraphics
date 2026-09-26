@@ -184,14 +184,29 @@ struct BodyParser {
   /// component reach itself and never deallocate. Assigning on mount and clearing on unmount
   /// confines that loop to the window where the tree is live anyway — which is what lets a body
   /// be written without a capture list.
-  private func handlerClosure(_ call: FunctionCallExprSyntax, _ spec: ModifierSpec) -> BoundHandler? {
-    guard let handler = spec.handler else { return nil }
-    let closure = call.trailingClosure
-      ?? call.arguments.first(where: { $0.label?.text == "action" })?.expression.as(ClosureExprSyntax.self)
-      ?? call.arguments.compactMap { $0.expression.as(ClosureExprSyntax.self) }.first
-    guard let closure else { return nil }
-
-    return BoundHandler(property: handler.property, closure: ExprSyntax(closure), adapter: handler.adapter)
+  private func handlerClosures(_ call: FunctionCallExprSyntax, _ spec: ModifierSpec) -> [BoundHandler] {
+    var bound: [BoundHandler] = []
+    if let handler = spec.handler {
+      let label = handler.label ?? "action"
+      let others = Set(spec.labeledHandlers.compactMap(\.label))
+      let closure = call.trailingClosure
+        ?? call.arguments.first(where: { $0.label?.text == label })?.expression.as(ClosureExprSyntax.self)
+        ?? call.arguments.lazy
+          .filter { !others.contains($0.label?.text ?? "") }
+          .compactMap { $0.expression.as(ClosureExprSyntax.self) }.first
+      if let closure {
+        bound.append(BoundHandler(property: handler.property, closure: ExprSyntax(closure), adapter: handler.adapter))
+      }
+    }
+    for handler in spec.labeledHandlers {
+      guard let label = handler.label else { continue }
+      let closure = call.arguments.first(where: { $0.label?.text == label })?.expression.as(ClosureExprSyntax.self)
+        ?? call.additionalTrailingClosures.first(where: { $0.label.text == label })?.closure
+      if let closure {
+        bound.append(BoundHandler(property: handler.property, closure: ExprSyntax(closure), adapter: handler.adapter))
+      }
+    }
+    return bound
   }
 
   private func parseElement(_ expr: ExprSyntax, path: String) -> ElementIR? {
@@ -315,7 +330,7 @@ struct BodyParser {
         // Its own path, lettered by the link, so its nodes never collide with the element's.
         let contentPath = "\(path)o\(chain.count)"
         let closure = call.trailingClosure
-          ?? call.arguments.first(where: { $0.label?.text == "content" })?.expression.as(ClosureExprSyntax.self)
+          ?? call.arguments.first(where: { $0.label?.text == spec.contentLabel })?.expression.as(ClosureExprSyntax.self)
         if let closure {
           guard let parsed = parse(closure.statements, path: contentPath) else { return nil }
           contents.append(LinkContent(link: chain.count, door: "replaceContent", path: contentPath, children: parsed))
@@ -327,7 +342,7 @@ struct BodyParser {
           field: Naming.node(path, chain.count), local: Naming.local(path, chain.count),
           type: inPlace ? chain.last?.type ?? spec.produces : self.linkType(call, spec),
           kind: .modifier(call: call, spec: spec),
-          bound: parseModifierArgs(call, spec), handlers: handlerClosure(call, spec).map { [$0] } ?? []
+          bound: parseModifierArgs(call, spec), handlers: handlerClosures(call, spec)
         )
       )
     }

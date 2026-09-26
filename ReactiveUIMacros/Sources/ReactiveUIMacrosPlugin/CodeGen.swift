@@ -620,6 +620,12 @@ struct CodeGen {
           "public func \(Naming.mutationReplace(name))(_ newValue: [\(element)])",
           ["self.\(storage) = newValue", update]
         ),
+        // What `.onMove` hands its action. A full update, which a list takes as a reorder: its
+        // rows keep their elements, and their state, and slide under `withAnimation`.
+        method(
+          "public func \(Naming.mutationMove(name))(fromOffsets source: IndexSet, toOffset destination: Int)",
+          ["self.\(storage).moveElements(fromOffsets: source, toOffset: destination)", update]
+        ),
       ]
 
       if incremental {
@@ -672,14 +678,20 @@ struct CodeGen {
     if let handler = spec.handler {
       // Any other arguments are kept, as written; only the handler is swapped for a placeholder.
       // An `action:` closure is the handler too, when it is not written trailing.
-      let others = call.arguments.filter { argument in
-        !(argument.expression.is(ClosureExprSyntax.self)
-          && (argument.label == nil || (argument.label?.text == "action" && call.trailingClosure == nil)))
+      // So is a closure labelled like one of its other handlers; further trailing closures are
+      // dropped with the trailing one, as the placeholder replaces them all.
+      let main = handler.label ?? "action"
+      let others = Set(spec.labeledHandlers.compactMap(\.label))
+      let kept = call.arguments.filter { argument in
+        guard argument.expression.is(ClosureExprSyntax.self), let label = argument.label?.text else {
+          return !argument.expression.is(ClosureExprSyntax.self)
+        }
+        return !(others.contains(label) || (label == main && call.trailingClosure == nil))
       }
-      guard !others.isEmpty else {
+      guard !kept.isEmpty else {
         return ".\(member.declName.baseName.text)\(handler.placeholder)"
       }
-      let arguments = others.map { argument in
+      let arguments = kept.map { argument in
         var a = argument
         a.expression = StateRewriter.scan(argument.expression, states: stateNames).expr
         a.trailingComma = nil
@@ -694,7 +706,7 @@ struct CodeGen {
     copy.calledExpression = ExprSyntax(newMember)
     // Content is built and attached apart, like a container's.
     let kept = copy.arguments.filter { argument in
-      !(spec.takesContent && argument.label?.text == "content" && argument.expression.is(ClosureExprSyntax.self))
+      !(spec.takesContent && argument.label?.text == spec.contentLabel && argument.expression.is(ClosureExprSyntax.self))
     }
     if spec.takesContent {
       copy.trailingClosure = nil
