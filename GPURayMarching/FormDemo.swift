@@ -26,6 +26,8 @@ struct AudioSettings {
 // - Pickers default to a menu; Difficulty is segmented, Theme a menu.
 // - Dates open a calendar or time steppers in a popover; Start shows the calendar inline.
 // - The tint opens a colour popover; the preview row follows it.
+// - "Buttons" shows each button style, and a button with a view label whose text and style follow
+//   state.
 @Component
 final class FormDemo : SingleChildElement {
   private static let size = float2(560, 640)
@@ -45,6 +47,8 @@ final class FormDemo : SingleChildElement {
   @State var due: Date = Date().addingTimeInterval(3 * 24 * 3600)
   @State var start: Date = Date()
   @State var tint: float4 = float4(0.0, 0.48, 1.0, 1)
+  @State var taps: Int = 0
+  @State var prominent: Bool = false
 
   @UIElementBuilder var body: [UIElement] {
     Form {
@@ -107,6 +111,20 @@ final class FormDemo : SingleChildElement {
           LabeledContent("Debug", value: "password has \(self.password.count) characters")
         }
       }
+      Section("Buttons") {
+        HStack(spacing: 12) {
+          Button("Borderless") { self.tap() }
+          Button("Plain") { self.tap() }.buttonStyle(.plain)
+          Button("Bordered") { self.tap() }.buttonStyle(.bordered)
+          Button("Prominent") { self.tap() }.buttonStyle(.borderedProminent)
+        }
+        Button(action: self.tap) {
+          Rectangle(FormMetrics.destructiveColor).frame(width: 10, height: 10).cornerRadius(5)
+          Text("Tapped \(self.taps) times")
+        }
+        .buttonStyle(self.prominent ? .borderedProminent : .bordered)
+        Toggle("Prominent", isOn: $prominent)
+      }
       Section {
         Button("Reset", role: .destructive) { self.reset() }
           .disabled(self.name.isEmpty && self.password.isEmpty && self.lives == 3 && self.difficulty == 1)
@@ -116,6 +134,10 @@ final class FormDemo : SingleChildElement {
   }
 
   // MARK: - Actions
+
+  func tap() {
+    self.taps += 1
+  }
 
   func reset() {
     self.name = ""

@@ -105,6 +105,62 @@ struct BindingMacroTests {
     #expect(text.contains("self.__n0a?.action = nil"))
   }
 
+  @Test("with action: passed, a button's trailing closure is its label")
+  func buttonLabelAfterAction() {
+    let (text, diagnostics) = expand(component(
+      states: "  @State var count: Int = 0",
+      "    Button(action: { self.count += 1 }) { Text(\"Add\") }"
+    ))
+    #expect(diagnostics.isEmpty)
+    #expect(text.contains("let n0a = Button()\n"))
+    #expect(text.contains("self.__n0a?.action = {\nself.count += 1\n}"))
+    #expect(text.contains("let n0_0a = Text(\"Add\")"))
+    #expect(text.contains("owner.replaceChildren(children, context, animation: animation)"))
+  }
+
+  @Test("Button { … } label: { … }: the action, then a reactive label through its door")
+  func buttonNamedLabel() {
+    let (text, diagnostics) = expand(component(
+      states: "  @State var count: Int = 0",
+      """
+          Button(role: .destructive) { self.count += 1 } label: {
+            Text("Tapped \\(self.count)")
+          }
+      """
+    ))
+    #expect(diagnostics.isEmpty)
+    #expect(text.contains("let n0a = Button(role: .destructive)\n"))
+    #expect(text.contains("self.__n0a?.action = {\nself.count += 1\n}"))
+    #expect(text.contains("owner.replaceChildren(children, context, animation: animation)"))
+    #expect(text.contains("n.setText(\"Tapped \\(self._count)\", context, animation: transaction)"))
+  }
+
+  @Test("an action given as a reference is armed and cleared like a closure")
+  func buttonActionReference() {
+    let (text, diagnostics) = expand(component(
+      states: "  @State var count: Int = 0",
+      "    Button(action: self.reset) { Text(\"Reset\") }"
+    ))
+    #expect(diagnostics.isEmpty)
+    #expect(text.contains("let n0a = Button()\n"))
+    #expect(text.contains("self.__n0a?.action = self.reset"))
+    #expect(text.contains("self.__n0a?.action = nil"))
+  }
+
+  @Test("buttonStyle is in place, and binds to setButtonStyle when it reads state")
+  func buttonStyle() {
+    let (text, diagnostics) = expand(component(
+      states: "  @State var prominent: Bool = false",
+      """
+          Button("Go") { self.prominent.toggle() }
+            .buttonStyle(self.prominent ? .borderedProminent : .bordered)
+      """
+    ))
+    #expect(diagnostics.isEmpty)
+    #expect(text.contains("let n0b = n0a.buttonStyle(self._prominent ? .borderedProminent : .bordered)"))
+    #expect(text.contains("n.setButtonStyle(self._prominent ? .borderedProminent : .bordered, context, animation: transaction)"))
+  }
+
   @Test("a picker's options are content, tagged in place; onSubmit and disabled are in place")
   func pickerAndModifiers() {
     let (text, diagnostics) = expand(component(

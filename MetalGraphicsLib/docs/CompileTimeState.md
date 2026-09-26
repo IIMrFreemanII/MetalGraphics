@@ -176,7 +176,11 @@ control given a constant keeps it. `@State` still declares `$name` — a real `B
 property — for hand-built trees, but a body never evaluates it.
 
 Constructor callbacks (`Button("OK") { … }`) are handlers too (`ArgSpec.handler`): dropped from
-the constructor and armed on mount, so they never capture `self` for good.
+the constructor and armed on mount, so they never capture `self` for good. That holds for a
+closure and for a reference alike, `Button(action: self.close) { … }`. As in SwiftUI, an element
+that takes both a callback and content reads its trailing closure as the callback unless the
+callback was passed by label: `Button("OK") { save() }` and `Button { save() } label: { … }` have
+the action there, `Button(action: save) { Text("OK") }` the label.
 
 ### Named content closures
 

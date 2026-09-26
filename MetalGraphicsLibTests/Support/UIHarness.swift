@@ -127,6 +127,22 @@ final class UIHarness {
     self.step()
   }
 
+  /// The left button going down at `point` and staying down, for what a press shows.
+  func mouseDown(at point: float2) {
+    self.setMouse(point)
+    self.input.leftMousePressed = true
+    self.input.leftMouseDown = true
+    self.input.clickCount = 1
+    self.step()
+  }
+
+  /// The left button coming up where the pointer is.
+  func mouseUp() {
+    self.input.leftMousePressed = false
+    self.input.leftMouseUp = true
+    self.step()
+  }
+
   func click(on hittable: any Hittable) {
     self.click(at: hittable.hitPosition + hittable.hitSize * 0.5)
   }
