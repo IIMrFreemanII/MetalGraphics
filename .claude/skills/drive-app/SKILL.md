@@ -1,6 +1,6 @@
 ---
 name: drive-app
-description: Build, launch and drive the GPURayMarching macOS app with real clicks, hovers and key presses, then screenshot it to check UI behaviour. Use to verify any change to the retained-mode UI, animations, input or rendering in the running app, or when asked to run, test or screenshot the app.
+description: Build, launch and drive the GPURayMarching macOS app with real clicks, hovers and key presses, then screenshot it. Slow (seconds per click and shot) and it takes over the mouse, so prefer the ui-tests skill (headless, seconds per suite) for checking layout, input, focus, animation and rendering logic. Use this for what the headless tests cannot see: real NSEvent input, windowing and resizing, hot reload, frame pacing and idle CPU, the @Component demos, a final end-to-end check of a finished feature, or when asked to run or screenshot the app.
 ---
 
 # Driving GPURayMarching

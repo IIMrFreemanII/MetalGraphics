@@ -160,7 +160,7 @@ public final class Animator {
       return
     }
 
-    let now = CACurrentMediaTime()
+    let now = context.clock()
     group?.retain()
     let entry = Running(
       element: element, retained: element.mounted ? nil : element,

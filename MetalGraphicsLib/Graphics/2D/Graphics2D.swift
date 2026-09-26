@@ -677,6 +677,14 @@ public struct SceneData {
     else {
       return
     }
+    guard self.encodeFrame(into: drawable.texture, commandBuffer) else { return }
+    commandBuffer.present(drawable)
+    self.finishFrame(commandBuffer)
+  }
+
+  /// Encodes this frame's bakes and `compute2D` into `texture`, which needs `.shaderWrite`
+  /// usage. False when no encoder could be made; the bakes are committed on their own then.
+  func encodeFrame(into texture: MTLTexture, _ commandBuffer: MTLCommandBuffer) -> Bool {
     // Glyphs and icons first laid out this frame are baked, and images first drawn uploaded,
     // before `compute2D` samples them.
     SDFBaker.shared.encodePendingBakes(into: commandBuffer)
@@ -685,7 +693,7 @@ public struct SceneData {
     guard let commandEncoder = commandBuffer.makeComputeCommandEncoder() else {
       // the bakes are already dequeued, so they still have to run
       commandBuffer.commit()
-      return
+      return false
     }
 
     commandEncoder.useResources([self.grid.cellBuffer, self.grid.shapeBuffer, self.circleBuffer, self.squareBuffer, self.lineBuffer, self.glyphBuffer, self.imageBuffer, self.textureTableBuffer, self.vectorBuffer, self.clipBuffer, self.glassBuffer], usage: .read)
@@ -712,14 +720,16 @@ public struct SceneData {
 
     let pipeline: MTLComputePipelineState = self.glasses.isEmpty ? self.pipelineState : self.glassPipeline
     commandEncoder.setComputePipelineState(pipeline)
-    let texture = drawable.texture
     commandEncoder.setTexture(texture, index: 0)
     commandEncoder.setTexture(self.glassAtlas, index: 3)
     self.dispatch(pipeline, width: texture.width, height: texture.height, commandEncoder)
 
     commandEncoder.endEncoding()
-    commandBuffer.present(drawable)
+    return true
+  }
 
+  /// Commits a frame `encodeFrame` filled and waits for the GPU to finish it.
+  func finishFrame(_ commandBuffer: MTLCommandBuffer) {
     commandBuffer.commit()
     commandBuffer.waitUntilCompleted()
     VectorBaker.shared.frameCompleted(gpuTime: commandBuffer.gpuEndTime - commandBuffer.gpuStartTime)
@@ -892,6 +902,22 @@ public struct SceneData {
     self.endFrame()
 
     self.drawData(at: view)
+  }
+
+  /// `context(in:_:)` without a view: draws one frame into `texture` and waits for it, without
+  /// presenting. For rendering headlessly, as tests do; `texture` needs `.shaderWrite` usage
+  /// and `renderer.windowSize * pixelsPerPoint` pixels. See `makeOffscreenTarget`.
+  public func render(into texture: MTLTexture, pixelsPerPoint: Float, _ cb: (Rect) -> Void) {
+    let windowRect = Rect(position: float2(), size: self.renderer.windowSize)
+    self.pixelsPerPoint = pixelsPerPoint
+
+    self.beginFrame()
+    cb(windowRect)
+    self.endFrame()
+
+    guard let commandBuffer = self.commandQueue.makeCommandBuffer() else { return }
+    guard self.encodeFrame(into: texture, commandBuffer) else { return }
+    self.finishFrame(commandBuffer)
   }
 
   /// Circles and lines are hard-edged debug primitives: they cast no shadow and take no blur.
