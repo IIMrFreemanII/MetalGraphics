@@ -373,12 +373,14 @@ enum ElementCatalog {
              ArgSpec("isOn", "setIsOn", animatable: true, binding: HandlerSpec(property: "onIsOnChange", placeholder: ""))],
       arity: .leaf
     ),
-    // The trailing closure is the action, not content.
+    // As in SwiftUI, the trailing closure is the action unless `action:` was passed, and then it
+    // is the label: `Button("OK") { … }`, `Button { … } label: { … }`, `Button(action: f) { … }`.
+    // The label goes through the button's own `replaceChildren`.
     "Button": TypeSpec(
       name: "Button",
       args: [ArgSpec(nil, "setTitle", animatable: true), ArgSpec("role", nil),
              ArgSpec("action", nil, handler: HandlerSpec(property: "action", placeholder: ""))],
-      arity: .leaf, takesContent: false
+      arity: .multi, namedContents: ["label": "replaceChildren"]
     ),
     // A numeric binding is adapted: the control works in `Double`, the state in its own type.
     "Slider": TypeSpec(
@@ -802,6 +804,10 @@ enum ElementCatalog {
     "pickerStyle": ModifierSpec(
       name: "pickerStyle", labels: [nil],
       produces: "Picker", setter: "setPickerStyle", combine: .identity, animatable: true, inPlaceOn: ["Picker"]
+    ),
+    "buttonStyle": ModifierSpec(
+      name: "buttonStyle", labels: [nil],
+      produces: "Button", setter: "setButtonStyle", combine: .identity, animatable: true, inPlaceOn: ["Button"]
     ),
     "datePickerStyle": ModifierSpec(
       name: "datePickerStyle", labels: [nil],

@@ -399,6 +399,22 @@ struct DiagnosticsTests {
     )
   }
 
+  @Test("F13: buttonStyle must be called on the Button, not on a wrapper")
+  func buttonStyleOnWrapper() {
+    assertMacroExpansion(
+      component("    Button(\"a\").padding(Inset(all: 1)).buttonStyle(.bordered)"),
+      expandedSource: stubsOnly("    Button(\"a\").padding(Inset(all: 1)).buttonStyle(.bordered)"),
+      diagnostics: [
+        DiagnosticSpec(
+          message: "'.buttonStyle' applies to Button only; call it directly on the Button, before 'Padding' wraps it.",
+          line: 6, column: 40
+        )
+      ],
+      macros: ["Component": ComponentMacro.self],
+      applyFixIts: [], fixedSource: nil
+    )
+  }
+
   @Test("F13: an image modifier must be called on the Image, not on a wrapper")
   func imageModifierOnWrapper() {
     assertMacroExpansion(

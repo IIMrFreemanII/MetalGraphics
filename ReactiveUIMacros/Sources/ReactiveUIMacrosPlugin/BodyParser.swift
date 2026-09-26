@@ -511,7 +511,8 @@ struct BodyParser {
         kept.append(argument)
         continue
       }
-      if let handler = argSpec.handler, argument.expression.is(ClosureExprSyntax.self) {
+      // A closure or a reference, `action: self.close`: either would hold `self` if left in.
+      if let handler = argSpec.handler, !argument.expression.is(NilLiteralExprSyntax.self) {
         handlers.append(BoundHandler(property: handler.property, closure: argument.expression, adapter: handler.adapter))
         continue
       }
@@ -536,9 +537,12 @@ struct BodyParser {
     }
 
     var copy = call
-    // Where the element takes no content, a trailing closure is its callback.
-    if let trailing = call.trailingClosure, !spec.takesContent,
-       let handler = spec.args.lazy.compactMap(\.handler).first
+    // A trailing closure is the callback where the element takes no content, or where it takes
+    // both and the callback was not passed: `Button("OK") { … }`, but `Button(action: f) { … }`
+    // has its label there.
+    if let trailing = call.trailingClosure,
+       let handler = spec.args.lazy.compactMap(\.handler).first,
+       !spec.takesContent || !handlers.contains(where: { $0.property == handler.property })
     {
       handlers.append(BoundHandler(property: handler.property, closure: ExprSyntax(trailing), adapter: handler.adapter))
       copy.trailingClosure = nil
