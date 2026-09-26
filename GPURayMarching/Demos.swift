@@ -19,6 +19,7 @@ enum Demo : String, Identifiable {
   case form
   case dragDrop
   case pointer
+  case redraw
 
   var id: Self { self }
 
@@ -41,6 +42,7 @@ enum Demo : String, Identifiable {
     case .form: "Form"
     case .dragDrop: "Drag & Drop"
     case .pointer: "Pointer"
+    case .redraw: "Redraw"
     }
   }
 
@@ -63,6 +65,7 @@ enum Demo : String, Identifiable {
     case .form: FormDemo()
     case .dragDrop: DragDropDemo()
     case .pointer: PointerDemo()
+    case .redraw: RedrawDemo()
     }
   }
 }
@@ -206,6 +209,13 @@ final class Demos : SingleChildElement {
           .background(self.selected == .pointer ? Self.activeTabColor : Self.inactiveTabColor)
           .animation(Self.tabAnimation, value: self.selected)
           .onTap { _ in self.select(.pointer) }
+        Text(Demo.redraw.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .redraw ? .white : .black)
+          .padding(Self.tabInset)
+          .background(self.selected == .redraw ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
+          .onTap { _ in self.select(.redraw) }
         Spacer()
       }
       VList(alignment: .leading, items: self.shown) { demo in

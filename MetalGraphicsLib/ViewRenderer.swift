@@ -7,7 +7,12 @@ import SwiftUI
   public var input: Input!
   public var graphics2D: Graphics2D?
   public let uiContext: UIContext = .init()
-  @Published public var windowSize = float2()
+  @Published public var windowSize = float2() {
+    didSet { self.cachedWindowSize = self.windowSize }
+  }
+  /// `windowSize`, read without `@Published`: its getter is a generic key-path access that costs
+  /// more than the draw call reading it, and every renderable reads it every frame.
+  public private(set) var cachedWindowSize = float2()
   @Published public var mousePosition = float2()
   @Published public var temp = float2(1, 2)
 

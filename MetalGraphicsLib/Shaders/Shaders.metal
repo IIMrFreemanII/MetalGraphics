@@ -188,6 +188,8 @@ struct ShapeArgBuffer {
 struct DebugData {
   bool drawGrid;
   bool showFilledCells;
+  // tints what was shaded lately; see `presentDamage`
+  bool showDamage;
 };
 
 struct SceneData {
@@ -653,22 +655,15 @@ static float2 pixelToPoint(uint2 gid, int width, int height, int2 windowSize) {
   return uv * float2(windowSize) * 0.5;
 }
 
-kernel void compute2D(
-                      texture2d<float, access::write> output [[texture(0)]],
-                      constant SceneData &data [[buffer(0)]],
-                      constant ShapeArgBuffer *buffers [[buffer(1)]],
-                      constant GridArgBuffer *gridBuffer [[buffer(2)]],
-                      texture2d<float> glyphAtlas [[texture(1)]],
-                      texture2d<float> vectorAtlas [[texture(2)]],
-                      texture2d<float> glassAtlas [[texture(3)]],
-                      uint2 gid [[thread_position_in_grid]]
-                      )
+// Shades pixel `gid` of `output`, which is inside it, and writes it.
+static void shadePixel(
+                       uint2 gid, texture2d<float, access::write> output, constant SceneData &data,
+                       constant ShapeArgBuffer *buffers, constant GridArgBuffer *gridBuffer,
+                       texture2d<float> glyphAtlas, texture2d<float> vectorAtlas, texture2d<float> glassAtlas
+                       )
 {
   int width = output.get_width();
   int height = output.get_height();
-  if (int(gid.x) >= width || int(gid.y) >= height) {
-    return;
-  }
   float2 uv = pixelToPoint(gid, width, height, data.windowSize);
   float pixelsPerPoint = float(width) / float(data.windowSize.x);
 
@@ -696,6 +691,98 @@ kernel void compute2D(
     }
   }
 
+  output.write(color, gid);
+}
+
+kernel void compute2D(
+                      texture2d<float, access::write> output [[texture(0)]],
+                      constant SceneData &data [[buffer(0)]],
+                      constant ShapeArgBuffer *buffers [[buffer(1)]],
+                      constant GridArgBuffer *gridBuffer [[buffer(2)]],
+                      texture2d<float> glyphAtlas [[texture(1)]],
+                      texture2d<float> vectorAtlas [[texture(2)]],
+                      texture2d<float> glassAtlas [[texture(3)]],
+                      uint2 gid [[thread_position_in_grid]]
+                      )
+{
+  if (int(gid.x) >= int(output.get_width()) || int(gid.y) >= int(output.get_height())) {
+    return;
+  }
+  shadePixel(gid, output, data, buffers, gridBuffer, glyphAtlas, vectorAtlas, glassAtlas);
+}
+
+// The pixels rect `rect` (min x, min y, max x, max y, in centered points) reaches in a
+// texture of `size`: from the first to one past the last, clamped to the texture.
+static void rectPixels(float4 rect, int2 size, int2 windowSize, thread int2 &first, thread int2 &end) {
+  // the inverse of `pixelToPoint`
+  float2 scale = float2(size) / float2(windowSize);
+  float2 center = float2(size) * 0.5;
+  first = max(int2(floor(rect.xy * scale + center)), int2(0));
+  end = min(int2(ceil(rect.zw * scale + center)) + 1, size);
+}
+
+// `compute2D` over the grid cells whose shapes changed: slice `gid.z` covers the pixels of
+// `dirtyRects[gid.z]`, one cell. A pixel on the edge between two cells may be shaded
+// for both; it finds its own cell either way, so both write the same colour.
+kernel void compute2DCells(
+                           texture2d<float, access::write> output [[texture(0)]],
+                           constant SceneData &data [[buffer(0)]],
+                           constant ShapeArgBuffer *buffers [[buffer(1)]],
+                           constant GridArgBuffer *gridBuffer [[buffer(2)]],
+                           device const float4 *dirtyRects [[buffer(3)]],
+                           texture2d<float> glyphAtlas [[texture(1)]],
+                           texture2d<float> vectorAtlas [[texture(2)]],
+                           texture2d<float> glassAtlas [[texture(3)]],
+                           uint3 gid [[thread_position_in_grid]]
+                           )
+{
+  int2 first, end;
+  rectPixels(dirtyRects[gid.z], int2(output.get_width(), output.get_height()), data.windowSize, first, end);
+  int2 pixel = first + int2(gid.xy);
+  if (any(pixel >= end)) {
+    return;
+  }
+  shadePixel(uint2(pixel), output, data, buffers, gridBuffer, glyphAtlas, vectorAtlas, glassAtlas);
+}
+
+// `showDamage`: writes `now` into every pixel of `rects[gid.z]` a frame shaded.
+kernel void stampDamage(
+                        texture2d<float, access::write> stamps [[texture(0)]],
+                        constant float &now [[buffer(0)]],
+                        device const float4 *rects [[buffer(1)]],
+                        constant int2 &windowSize [[buffer(2)]],
+                        uint3 gid [[thread_position_in_grid]]
+                        )
+{
+  int2 first, end;
+  rectPixels(rects[gid.z], int2(stamps.get_width(), stamps.get_height()), windowSize, first, end);
+  int2 pixel = first + int2(gid.xy);
+  if (any(pixel >= end)) {
+    return;
+  }
+  stamps.write(float4(now), uint2(pixel));
+}
+
+// `showDamage`: the canvas as presented, tinted where it was shaded lately. The tint holds
+// while a pixel keeps being shaded and fades over `fade` seconds once it stops.
+kernel void presentDamage(
+                          texture2d<float, access::read> canvas [[texture(0)]],
+                          texture2d<float, access::read> stamps [[texture(1)]],
+                          texture2d<float, access::write> output [[texture(2)]],
+                          constant float &now [[buffer(0)]],
+                          constant float &fade [[buffer(1)]],
+                          uint2 gid [[thread_position_in_grid]]
+                          )
+{
+  if (gid.x >= output.get_width() || gid.y >= output.get_height()) {
+    return;
+  }
+  float4 color = canvas.read(gid);
+  float stamp = stamps.read(gid).r;
+  // 0 is never shaded since the stamps were made
+  float strength = stamp > 0 ? saturate(1 - (now - stamp) / fade) : 0;
+  const float3 tint = float3(0.2, 0.75, 0.45);
+  color.rgb = mix(color.rgb, tint, 0.3 * strength);
   output.write(color, gid);
 }
 

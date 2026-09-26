@@ -34,7 +34,10 @@ class TestViewRenderer: ViewRenderer {
       return
     }
 
+    let profiler = FrameProfiler.shared
+    let updateStart = profiler.start()
     self.uiContext.update(root: self.root, size: self.windowSize, input: self.input, graphics: graphics)
+    profiler.add(.update, since: updateStart)
     // A cursor is set only when it changes, so this costs a compare on an idle frame.
     (view as? MyMTKView)?.pointerStyle = self.uiContext.pointerStyle
 
@@ -44,13 +47,18 @@ class TestViewRenderer: ViewRenderer {
     // The input's per-frame state (clicks, deltas, keys) is normally reset at the end of the
     // drawn frame; a skipped frame has to reset it too, or a click would still read as pressed
     // on every frame after it.
-    guard self.uiContext.needsRender else {
+    //
+    // The redrawn-area tint (`showDamage`) fades over a few frames after the last change, so
+    // those frames are presented even though nothing changed.
+    guard self.uiContext.needsRender || graphics.needsDamageFrames else {
       self.input.endFrame()
       return
     }
 
     graphics.context(in: view) { _ in
+      let renderStart = profiler.start()
       self.uiContext.render(root: self.root, graphics)
+      profiler.add(.uiRender, since: renderStart)
 //      self.root.render(graphics)
 //      let boxSize = float2(100, 100)
 //      let box = BoundingBox2D(center: float2() - self.graphics2D!.size * 0.5 + boxSize * 0.5, size: boxSize)
