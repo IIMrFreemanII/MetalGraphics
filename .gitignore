@@ -6,3 +6,6 @@ ReactiveUIMacros/.build/
 # Xcode per-user state
 xcuserdata/
 .DS_Store
+
+# Knowledge graph, regenerated locally by `graphify update .`
+graphify-out/
