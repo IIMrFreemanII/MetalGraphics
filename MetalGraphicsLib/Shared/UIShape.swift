@@ -60,4 +60,17 @@ public struct UIShape: Equatable, Sendable {
       return (ClipRect(min: center - half, max: center + half), float4(repeating: half))
     }
   }
+
+  /// Whether `point` is inside this shape resolved in `rect`: its rounded rect, each corner
+  /// rounded by its own radius. What `.contentShape(_:)` hit tests with.
+  public func contains(_ point: float2, in rect: ClipRect) -> Bool {
+    let (box, radii) = self.resolve(in: rect)
+    let center = (box.min + box.max) * 0.5
+    let half = (box.max - box.min) * 0.5
+    let p = point - center
+    // The corner's radius, in `radii`' order, y down: trailing or leading, bottom or top.
+    let radius = p.x > 0 ? (p.y > 0 ? radii.x : radii.y) : (p.y > 0 ? radii.z : radii.w)
+    let q = simd_abs(p) - half + radius
+    return simd_length(simd_max(q, .zero)) + min(max(q.x, q.y), 0) - radius <= 0
+  }
 }

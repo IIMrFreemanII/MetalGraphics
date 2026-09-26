@@ -223,8 +223,12 @@ From the outside `RowView(item:onRemove:)` is an ordinary constructor call, opaq
 | F10 | a list's `items:` that is not a direct `@State` array reference |
 | F11 | a generated mutation method colliding with one the component declares |
 | F12 | `.animation(_:value:)` whose `value:` reads no `@State`, or written without `value:` |
-| F13 | an in-place modifier (`.font`, `.foregroundColor`, `.resizable`, `.fill`, `.trim`, …) called on something other than the element it styles |
+| F13 | an in-place-only modifier (`.resizable`, `.fill`, `.trim`, `.buttonStyle`, …) called on something other than the element it styles. The text modifiers wrap anything else instead |
 | F14 | a binding argument (`isOn:`, `text:`, `selection:`, …) that is neither `$state[.member…]` nor `.constant(v)` |
+| F15 | an operator other than `+` between texts, or a `+` operand that is not `Text(string)` / `Text(verbatim:)` with run modifiers |
+| F16 | a paragraph modifier (`.lineLimit`, `.multilineTextAlignment`, …) on an operand of `+` |
+| F17 | a literal a text modifier cannot take: `.lineLimit` below 1, `.minimumScaleFactor` outside (0, 1] |
+| F18 | *(warning)* a constant text style over a subtree with no `Text` in it |
 
 F9 is retired, not missing: it warned that a handler capturing `self` strongly leaks, which stopped
 being true once the macro started clearing handlers on unmount. The numbers are not reused.
@@ -487,12 +491,55 @@ Text(self.title)
   .animation(.spring(), value: self.big)
 ```
 
-`.font(_:)` (a `TextFont`: `.system(size:)`, `.custom(_:size:)`) and `.foregroundColor(_:)` are
-how a `Text` is styled; unset, it draws at 16pt in the default face, in black. They set the
-`Text` they are called on and return it — no wrapper element. For
-the macro they are *in-place* modifiers: links of their own whose field holds the same `Text`, so
-scopes cover them by position like any link, and calling one on anything but a `Text` is F13.
-`TextFont` is not named `Font`, which would clash with SwiftUI's.
+The text modifiers are SwiftUI's. Fonts are a `TextFont` — `.largeTitle` … `.caption2`,
+`.system(size:weight:design:)`, `.custom("Georgia", size:)` — with `.bold()`, `.italic()`,
+`.weight(_:)`, `.monospaced()` and `.monospacedDigit()`. `.system` is San Francisco; an unstyled
+`Text` draws at 16pt in it, in black. `TextFont` is not named `Font`, which would clash with
+SwiftUI's. The modifiers:
+
+- **Run modifiers**, which `Text + Text` keeps per operand: `.font`, `.fontWeight`, `.fontDesign`,
+  `.bold`, `.italic`, `.monospaced`, `.monospacedDigit`, `.foregroundColor`/`.foregroundStyle`,
+  `.underline(_:color:)`, `.strikethrough(_:color:)`, `.kerning`, `.tracking`, `.baselineOffset`.
+- **Paragraph modifiers**: `.lineLimit`, `.multilineTextAlignment`, `.truncationMode`,
+  `.lineSpacing`, `.minimumScaleFactor`, `.textCase`. On an operand of `+` they are F16, as SwiftUI
+  rejects them there through its types.
+
+**Where they apply.** On a `Text` each sets that text's own style and returns it — in place, a
+link of its own whose field holds the same `Text`, so scopes cover it by position like any link.
+On anything else it wraps it in a `TextStyleElement`, whose style every text inside inherits, as
+SwiftUI's environment does; another text modifier after it adds to that element, in place. A
+text's own style wins over what it inherits, a nearer container over a farther one, and on a
+container the first modifier of a chain over a later one, which sits farther out:
+`.font(.title).font(.body)` is `.title`.
+
+**What the macro folds at compile time.** The macro sees every text in the body, so it does part
+of the runtime's work ahead of it:
+
+- A **constant** style around a subtree whose texts are all written in the body — built of
+  `Text`s and elements that hide no text of their own (`ElementCatalog.textFreeTypes`: stacks,
+  frames, shapes, images…) — is written into those texts as they are built, with
+  `Text.inheritStyle(_:)`, innermost container first. No `TextStyleElement` is made and nothing is
+  pushed during layout. The folded links are kept as pass-through links, so the ones after them
+  keep their names. A `Button("Save")`, a list's rows or a table's cells hide their texts, and a
+  reactive argument needs a setter, so those keep the runtime `TextStyleElement`; so does a
+  constant style over one, since the runtime style is nearer and must win.
+- A run of **constant** text modifiers on one element is set with a single `applyStyle`, its
+  `TextEnvironment` hoisted into a `private static let __style<path>_<link>` unless it names
+  `self` or `Self`, when it is written in place.
+- **`Text("Hi ") + Text(self.name).bold()`** becomes one `Text(runs: [TextRun(…), …])`. A reactive
+  operand's string updates through `setRunText(Text.RunText(index, value))`, a reactive modifier on
+  it through `setRunStyle`, so an update builds no operand. The sum may be the root of a chain,
+  `(a + b).lineLimit(1)`. Its operands are `Text(string)` or `Text(verbatim:)` with run modifiers
+  only (F15).
+
+**Setters and cost.** Colour and font size animate — `setFont` and `setForegroundColor` — and a
+new face snaps, since glyphs cannot morph. The text is shaped once, at the size it animates to,
+and drawn scaled in between: an animated size costs no shaping per frame, and wraps as it will at
+the end. A colour change alone never reshapes. The other setters relayout, and skip a value that
+did not change. A `TextStyleElement`'s colour reaches its texts at render time, so changing or
+animating it only redraws; its other fields reach them during layout. A popover and a drag
+preview are laid out apart from the tree: the style around their anchor is passed in as it was
+when they opened, and not updated while they are open.
 
 `Image` works the same way. `Image(name)` takes its name reactively (`setName`), and
 `.foregroundColor(_:)` is in place on it as on `Text`: an in-place modifier lists every type it
@@ -525,6 +572,33 @@ Color and font size animate — `setFont` and `setForegroundColor` — and a new
 glyphs cannot morph. The text is shaped once, at the size it animates to, and drawn scaled in
 between: an animated size costs no shaping per frame, and wraps as it will at the end. A color
 change alone no longer reshapes at all.
+
+### Pointer
+
+```swift
+Rectangle(.blue)
+  .contentShape(.circle)
+  .onTapGesture(count: 2) { self.zoomed.toggle() }
+  .onContinuousHover { phase in self.hovered = phase != .ended }
+  .pointerStyle(self.zoomed ? .zoomOut : .zoomIn)
+  .gesture(DragGesture().onChanged { value in self.offset = value.translation })
+```
+
+The pointer follows SwiftUI's rule: it hovers the topmost element under it that has anything to
+do with the pointer, and the elements that one sits in, so a covered element is not hovered and a
+popover blocks hover beneath it. A press belongs to the element it went down on until the button
+comes up: its drag, its pointer style and its tap. `onTap` still fires as the button goes down;
+`onTapGesture` fires as it comes up over the element, for the click count asked, and passes where.
+`UIContext.pointerStyle` is the cursor the view shows. When content moves under a pointer that
+does not — a layout change, a scroll — the hover catches up once the content is at rest.
+
+For the macro these are handler modifiers like `onTap`: the chain is built with a placeholder and
+the handler armed on mount. `.pointerStyle` binds to `setPointerStyle`; `.allowsHitTesting` is in
+place on anything and binds to `setAllowsHitTesting`; `.contentShape` binds to `setContentShape`.
+`.gesture(…)` is armed whole, since its closures capture `self`: anything else written in it,
+such as `DragGesture(minimumDistance: self.distance)`, is read when the component mounts and does
+not follow state. At runtime each of them sets its part of the plain `HittableView` it is called
+on, when that part is free, so `.onTap { }.onHover { }.pointerStyle(.link)` is one view.
 
 ### Costs to know
 

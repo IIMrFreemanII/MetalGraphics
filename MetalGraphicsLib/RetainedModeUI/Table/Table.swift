@@ -102,7 +102,7 @@ public final class Table<T: Identifiable> : SingleChildElement {
     }
     // Every edge but the last: the last column's right edge is the table's.
     let dividers = self.columns.indices.dropLast().map { index in
-      HittableView(
+      let divider = HittableView(
         // Swallows the click, so the title under it does not sort as a resize starts.
         onTap: { _ in },
         onPress: { [unowned self] down, input in
@@ -112,6 +112,8 @@ public final class Table<T: Identifiable> : SingleChildElement {
       ) {
         TableColumnDivider()
       }
+      divider.pointerStyle = .columnResize
+      return divider
     }
     return TableHeader(self.layout, titles: TableCells(self.layout, cells: titleCells), tapAreas: tapAreas, dividers: dividers)
   }

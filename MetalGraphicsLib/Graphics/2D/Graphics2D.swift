@@ -307,6 +307,9 @@ public struct SceneData {
   /// none. Each shape is blurred on its own, analytically, from its distance field, like a
   /// shadow: no pass is added. See `BlurElement`.
   private var blur: Float = 0
+  /// The colour texts draw in when nothing nearer sets one: the nearest `TextStyleElement`'s,
+  /// which `UIContext` sets before each element renders.
+  public internal(set) var textForeground: float4? = nil
 
   /// This frame's frosted glass panels, in depth order, and the backdrop pass each needs; a
   /// glass without a backdrop has no pass.
@@ -1228,24 +1231,30 @@ public struct SceneData {
   }
 
   /// Draws a layout made by `layoutText` with its top left corner at `position`, magnified by
-  /// `scale` about that corner.
-  public func draw(textLayout layout: TextLayout, at position: float2, color: float4, scale: Float = 1) {
+  /// `scale` about that corner. Every run is drawn in `color`, and its underline and
+  /// strikethrough too, unless `paints` gives each run colours of its own.
+  public func draw(textLayout layout: TextLayout, at position: float2, color: float4, paints: [TextRunPaint]? = nil, scale: Float = 1) {
     // A text casts one shadow per shadow set, all its glyphs' at one depth, beneath all of them.
     for shadow in self.shadows {
-      var shadowColor = shadow.color
-      shadowColor.w *= color.w
-      guard shadowColor.w > 0 else { continue }
+      guard shadow.color.w > 0 else { continue }
       let clip = self.beginShadow(shadow)
-      self.appendGlyphs(layout, at: position + shadow.offset, color: shadowColor, scale: scale, blur: Self.combined(shadow.sigma, self.blur))
+      self.appendText(
+        layout, at: position + shadow.offset, color: color, paints: paints, scale: scale,
+        blur: Self.combined(shadow.sigma, self.blur), shadow: shadow.color
+      )
       self.depth += 1
       self.endShadow(shadow, clip)
     }
-    self.appendGlyphs(layout, at: position, color: color, scale: scale, blur: self.blur)
+    self.appendText(layout, at: position, color: color, paints: paints, scale: scale, blur: self.blur, shadow: nil)
     self.depth += 1
   }
 
-  private func appendGlyphs(_ layout: TextLayout, at position: float2, color: float4, scale: Float, blur: Float) {
-    let fontSize = layout.fontSize * scale
+  /// Glyphs and decorations at the current depth. A shadow's copy is in `shadow`'s colour, as
+  /// opaque as what casts it.
+  private func appendText(
+    _ layout: TextLayout, at position: float2, color: float4, paints: [TextRunPaint]?, scale: Float, blur: Float,
+    shadow: float4?
+  ) {
     // Baselines land between two rows of pixel samples, so a flat glyph edge covers whole rows
     // instead of blurring across two. `compute2D` samples pixel `gid` at
     // `(gid - drawableSize / 2) / pixelsPerPoint`.
@@ -1253,13 +1262,24 @@ public struct SceneData {
     let snapToPixelEdge = { (y: Float) -> Float in
       (((y + halfWindow) * self.pixelsPerPoint).rounded(.down) + 0.5) / self.pixelsPerPoint - halfWindow
     }
+    let paintCount = paints?.count ?? 0
+    func tinted(_ color: float4) -> float4 {
+      guard var shadow else { return color }
+      shadow.w *= color.w
+      return shadow
+    }
 
     for line in layout.lines {
+      let x = position.x + line.x * scale
       let baseline = snapToPixelEdge(position.y + line.baseline * scale)
       for glyph in line.glyphs {
+        let run = Int(glyph.run)
+        let glyphColor = tinted(run < paintCount ? paints![run].text : color)
+        guard glyphColor.w > 0 else { continue }
         let metrics = glyph.metrics
+        let fontSize = glyph.emSize * scale
         let topLeft = float2(
-          position.x + glyph.origin.x * scale + metrics.boundsMin.x * fontSize,
+          x + glyph.origin.x * scale + metrics.boundsMin.x * fontSize,
           baseline - glyph.origin.y * scale - metrics.boundsMax.y * fontSize
         )
         self.glyphs.append(Glyph(
@@ -1267,12 +1287,49 @@ public struct SceneData {
           size: (metrics.boundsMax - metrics.boundsMin) * fontSize,
           uvMin: metrics.uvMin,
           uvMax: metrics.uvMax,
-          color: color,
+          color: glyphColor,
           depth: self.depth,
           fontSize: fontSize,
           blur: blur
         ))
       }
+
+      // Kept on the pixel grid the baseline is snapped to, and at least a pixel thick.
+      let snap = baseline - (position.y + line.baseline * scale)
+      let pixel = 1 / self.pixelsPerPoint
+      for decoration in line.decorations {
+        let run = Int(decoration.run)
+        let paint = run < paintCount ? paints![run] : nil
+        let decorationColor = tinted(decoration.isStrikethrough ? paint?.strikethrough ?? color : paint?.underline ?? color)
+        guard decorationColor.w > 0 else { continue }
+        let height = max(decoration.size.y * scale, pixel)
+        let top = ((position.y + decoration.origin.y * scale + snap) * self.pixelsPerPoint).rounded() / self.pixelsPerPoint
+        let size = float2(decoration.size.x * scale, height)
+        var item = self.roundedBox(
+          center: float2(x + decoration.origin.x * scale, top) + size * 0.5, half: size * 0.5, radii: .zero,
+          color: decorationColor
+        )
+        if blur > 0 {
+          let margin = blur * ShadowState.reach
+          item.blur = blur
+          item.clip += float4(-margin, -margin, margin, margin)
+        }
+        item.depth = self.depth
+        self.vectors.append(item)
+      }
     }
+  }
+}
+
+/// The colours one run of a text is drawn in, for `Graphics2D.draw(textLayout:at:color:paints:)`.
+public struct TextRunPaint: Equatable, Sendable {
+  public var text: float4
+  public var underline: float4
+  public var strikethrough: float4
+
+  public init(text: float4, underline: float4, strikethrough: float4) {
+    self.text = text
+    self.underline = underline
+    self.strikethrough = strikethrough
   }
 }

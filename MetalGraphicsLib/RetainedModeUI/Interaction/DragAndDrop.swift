@@ -91,6 +91,9 @@ public final class DraggableElement : HittableView {
   public internal(set) var preview: UIElement?
 
   private weak var context: UIContext?
+  /// The text style it was last laid out under: what the preview, laid out apart from the
+  /// tree, is styled with.
+  private var textScope = TextEnvironment()
   /// Where the button went down, until the press becomes a drag or ends.
   private var pressPoint: float2? = nil
 
@@ -100,6 +103,9 @@ public final class DraggableElement : HittableView {
     // Its own, never armed or cleared by `@Component`: nothing captures a component here.
     self.onPress = { [unowned self] down, input in self.pressed(down, input) }
     self.onDrag = { [unowned self] input in self.dragged(input) }
+    // An open hand over it, closed while it is pressed and dragged.
+    self.pointerStyle = .grabIdle
+    self.pressedPointerStyle = .grabActive
   }
 
   /// Sets the preview. What `.draggable(_:preview:)`'s content is applied with, like an
@@ -122,6 +128,11 @@ public final class DraggableElement : HittableView {
   public override func mount(_ context: UIContext) {
     super.mount(context)
     self.context = context
+  }
+
+  public override func calcSize(_ proposal: ProposedSize) -> float2 {
+    self.textScope = TextScope.current
+    return super.calcSize(proposal)
   }
 
   public override func unmount(_ context: UIContext) {
@@ -150,7 +161,8 @@ public final class DraggableElement : HittableView {
       guard simd_distance(start, point) >= DragSession.threshold else { return }
       self.pressPoint = nil
       context.beginDrag(
-        owner: self, payload: self.payload, ghost: self.preview == nil ? self : nil, preview: self.preview, from: start
+        owner: self, payload: self.payload, ghost: self.preview == nil ? self : nil, preview: self.preview, from: start,
+        textStyle: self.textScope
       )
     }
     // After a cancel, the rest of the press moves nothing.

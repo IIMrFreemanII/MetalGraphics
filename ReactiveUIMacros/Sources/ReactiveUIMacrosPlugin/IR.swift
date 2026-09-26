@@ -63,12 +63,17 @@ struct ChainLink {
     case constructor(call: FunctionCallExprSyntax, type: TypeSpec)
     /// `.frame(width: 100, height: 100)` — emitted as the modifier call on the previous link.
     case modifier(call: FunctionCallExprSyntax, spec: ModifierSpec)
+    /// A modifier folded away at compile time: the previous link's element, as is. A constant
+    /// text style set around texts the macro can see is written into them instead
+    /// (`ElementIR.inheritedStyles`), and a run of constant text modifiers becomes one
+    /// `applyStyle`. Kept as a link, so the links after it keep their names and positions.
+    case passThrough
   }
 
   let field: String       // "__n0a"
   let local: String       // "n0a"
-  let type: String        // the Swift type of the node field
-  let kind: Kind
+  var type: String        // the Swift type of the node field
+  var kind: Kind
   let bound: [BoundArg]
   /// A handler modifier's closure (`.onTap`), or a constructor's callbacks and binding
   /// write-backs (`Button { … }`, `isOn: $wifi`).
@@ -120,11 +125,23 @@ struct ChildList {
 
 struct ElementIR {
   let path: String
-  let chain: [ChainLink]  // innermost (the constructor) first
-  let children: [NodeIR]
+  var chain: [ChainLink]  // innermost (the constructor) first
+  var children: [NodeIR]
   let arity: Arity
   let scopes: [AnimationScope]
   var contents: [LinkContent] = []
+  /// For a `Text`: the constant styles of the containers around it that the macro folded away,
+  /// innermost first, each an expression of a `TextEnvironment`. Written into it with
+  /// `inheritStyle` when it is built.
+  var inheritedStyles: [String] = []
+  /// The `static let`s holding the folded styles this element's chain defines: name, value.
+  var styleConstants: [(field: String, value: String)] = []
+
+  /// The type of the constructor, as the catalog names it.
+  var constructorType: String? {
+    if case .constructor(_, let type) = chain[0].kind { return type.name }
+    return nil
+  }
 
   /// Every non-empty list of children under this element: the constructor's content, then each
   /// content modifier's, in chain order.

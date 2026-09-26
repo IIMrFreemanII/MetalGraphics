@@ -10,7 +10,7 @@ import simd
 ///
 /// Shapes are drawn in the order they are written, each above the ones before it, and hit in
 /// the reverse order — each exactly inside its own outline.
-open class VectorShape: UIElement, Hittable {
+open class VectorShape: UIElement, Hittable, PointerHandling {
   public enum Style {
     case fill
     case stroke
@@ -36,6 +36,7 @@ open class VectorShape: UIElement, Hittable {
   public var onHover: ((Bool, Input) -> Void)?
   public var onPress: ((Bool, Input) -> Void)?
   public var onDrag: ((Input) -> Void)? { nil }
+  public var pointer: PointerHandlers?
   public var isHovered = false
   public var isPressed = false
   /// The canvas's laid-out rect: the grid files every shape of a canvas under all of it, and
@@ -247,6 +248,39 @@ open class VectorShape: UIElement, Hittable {
   /// when it comes up, wherever the pointer is by then.
   public func onPress(_ callback: @escaping (Bool, Input) -> Void) -> Self {
     self.onPress = callback
+    return self
+  }
+
+  /// The pointer's shape over the shape's outline.
+  public func pointerStyle(_ style: PointerStyle?) -> Self {
+    self.pointerStyle = style
+    return self
+  }
+
+  /// Where the pointer is over the outline, as it moves; `.local` is the canvas's.
+  public func onContinuousHover(
+    coordinateSpace: CoordinateSpace = .local, perform action: @escaping (HoverPhase) -> Void
+  ) -> Self {
+    self.setContinuousHover(coordinateSpace, action)
+    return self
+  }
+
+  /// Called when `count` clicks end inside the outline.
+  public func onTapGesture(count: Int = 1, perform action: @escaping () -> Void) -> Self {
+    self.setTapGesture(count, .local, HittableView.tapAction(action))
+    return self
+  }
+
+  /// Called with where `count` clicks ended inside the outline.
+  public func onTapGesture(
+    count: Int = 1, coordinateSpace: CoordinateSpace = .local, perform action: @escaping (float2) -> Void
+  ) -> Self {
+    self.setTapGesture(count, coordinateSpace, action)
+    return self
+  }
+
+  public func gesture(_ gesture: some Gesture) -> Self {
+    self.gesture = gesture
     return self
   }
 }

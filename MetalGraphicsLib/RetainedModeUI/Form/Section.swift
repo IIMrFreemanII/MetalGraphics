@@ -6,8 +6,8 @@ import simd
 ///
 /// Each child is one row. Rows fill the card's width, less the row inset, so a control's label
 /// sits at the leading edge and the control at the trailing one; each is centred vertically in a
-/// row at least `FormMetrics.rowMinHeight` tall. A header or footer `Text` left in the default
-/// font takes the caption style.
+/// row at least `FormMetrics.rowMinHeight` tall. The texts of a header or footer take the
+/// caption style, unless they set their own font or colour.
 ///
 /// `children` are the rows only, so `@Component`'s `replaceChildren`, branch swaps and row
 /// transitions work on them as on a stack's. The card, header and footer are elements of its
@@ -164,14 +164,20 @@ public final class Section : MultiChildElement {
   }
 }
 
-/// A section's header or footer: its caption string, or views in its place.
-final class CaptionSlot : VStack {
-  let caption = Text("").font(FormMetrics.captionFont).foregroundColor(FormMetrics.secondaryColor)
+/// A section's header or footer: its caption string, or views in its place. The texts in it
+/// draw in the secondary colour, and the caption font unless they set their own.
+final class CaptionSlot : TextStyleElement {
+  let caption = Text("")
+  private let stack = VStack(alignment: .leading, spacing: 2)
   private var hasViews = false
 
   init() {
-    super.init(alignment: .leading, spacing: 2)
-    self.applyContent([self.caption])
+    super.init(
+      overrides: TextEnvironment().foregroundColor(FormMetrics.secondaryColor),
+      defaults: TextEnvironment().font(FormMetrics.captionFont)
+    )
+    self.stack.applyContent([self.caption])
+    self.applyContent([self.stack])
   }
 
   /// Shows nothing: no views, and an empty caption.
@@ -183,22 +189,12 @@ final class CaptionSlot : VStack {
   }
 
   func setViews(_ elements: [UIElement], _ context: UIContext?, animation: UIAnimation?) {
-    for element in elements {
-      // Only what was left at the defaults: a colour or font set on purpose stays.
-      guard let text = element as? Text else { continue }
-      if text.font.size == 16, text.font.font == nil {
-        _ = text.font(FormMetrics.captionFont)
-      }
-      if text.color == .black {
-        _ = text.foregroundColor(FormMetrics.secondaryColor)
-      }
-    }
     self.hasViews = !elements.isEmpty
     let shown = self.hasViews ? elements : [self.caption]
     if let context {
-      self.replaceChildren(shown, context, animation: animation)
+      self.stack.replaceChildren(shown, context, animation: animation)
     } else {
-      self.applyContent(shown)
+      self.stack.applyContent(shown)
     }
   }
 }

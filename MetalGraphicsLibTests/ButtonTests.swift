@@ -32,16 +32,47 @@ final class ButtonTests: XCTestCase {
   func testLabelTextTakesTheStyleUnlessColoredOnPurpose() {
     let plain = Text("Plain")
     let red = Text("Red").foregroundColor(.red)
-    let button = Button(action: {}) { plain; red }
-    XCTAssertEqual(plain.color, FormMetrics.accentColor)
-    XCTAssertEqual(plain.font.size, FormMetrics.font.size)
-    XCTAssertEqual(red.color, .red)
-
+    let nested = Text("Nested")
+    let button = Button(action: {}) { plain; red; VStack { nested } }
     let h = UIHarness { button }
+    h.settle()
+    XCTAssertEqual(plain.displayedColor, FormMetrics.accentColor)
+    XCTAssertEqual(plain.font.size, FormMetrics.font.size)
+    XCTAssertEqual(red.displayedColor, .red)
+    // A text deeper in the label is styled too.
+    XCTAssertEqual(nested.displayedColor, FormMetrics.accentColor)
+    XCTAssertEqual(nested.font, FormMetrics.font)
+
     button.setButtonStyle(.borderedProminent, h.context)
     h.settle()
-    XCTAssertEqual(plain.color, float4(1, 1, 1, 1))
-    XCTAssertEqual(red.color, .red)
+    XCTAssertEqual(plain.displayedColor, float4(1, 1, 1, 1))
+    XCTAssertEqual(red.displayedColor, .red)
+  }
+
+  func testAnimatedStyleChangeFadesTheLabelWithoutRelayout() {
+    let text = Text("Go")
+    let button = Button(action: {}) { text }
+    let h = UIHarness { button }
+    h.settle()
+    button.setButtonStyle(.plain, h.context, animation: .linear(1))
+    // The face relayouts once for the new style; the colour then only redraws.
+    h.step()
+    let generation = LayoutPass.generation
+    h.advance(0.5)
+    let midway = text.displayedColor
+    XCTAssertNotEqual(midway, FormMetrics.accentColor)
+    XCTAssertNotEqual(midway, FormMetrics.labelColor)
+    XCTAssertNotNil(h.settle())
+    XCTAssertEqual(text.displayedColor, FormMetrics.labelColor)
+    // Only the colour changed: redrawn every frame, never laid out again.
+    XCTAssertEqual(LayoutPass.generation, generation)
+  }
+
+  func testFontAroundTheButtonReachesItsLabel() {
+    let text = Text("Big")
+    let h = UIHarness { Button(action: {}) { text }.font(.title) }
+    h.settle()
+    XCTAssertEqual(text.font, .title)
   }
 
   func testReplacedLabelIsStyled() {
@@ -50,7 +81,7 @@ final class ButtonTests: XCTestCase {
     let text = Text("Later")
     button.replaceChildren([text], h.context)
     h.settle()
-    XCTAssertEqual(text.color, FormMetrics.labelColor)
+    XCTAssertEqual(text.displayedColor, FormMetrics.labelColor)
     XCTAssertGreaterThan(h.first(HittableView.self)!.hitSize.x, 0)
   }
 

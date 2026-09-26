@@ -69,6 +69,12 @@ public class UIContext {
   private var blurResolved: [Float] = []
   private var paintBlurs: [Int] = []
 
+  /// Every `TextStyleElement` that sets a colour, in pre-order; `paintForegrounds[i]` is the
+  /// nearest one above `paintOrder[i]`, or -1. Nearest wins, so there is nothing to resolve: the
+  /// render loop hands the renderer that one's colour, which its texts draw in.
+  private var foregroundOrder: [TextStyleElement] = []
+  private var paintForegrounds: [Int] = []
+
   /// Every element that clips what is under it, in pre-order like `effectOrder`.
   /// `clipParents[i]` is the nearest clip above `clipOrder[i]`, or -1, `clipEffects[i]` the
   /// nearest effect at or above it, or -1. `paintClips` and `hitClips` are the nearest clip
@@ -88,6 +94,8 @@ public class UIContext {
   private var clipGPU: [Int32] = []
   private var paintClips: [Int] = []
   private var hitClips: [Int] = []
+  /// The nearest element of `hitOrder` each sits in, or -1: what a hover spreads out along.
+  private var hitParents: [Int32] = []
 
   /// Mounted scroll views, and those in the tree in pre-order with the clip above each, which
   /// is where the wheel is routed from.
@@ -106,6 +114,8 @@ public class UIContext {
   private var keyHandlers: [ObjectIdentifier : KeyPressElement] = [:]
   private var focusOrder: [FocusableElement] = []
   private var focusClips: [Int] = []
+  /// False for a focusable under `.allowsHitTesting(false)`: Tab reaches it, a click does not.
+  private var focusClickable: [Bool] = []
   private var focusKeys: [Int] = []
   private var keyOrder: [KeyPressElement] = []
   private var keyParents: [Int] = []
@@ -142,6 +152,21 @@ public class UIContext {
   private var layoutAnimation: UIAnimation? = nil
   private var layoutGroups: [AnimationGroup] = []
   public private(set) var hitGrid = HittableGrid2D(position: .zero, size: int2(10, 10), cellSize: 50)
+
+  /// The pointer's shape: what is under it asks for, or what the element it pressed does. The
+  /// view shows it as a cursor.
+  public var pointerStyle: PointerStyle { self.hitGrid.pointerStyle }
+
+  /// Set when an element under the pointer changes its pointer style: re-resolved at the end of
+  /// the frame, without a hit test.
+  var pointerStyleStale = false
+
+  /// How many times anything invalidated the hit grid: a re-hover waits for a frame in which
+  /// this does not move, so it runs once content has come to rest rather than every frame of
+  /// an animation.
+  private var hitInvalidations: UInt32 = 0
+  /// How many times the hit grid was rebuilt. For tests.
+  private(set) var hitGridRebuilds = 0
   private var lastSize: float2 = .zero
   private var afterLayoutWork: [() -> Void] = []
 
@@ -181,6 +206,9 @@ public class UIContext {
     if kinds.contains(.treeOrder) {
       // The grid stores views in hit order, so a new order means a new grid.
       kinds.formUnion([.hitGrid, .render])
+    }
+    if kinds.contains(.hitGrid) {
+      self.hitInvalidations &+= 1
     }
     self.pending.formUnion(kinds)
   }
@@ -267,6 +295,7 @@ public class UIContext {
     root: Frame, size: float2, input: Input, graphics: Graphics2D, time: Double? = nil
   ) -> Void {
     let time = time ?? self.clock()
+    let hitInvalidationsAtStart = self.hitInvalidations
     if size != self.lastSize {
       self.lastSize = size
       self.invalidate(.layout)
@@ -285,7 +314,8 @@ public class UIContext {
 
     // `mouseDown`/`mouseUp` too: a click whose down and up both land between two frames is no
     // longer pressed by the time this runs, and would otherwise be missed.
-    if input.mouseMoved || input.mousePressed || input.mouseDown || input.mouseUp {
+    let pointerEvent = input.mouseMoved || input.mousePressed || input.mouseDown || input.mouseUp
+    if pointerEvent {
       if self.pending.contains(.treeOrder) {
         self.rebuildTreeOrder(root)
       }
@@ -296,7 +326,9 @@ public class UIContext {
       if input.leftMouseDown, !self.focusables.isEmpty {
         self.routeFocus(input)
       }
-      self.hitGrid.handleEvents(input)
+      self.hitGrid.updateHover(input)
+      self.hitGrid.handlePointer(input, time: time)
+      self.pointerStyleStale = false
     }
 
     // After the click, so a click and the typing after it that land in one frame go together.
@@ -343,6 +375,7 @@ public class UIContext {
         self.layoutGroups.forEach { self.animator.release($0) }
         self.layoutGroups.removeAll()
       }
+      assert(TextScope.depth == 0, "a TextStyleElement left its style pushed")
       // `.hitGrid` stays pending: `invalidate(.layout)` added it.
       self.pending.remove(.layout)
     }
@@ -352,6 +385,26 @@ public class UIContext {
       let work = self.afterLayoutWork
       self.afterLayoutWork.removeAll(keepingCapacity: true)
       work.forEach { $0() }
+    }
+
+    // Content moved under a pointer that did not — a layout change, a scroll — and has come to
+    // rest: hover what is under the pointer now. Once, when nothing will move it further: this
+    // frame moved nothing, or it ran the last step of the animations and no scroll arrived. An
+    // animation or a scroll's momentum costs no hit test per frame; the hover catches up when
+    // it ends.
+    let atRest = self.hitInvalidations == hitInvalidationsAtStart
+      || (self.animator.isIdle && input.scrollDelta == .zero)
+    if !pointerEvent, input.isPointerInView, self.pending.contains(.hitGrid), atRest {
+      if self.pending.contains(.treeOrder) {
+        self.rebuildTreeOrder(root)
+      }
+      self.rebuildHitGrid(graphics)
+      self.hitGrid.updateHover(input)
+      self.pointerStyleStale = false
+    }
+    if self.pointerStyleStale {
+      self.pointerStyleStale = false
+      self.hitGrid.resolvePointerStyle()
     }
   }
 
@@ -384,6 +437,7 @@ public class UIContext {
     var shadowClip = -1
     // The blur `renderer` draws with, as an index into `blurOrder`, or -1 for none.
     var blur = -1
+    let hasForegrounds = !self.foregroundOrder.isEmpty
     if self.clipOrder.isEmpty {
       for index in self.paintOrder.indices {
         if hasShadows, self.paintShadows[index] != shadow {
@@ -393,6 +447,9 @@ public class UIContext {
         if hasBlurs, self.paintBlurs[index] != blur {
           blur = self.paintBlurs[index]
           renderer.setBlur(blur < 0 ? 0 : self.blurResolved[blur])
+        }
+        if hasForegrounds {
+          self.setForeground(self.paintForegrounds[index], renderer)
         }
         let effect = self.paintEffects[index]
         self.paintOrder[index].render(renderer, effect < 0 ? .identity : self.effectResolved[effect])
@@ -420,6 +477,9 @@ public class UIContext {
           blur = self.paintBlurs[index]
           renderer.setBlur(blur < 0 ? 0 : self.blurResolved[blur])
         }
+        if hasForegrounds {
+          self.setForeground(self.paintForegrounds[index], renderer)
+        }
         let effect = self.paintEffects[index]
         self.paintOrder[index].render(renderer, effect < 0 ? .identity : self.effectResolved[effect])
       }
@@ -440,6 +500,9 @@ public class UIContext {
       renderer.resetClip()
       let lift = EffectState(opacity: DragSession.ghostOpacity, scale: 1, translate: drag.pointer - drag.start)
       for index in drag.ghostStart ..< drag.ghostEnd {
+        if hasForegrounds {
+          self.setForeground(self.paintForegrounds[index], renderer)
+        }
         let effect = self.paintEffects[index]
         self.paintOrder[index].render(renderer, lift.composed(with: effect < 0 ? .identity : self.effectResolved[effect]))
       }
@@ -450,7 +513,12 @@ public class UIContext {
     if blur >= 0 {
       renderer.setBlur(0)
     }
+    renderer.textForeground = nil
     self.pending.remove(.render)
+  }
+
+  private func setForeground(_ foreground: Int, _ renderer: Graphics2D) -> Void {
+    renderer.textForeground = foreground < 0 ? nil : self.foregroundOrder[foreground].displayedForeground
   }
 
   // Parents come first in `blurOrder`, so each one's parent is already resolved. Gaussians in a
@@ -611,7 +679,7 @@ public class UIContext {
     // Pre-order, so walking it backwards meets an element before the ones it is inside.
     for index in self.focusOrder.indices.reversed() {
       let element = self.focusOrder[index]
-      guard element.mounted, element.isFocusable,
+      guard self.focusClickable[index], element.mounted, element.isFocusable,
             ClipRect(position: element.position, size: element.size).contains(point)
       else { continue }
       let clip = self.focusClips[index]
@@ -681,9 +749,8 @@ public class UIContext {
       return
     }
 
-    self.hitGrid = .init(
-      position: self.hitGrid.position, size: newGridSize, cellSize: self.hitGrid.cellSize
-    )
+    // Resized, not replaced: what the pointer is hovering and pressing carries over.
+    self.hitGrid.resize(newGridSize)
     self.invalidate(.hitGrid)
   }
 
@@ -693,10 +760,14 @@ public class UIContext {
     if !self.clipOrder.isEmpty {
       self.resolveClips(withEffects: false)
     }
-    for index in self.hitOrder.indices.reversed() {
+    for index in self.hitOrder.indices {
       let clip = self.hitClips[index]
-      self.hitGrid.mapViewToGrid(self.hitOrder[index], clip < 0 ? nil : self.clipResolved[clip], renderer)
+      self.hitGrid.add(self.hitOrder[index], parent: self.hitParents[index], clip: clip < 0 ? nil : self.clipResolved[clip])
     }
+    for index in self.hitOrder.indices.reversed() {
+      self.hitGrid.mapViewToGrid(index, renderer)
+    }
+    self.hitGridRebuilds &+= 1
 
     self.pending.remove(.hitGrid)
   }
@@ -709,7 +780,10 @@ public class UIContext {
   /// Starts a drag of `payload` by `owner`, which alone may move, end or cancel it, from the
   /// pointer at `start`. `ghost` is drawn again under the pointer, or `preview` is, mounted for
   /// the drag. A nil payload is dropped nowhere: a list reordering its own rows.
-  func beginDrag(owner: UIElement, payload: Any?, ghost: UIElement?, preview: UIElement?, from start: float2) -> Void {
+  func beginDrag(
+    owner: UIElement, payload: Any?, ghost: UIElement?, preview: UIElement?, from start: float2,
+    textStyle: TextEnvironment = TextEnvironment()
+  ) -> Void {
     if self.drag != nil {
       self.cancelDrag()
     }
@@ -720,7 +794,12 @@ public class UIContext {
       // Once per drag, so `collect` finds where it sits in the paint order.
       self.invalidate(.treeOrder)
     }
-    if let preview {
+    if var preview {
+      // Laid out apart from the tree, so styled as its texts would be where it was dragged from.
+      if textStyle != TextEnvironment() {
+        let content = preview
+        preview = TextStyleElement(overrides: textStyle) { content }
+      }
       let layer = DragPreviewLayer(preview)
       layer.pointer = start
       drag.preview = layer
@@ -812,6 +891,8 @@ public class UIContext {
     self.blurParents.removeAll(keepingCapacity: true)
     self.blurEffects.removeAll(keepingCapacity: true)
     self.paintBlurs.removeAll(keepingCapacity: true)
+    self.foregroundOrder.removeAll(keepingCapacity: true)
+    self.paintForegrounds.removeAll(keepingCapacity: true)
     self.hitOrder.removeAll(keepingCapacity: true)
     self.effectOrder.removeAll(keepingCapacity: true)
     self.effectParents.removeAll(keepingCapacity: true)
@@ -820,6 +901,8 @@ public class UIContext {
     self.clipEffects.removeAll(keepingCapacity: true)
     self.paintClips.removeAll(keepingCapacity: true)
     self.hitClips.removeAll(keepingCapacity: true)
+    self.hitParents.removeAll(keepingCapacity: true)
+    self.focusClickable.removeAll(keepingCapacity: true)
     self.scrollOrder.removeAll(keepingCapacity: true)
     self.scrollClips.removeAll(keepingCapacity: true)
     self.focusOrder.removeAll(keepingCapacity: true)
@@ -834,13 +917,13 @@ public class UIContext {
       drag.ghostStart = 0
       drag.ghostEnd = 0
     }
-    self.collect(root, effect: -1, clip: -1, shadow: -1, blur: -1, key: -1, spine: -1, inFocusable: false, leaving: false)
+    self.collect(root, effect: -1, clip: -1, shadow: -1, blur: -1, foreground: -1, key: -1, hit: -1, spine: -1, inFocusable: false, leaving: false, noHit: false)
     for overlay in self.overlays {
-      self.collect(overlay, effect: -1, clip: -1, shadow: -1, blur: -1, key: -1, spine: -1, inFocusable: false, leaving: false)
+      self.collect(overlay, effect: -1, clip: -1, shadow: -1, blur: -1, foreground: -1, key: -1, hit: -1, spine: -1, inFocusable: false, leaving: false, noHit: false)
     }
     // Last, so it draws over the popovers too; as if leaving, so it is drawn and never hit.
     if let preview = self.drag?.preview {
-      self.collect(preview, effect: -1, clip: -1, shadow: -1, blur: -1, key: -1, spine: -1, inFocusable: false, leaving: true)
+      self.collect(preview, effect: -1, clip: -1, shadow: -1, blur: -1, foreground: -1, key: -1, hit: -1, spine: -1, inFocusable: false, leaving: true, noHit: false)
     }
     self.effectResolved = Array(repeating: .identity, count: self.effectOrder.count)
     self.shadowResolved = Array(repeating: ShadowState(color: .zero, sigma: 0, offset: .zero), count: self.shadowOrder.count)
@@ -875,8 +958,8 @@ public class UIContext {
   // elements only, or -1, and `inFocusable` is true under a focusable element. `leaving` is true under a child playing its
   // removal transition: still drawn, but no longer hit, focused or offered keys.
   private func collect(
-    _ element: UIElement, effect: Int, clip: Int, shadow: Int, blur: Int, key: Int, spine: Int, inFocusable: Bool,
-    leaving: Bool
+    _ element: UIElement, effect: Int, clip: Int, shadow: Int, blur: Int, foreground: Int, key: Int, hit: Int,
+    spine: Int, inFocusable: Bool, leaving: Bool, noHit: Bool
   ) -> Void {
     // Still laid out, but nothing under it is drawn, hit or scrolled.
     guard !element.isHidden else { return }
@@ -893,10 +976,14 @@ public class UIContext {
     var clip = clip
     var shadow = shadow
     var blur = blur
+    var foreground = foreground
     var key = key
+    var hit = hit
     var spine = spine
     var inFocusable = inFocusable
     let leaving = leaving || element.isLeaving
+    // `.allowsHitTesting(false)`: drawn, but the pointer passes through to what is under it.
+    let noHit = noHit || !element.allowsHitTesting
 
     // Not exclusive with drawing: a sliding `Background` draws itself with its own slide.
     if element.hasEffect {
@@ -910,13 +997,16 @@ public class UIContext {
       self.paintEffects.append(effect)
       self.paintShadows.append(shadow)
       self.paintBlurs.append(blur)
+      self.paintForegrounds.append(foreground)
       self.paintClips.append(clip)
-    } else if !leaving, let hittable = element as? any Hittable,
+    } else if !leaving, !noHit, let hittable = element as? any Hittable,
               self.hittableViews[ObjectIdentifier(hittable)] != nil {
+      self.hitParents.append(Int32(hit))
+      hit = self.hitOrder.count
       self.hitOrder.append(hittable)
       self.hitClips.append(clip)
     }
-    if !leaving, let scrollView = element as? ScrollView,
+    if !leaving, !noHit, let scrollView = element as? ScrollView,
        self.scrollViews[ObjectIdentifier(scrollView)] != nil {
       self.scrollOrder.append(scrollView)
       self.scrollClips.append(clip)
@@ -932,7 +1022,7 @@ public class UIContext {
       }
       self.keyOrder.append(handler)
     }
-    if !leaving, !self.dropTargets.isEmpty, let target = element as? DropDestinationBase,
+    if !leaving, !noHit, !self.dropTargets.isEmpty, let target = element as? DropDestinationBase,
        self.dropTargets[ObjectIdentifier(target)] != nil {
       self.dropOrder.append(target)
       self.dropClips.append(clip)
@@ -941,6 +1031,8 @@ public class UIContext {
        self.focusables[ObjectIdentifier(focusable)] != nil {
       self.focusOrder.append(focusable)
       self.focusClips.append(clip)
+      // Still reached with Tab, but a click passes through it.
+      self.focusClickable.append(!noHit)
       self.focusKeys.append(key)
       // The handlers wrapped round it are its own, from the outermost on its spine down. They
       // are consecutive: nothing else sits between them in pre-order.
@@ -966,6 +1058,10 @@ public class UIContext {
       blur = self.blurOrder.count
       self.blurOrder.append(blurElement)
     }
+    if let style = element as? TextStyleElement, style.displayedForeground != nil {
+      foreground = self.foregroundOrder.count
+      self.foregroundOrder.append(style)
+    }
     // After the element itself: a clip keeps in what is under it, not the element.
     if element.clipRect != nil {
       self.clipParents.append(clip)
@@ -979,8 +1075,8 @@ public class UIContext {
     }
     element.forEachChildInPaintOrder {
       self.collect(
-        $0, effect: effect, clip: clip, shadow: shadow, blur: blur, key: key, spine: spine, inFocusable: inFocusable,
-        leaving: leaving
+        $0, effect: effect, clip: clip, shadow: shadow, blur: blur, foreground: foreground, key: key, hit: hit,
+        spine: spine, inFocusable: inFocusable, leaving: leaving, noHit: noHit
       )
     }
   }

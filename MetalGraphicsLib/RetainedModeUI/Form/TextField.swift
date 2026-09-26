@@ -88,6 +88,8 @@ public class TextField : FormControl {
       if down { self.pressed(at: input.mousePosition.x, clicks: input.clickCount, extending: input.shiftPressed) }
     }
     pointer.onDrag = { [unowned self] input in self.dragged(to: input.mousePosition.x) }
+    // An I-beam over the text, as AppKit's fields show.
+    pointer.pointerStyle = .horizontalText
     self.refresh(nil)
   }
 
@@ -366,7 +368,7 @@ public class TextField : FormControl {
     }
     // The prompt is not text: its caret offsets are the empty text's.
     let measured = self.text.isEmpty ? "" : shown
-    self.box.offsets = caretOffsets(measured, style: TextStyle(fontSize: FormMetrics.font.size, font: FormMetrics.font.font))
+    self.box.offsets = caretOffsets(measured, font: FormMetrics.font)
     self.box.setSelection(caret: self.caret, anchor: self.anchor, context, force: true)
   }
 

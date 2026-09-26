@@ -27,10 +27,9 @@ public enum ButtonStyle : Sendable {
 /// `Button(action: self.close) { Image(…); Text("Close") }` or
 /// `Button { self.save() } label: { Text("Save") }`.
 ///
-/// The label's elements sit side by side. A `Text` directly in the label, left at the default
-/// color and font, takes the style's color and the form's font, and follows later style changes;
-/// one colored on purpose keeps its color, and a `Text` nested deeper (in a stack inside the
-/// label) is left alone.
+/// The label's elements sit side by side. Every `Text` in the label, however deep, draws in the
+/// style's color and follows later style changes, unless it was colored on purpose; it takes the
+/// form's font unless a font was set on it or around the button.
 public final class Button : FormControl {
   /// What a tap runs. `@Component` arms it on mount and clears it on unmount, like `onTap`.
   public var action: (() -> Void)?
@@ -42,8 +41,10 @@ public final class Button : FormControl {
   private let press: EffectElement
   private let face: ButtonFace
   private let label: HStack
-  /// The label's texts this button colored, recolored when the style changes.
-  private var tinted: [Text] = []
+  /// Around the label: the style's color and the form's font, for the texts in it.
+  private let labelStyle: TextStyleElement
+  /// What the pointer hits: the whole button.
+  private let hit: HittableView
 
   public convenience init(_ title: String, role: ButtonRole? = nil, action: (() -> Void)? = nil) {
     let text = Text(title)
@@ -62,15 +63,21 @@ public final class Button : FormControl {
     self.title = title
     let stack = HStack(spacing: 6)
     self.label = stack
-    let face = ButtonFace(role: role) { stack }
+    let labelStyle = TextStyleElement(
+      overrides: TextEnvironment().foregroundColor(Self.labelColor(.automatic, role)),
+      defaults: TextEnvironment().font(FormMetrics.font)
+    ) { stack }
+    self.labelStyle = labelStyle
+    let face = ButtonFace(role: role) { labelStyle }
     let press = EffectElement { face }
     self.face = face
     self.press = press
     let hit = HittableView(onTap: nil) { press }
+    // A pointing hand over it, as over a link.
+    hit.pointerStyle = .link
+    self.hit = hit
     super.init(content: hit)
-    let elements = label()
-    self.adopt(elements)
-    self.label.applyContent(elements)
+    self.label.applyContent(label())
     hit.onTap = { [unowned self] _ in
       guard !self.isDisabled else { return }
       self.action?()
@@ -93,7 +100,6 @@ public final class Button : FormControl {
 
   /// The door `@Component` attaches the label through.
   public func replaceChildren(_ elements: [UIElement], _ context: UIContext, animation: UIAnimation? = nil) -> Void {
-    self.adopt(elements)
     self.label.replaceChildren(elements, context, animation: animation)
   }
 
@@ -103,10 +109,7 @@ public final class Button : FormControl {
     self.face.setStyle(value, context, animation: animation)
     self.face.setPressed(false, context)
     self.press.setOpacity(1, context)
-    let color = self.labelColor
-    for text in self.tinted {
-      text.setForegroundColor(color, context, animation: animation)
-    }
+    self.labelStyle.setForegroundColor(Self.labelColor(value, self.role), context, animation: animation)
   }
 
   /// Built in `style`: `.buttonStyle(.bordered)`. Sets this button's own style and returns it.
@@ -114,46 +117,28 @@ public final class Button : FormControl {
     guard style != self.style else { return self }
     self.style = style
     self.face.style = style
-    let color = self.labelColor
-    for text in self.tinted {
-      _ = text.foregroundColor(color)
-    }
+    self.labelStyle.overrides.foreground = Self.labelColor(style, self.role)
     return self
   }
 
-  /// What a label's text is colored in this style.
-  private var labelColor: float4 {
-    switch self.style {
+  /// The pointer's shape over the button: a pointing hand when never set.
+  public func pointerStyle(_ style: PointerStyle?) -> Self {
+    self.hit.pointerStyle = style
+    return self
+  }
+
+  public func setPointerStyle(_ value: PointerStyle?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.hit.setPointerStyle(value, context, animation: animation)
+  }
+
+  /// What a label's text is colored in `style`.
+  private static func labelColor(_ style: ButtonStyle, _ role: ButtonRole?) -> float4 {
+    switch style {
     case .borderedProminent: return float4(1, 1, 1, 1)
-    case .plain: return self.role == .destructive ? FormMetrics.destructiveColor : FormMetrics.labelColor
-    case .automatic, .borderless, .bordered: return ButtonFace.tint(self.role)
+    case .plain: return role == .destructive ? FormMetrics.destructiveColor : FormMetrics.labelColor
+    case .automatic, .borderless, .bordered: return ButtonFace.tint(role)
     }
   }
-
-  /// Styles the label's texts left at the defaults, and remembers them for a later style change.
-  /// Texts that left the label are forgotten.
-  private func adopt(_ elements: [UIElement]) {
-    self.tinted.removeAll(keepingCapacity: true)
-    let color = self.labelColor
-    for element in elements {
-      guard let text = element as? Text else { continue }
-      if text.font.size == 16, text.font.font == nil {
-        _ = text.font(FormMetrics.font)
-      }
-      // Either never colored, or colored by this button before a branch brought it back.
-      if text.color == .black || self.adopted.contains(ObjectIdentifier(text)) {
-        _ = text.foregroundColor(color)
-        self.tinted.append(text)
-      }
-    }
-    for text in self.tinted {
-      self.adopted.insert(ObjectIdentifier(text))
-    }
-  }
-
-  /// Every text this button has colored: a branch swap brings a text back already colored, and
-  /// it has to be told apart from one colored on purpose.
-  private var adopted: Set<ObjectIdentifier> = []
 }
 
 /// What a button's label sits on: nothing in the text styles, a rounded bezel in the bordered

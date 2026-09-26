@@ -177,24 +177,37 @@ extension UIElement {
 extension UIElement: UIElementWrapping {}
 
 extension UIElementWrapping where Self: UIElement {
+  // Each of these sets its handler on the `HittableView` it is called on, when that is a plain
+  // one with the slot free, and wraps anything else in one: `.onTap { }.onHover { }` is one
+  // view, hit and hovered as one.
+
   public func onTap(_ callback: @escaping (Input) -> Void) -> HittableView {
-    HittableView(onTap: callback) {
-      self
-    }
+    let view = self.hittable { $0.onTap == nil }
+    view.onTap = callback
+    return view
   }
 
   public func onHover(_ callback: @escaping (Bool, Input) -> Void) -> HittableView {
-    HittableView(onHover: callback) {
-      self
-    }
+    let view = self.hittable { $0.onHover == nil }
+    view.onHover = callback
+    return view
   }
 
   /// Calls `callback` with true when the left button goes down on this element, and with false
   /// when it comes up again, wherever the pointer is by then.
   public func onPress(_ callback: @escaping (Bool, Input) -> Void) -> HittableView {
-    HittableView(onPress: callback) {
-      self
+    let view = self.hittable { $0.onPress == nil }
+    view.onPress = callback
+    return view
+  }
+
+  /// This element, when it is a plain `HittableView` that `isFree` accepts, or a new one
+  /// around it. A subclass — a draggable, a control's own — is always wrapped.
+  func hittable(_ isFree: (HittableView) -> Bool) -> HittableView {
+    if let view = self as? HittableView, type(of: view) == HittableView.self, isFree(view) {
+      return view
     }
+    return HittableView { self }
   }
 
   /// Sizes this element to a shape: the largest of that shape that fits what it is offered, or
@@ -257,6 +270,14 @@ extension UIElementWrapping where Self: UIElement {
   /// returns it.
   public func hidden() -> Self {
     self.isHidden = true
+    return self
+  }
+
+  /// With false, the pointer passes through this element and everything in it — no hover, tap,
+  /// press, scroll or drop — to what is underneath. It is still drawn, and still reached with
+  /// Tab.
+  public func allowsHitTesting(_ enabled: Bool) -> Self {
+    self.allowsHitTesting = enabled
     return self
   }
 

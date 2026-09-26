@@ -186,7 +186,11 @@ struct BodyParser {
   /// be written without a capture list.
   private func handlerClosures(_ call: FunctionCallExprSyntax, _ spec: ModifierSpec) -> [BoundHandler] {
     var bound: [BoundHandler] = []
-    if let handler = spec.handler {
+    if let handler = spec.handler, handler.isArgument {
+      if let argument = call.arguments.first(where: { $0.label == nil }) {
+        bound.append(BoundHandler(property: handler.property, closure: argument.expression.trimmed, adapter: handler.adapter))
+      }
+    } else if let handler = spec.handler {
       let label = handler.label ?? "action"
       let others = Set(spec.labeledHandlers.compactMap(\.label))
       let closure = call.trailingClosure
@@ -215,22 +219,34 @@ struct BodyParser {
     // Peel the chain from the outside in, then reverse so the constructor comes first.
     var calls: [FunctionCallExprSyntax] = []
     var current = expr
+    // Set when the root is `Text(…) + Text(…)`: the setters of its reactive operands.
+    var concatenationBound: [BoundArg] = []
 
     while true {
       guard let call = current.as(FunctionCallExprSyntax.self) else {
-        context.error(
-          "F4",
-          "'\(current.trimmedDescription)' is not an element the component macro recognises.",
-          at: current
-        )
-        return nil
+        switch self.concatenation(current) {
+        case .lowered(let call, let bound):
+          calls.append(call)
+          concatenationBound = bound
+        case .failed:
+          return nil
+        case .none:
+          context.error(
+            "F4",
+            "'\(current.trimmedDescription)' is not an element the component macro recognises.",
+            at: current
+          )
+          return nil
+        }
+        break
       }
       calls.append(call)
 
-      // A modifier is applied to another call. `self.row()` is a member access too, but its
-      // base is not a call — that is a helper method, and it is the root we report on.
-      if let member = call.calledExpression.as(MemberAccessExprSyntax.self),
-         let base = member.base, base.is(FunctionCallExprSyntax.self)
+      // A modifier is applied to another call, or to a parenthesised `+` of texts. `self.row()`
+      // is a member access too, but its base is not a call — that is a helper method, and it is
+      // the root we report on.
+      if let member = call.calledExpression.as(MemberAccessExprSyntax.self), let base = member.base,
+         base.is(FunctionCallExprSyntax.self) || base.is(TupleExprSyntax.self)
       {
         current = base            // a modifier: keep peeling
         continue
@@ -280,7 +296,8 @@ struct BodyParser {
     // Bindings and callbacks come out of the call first, so what is left binds as usual: a
     // lowered `isOn: self.wifi` is then just a reactive argument.
     guard let (loweredCall, ctorHandlers, namedContents) = lowerConstructor(ctorCall, typeSpec) else { return nil }
-    let (ctorBound, contentClosure) = parseConstructorArgs(loweredCall, typeSpec)
+    var (ctorBound, contentClosure) = parseConstructorArgs(loweredCall, typeSpec)
+    ctorBound += concatenationBound
     chain.append(
       ChainLink(
         field: Naming.node(path, 0), local: Naming.local(path, 0),
@@ -307,6 +324,7 @@ struct BodyParser {
         context.error("F4", message, at: member.declName)
         return nil
       }
+      guard checkTextLiteral(name, call) else { return nil }
       if spec.isScope {
         guard let scope = parseAnimationScope(call, path: path, upToLink: chain.count, index: scopes.count)
         else { return nil }
@@ -361,7 +379,11 @@ struct BodyParser {
       }
     }
 
-    return ElementIR(path: path, chain: chain, children: children, arity: typeSpec.arity, scopes: scopes, contents: contents)
+    var element = ElementIR(
+      path: path, chain: chain, children: children, arity: typeSpec.arity, scopes: scopes, contents: contents
+    )
+    self.foldTextStyles(&element)
+    return element
   }
 
   // MARK: - Animation scopes

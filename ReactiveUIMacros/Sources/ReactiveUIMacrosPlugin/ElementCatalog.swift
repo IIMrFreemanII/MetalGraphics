@@ -118,12 +118,17 @@ struct HandlerSpec {
   /// trailing closure, its `action:` closure, or else its first closure; set for the others,
   /// which are found by label, as an argument or a further trailing closure: `isTargeted:`.
   let label: String?
+  /// The handler is the modifier's first unlabelled argument, whatever expression it is, not a
+  /// closure: `.gesture(DragGesture().onChanged { … })`, whose closures capture `self` as a
+  /// handler's do. The chain is built with `placeholder` as the whole argument list instead.
+  let isArgument: Bool
 
-  init(property: String, placeholder: String, adapter: String? = nil, label: String? = nil) {
+  init(property: String, placeholder: String, adapter: String? = nil, label: String? = nil, isArgument: Bool = false) {
     self.property = property
     self.placeholder = placeholder
     self.adapter = adapter
     self.label = label
+    self.isArgument = isArgument
   }
 }
 
@@ -307,9 +312,12 @@ enum ElementCatalog {
       args: [ArgSpec(nil, "setAxes", animatable: true), ArgSpec("showsIndicators", "setShowsIndicators")],
       arity: .single
     ),
+    // `Text(value, format:)` and `Text(date, style:)` reformat a new value the way they were
+    // made to; the format and style themselves are constant.
     "Text": TypeSpec(
       name: "Text",
-      args: [ArgSpec(nil, "setText", animatable: true)],
+      args: [ArgSpec(nil, "setText", animatable: true), ArgSpec("verbatim", "setText", animatable: true),
+             ArgSpec("format", nil), ArgSpec("style", nil)],
       arity: .leaf
     ),
     "Image": TypeSpec(
@@ -450,6 +458,48 @@ enum ElementCatalog {
       arity: .leaf
     ),
   ]
+
+  /// What the text modifiers act on in place.
+  static let textStyled: Set<String> = ["Text", "TextStyleElement"]
+
+  /// The text modifiers that style a run: what an operand of `Text + Text` may have. The others
+  /// style a paragraph, and SwiftUI rejects them on an operand too.
+  static let runModifiers: Set<String> = [
+    "font", "foregroundColor", "foregroundStyle", "fontWeight", "fontDesign", "bold", "italic", "monospaced",
+    "monospacedDigit", "underline", "strikethrough", "kerning", "tracking", "baselineOffset",
+  ]
+  static let paragraphModifiers: Set<String> = [
+    "lineLimit", "multilineTextAlignment", "truncationMode", "lineSpacing", "minimumScaleFactor", "textCase",
+  ]
+  static var textModifiers: Set<String> { runModifiers.union(paragraphModifiers) }
+
+  /// Elements that hold no text the macro cannot see: every `Text` under them is written in the
+  /// body. A text style set around a subtree of only these, and `Text`s, is folded into those
+  /// texts at compile time. A control with a string label, a list's rows or a table's cells
+  /// hide theirs, so a style around them stays a `TextStyleElement`.
+  static let textFreeTypes: Set<String> = [
+    "Rectangle", "Background", "Frame", "Padding", "VStack", "HStack", "ZStack", "Grid", "GridRow",
+    "ViewThatFits", "LayoutView", "ExpandedFrame", "ScrollView", "Image", "VectorCanvas", "Circle", "Ellipse",
+    "RoundedRectangle", "Capsule", "Path", "Divider", "Spacer", "FlexFrame", "EmptyElement", "Form",
+  ]
+
+  /// Every one animates: colour and size interpolate, and what the others' relayout moves
+  /// slides.
+  static func textModifier(
+    _ name: String, labels: [String?] = [nil], setter: String?, animatable: Bool = true,
+    argSetters: [ArgSpec]? = nil, inPlaceOn: Set<String> = textStyled
+  ) -> ModifierSpec {
+    ModifierSpec(
+      name: name, labels: labels, produces: "TextStyleElement", setter: setter, combine: .identity,
+      animatable: animatable, inPlaceOn: inPlaceOn, wrapsOtherwise: true, argSetters: argSetters
+    )
+  }
+
+  /// What the macro sets a folded chain of constant text modifiers with, in place.
+  static let applyStyle = ModifierSpec(
+    name: "applyStyle", labels: [nil], produces: "TextStyleElement", setter: nil, combine: .identity,
+    inPlaceOn: textStyled
+  )
 
   /// What `.disabled` can be called on.
   static let formControls: Set<String> = [
@@ -669,10 +719,6 @@ enum ElementCatalog {
       name: "keyframes", labels: [nil, "trigger"],
       produces: "KeyframeElement", setter: "setTrigger", combine: .labeled("trigger")
     ),
-    "font": ModifierSpec(
-      name: "font", labels: [nil],
-      produces: "Text", setter: "setFont", combine: .identity, animatable: true, inPlaceOn: ["Text"]
-    ),
     "scrollDisabled": ModifierSpec(
       name: "scrollDisabled", labels: [nil],
       produces: "ScrollView", setter: "setScrollDisabled", combine: .identity, inPlaceOn: ["ScrollView"]
@@ -686,12 +732,40 @@ enum ElementCatalog {
       name: "id", labels: [nil],
       produces: "IDElement", setter: nil, combine: .identity
     ),
-    // `produces` is only a default: an in-place link is typed as its receiver.
-    "foregroundColor": ModifierSpec(
-      name: "foregroundColor", labels: [nil],
-      produces: "Text", setter: "setForegroundColor", combine: .identity, animatable: true,
-      inPlaceOn: ["Text", "Image"]
+    // Text styling. On a `Text` each sets its own style; on a `TextStyleElement` it adds to that
+    // element's; on anything else it wraps it in a `TextStyleElement`, whose style every text
+    // inside inherits. `produces` is only that last case's: an in-place link is typed as its
+    // receiver.
+    "font": textModifier("font", setter: "setFont"),
+    "foregroundColor": textModifier(
+      "foregroundColor", setter: "setForegroundColor", inPlaceOn: textStyled.union(["Image"])
     ),
+    "foregroundStyle": textModifier(
+      "foregroundStyle", setter: "setForegroundColor", inPlaceOn: textStyled.union(["Image"])
+    ),
+    "fontWeight": textModifier("fontWeight", setter: "setFontWeight"),
+    "fontDesign": textModifier("fontDesign", setter: "setFontDesign"),
+    "bold": textModifier("bold", setter: "setBold"),
+    "italic": textModifier("italic", setter: "setItalic"),
+    "monospaced": textModifier("monospaced", setter: "setMonospaced"),
+    "monospacedDigit": textModifier("monospacedDigit", labels: [], setter: nil),
+    "underline": textModifier(
+      "underline", labels: [nil, "color"], setter: nil,
+      argSetters: [ArgSpec(nil, "setUnderline", animatable: true), ArgSpec("color", "setUnderlineColor", animatable: true)]
+    ),
+    "strikethrough": textModifier(
+      "strikethrough", labels: [nil, "color"], setter: nil,
+      argSetters: [ArgSpec(nil, "setStrikethrough", animatable: true), ArgSpec("color", "setStrikethroughColor", animatable: true)]
+    ),
+    "kerning": textModifier("kerning", setter: "setKerning"),
+    "tracking": textModifier("tracking", setter: "setTracking"),
+    "baselineOffset": textModifier("baselineOffset", setter: "setBaselineOffset"),
+    "lineLimit": textModifier("lineLimit", setter: "setLineLimit"),
+    "multilineTextAlignment": textModifier("multilineTextAlignment", setter: "setMultilineTextAlignment"),
+    "truncationMode": textModifier("truncationMode", setter: "setTruncationMode"),
+    "lineSpacing": textModifier("lineSpacing", setter: "setLineSpacing"),
+    "minimumScaleFactor": textModifier("minimumScaleFactor", setter: "setMinimumScaleFactor"),
+    "textCase": textModifier("textCase", setter: "setTextCase"),
     // How an image is sized and drawn: constant, built once with it.
     "resizable": ModifierSpec(
       name: "resizable", labels: [], produces: "Image", setter: nil, combine: .identity,
@@ -773,6 +847,44 @@ enum ElementCatalog {
       produces: "HittableView", setter: nil, combine: .identity,
       handler: HandlerSpec(property: "onPress", placeholder: "{ _, _ in }"),
       inPlaceOn: vectorShapes, wrapsOtherwise: true
+    ),
+    // Pointer. At runtime each sets its part of the plain `HittableView` it is called on, when
+    // it has one free, and wraps anything else; the link is a `HittableView` either way. The
+    // coordinate space and click count are built once; the handler is armed on mount.
+    "pointerStyle": ModifierSpec(
+      name: "pointerStyle", labels: [nil],
+      produces: "HittableView", setter: "setPointerStyle", combine: .identity,
+      inPlaceOn: vectorShapes.union(["Button"]), wrapsOtherwise: true
+    ),
+    "onContinuousHover": ModifierSpec(
+      name: "onContinuousHover", labels: ["coordinateSpace", "perform"],
+      produces: "HittableView", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "onContinuousHover", placeholder: "{ _ in }", label: "perform"),
+      inPlaceOn: vectorShapes, wrapsOtherwise: true
+    ),
+    // Built with a placeholder taking the location, whichever overload was written; the adapter
+    // fits either closure to `tapAction`.
+    "onTapGesture": ModifierSpec(
+      name: "onTapGesture", labels: ["count", "coordinateSpace", "perform"],
+      produces: "HittableView", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "tapAction", placeholder: "{ _ in }", adapter: "HittableView.tapAction", label: "perform"),
+      inPlaceOn: vectorShapes, wrapsOtherwise: true
+    ),
+    // The gesture is armed whole: its closures capture `self`. Anything else in it is read
+    // then, on mount, and does not follow state.
+    "gesture": ModifierSpec(
+      name: "gesture", labels: [nil],
+      produces: "HittableView", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "gesture", placeholder: "(EmptyGesture())", isArgument: true),
+      inPlaceOn: vectorShapes, wrapsOtherwise: true
+    ),
+    "contentShape": ModifierSpec(
+      name: "contentShape", labels: [nil],
+      produces: "HittableView", setter: "setContentShape", combine: .identity
+    ),
+    "allowsHitTesting": ModifierSpec(
+      name: "allowsHitTesting", labels: [nil],
+      produces: "UIElement", setter: "setAllowsHitTesting", combine: .identity, inPlaceOnAny: true
     ),
     // Every overload makes the same element with the same handler, so one spec covers them. The
     // key, keys, characters and phases are built once.

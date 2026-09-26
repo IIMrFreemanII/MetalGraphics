@@ -1,4 +1,4 @@
-public class HittableView: SingleChildElement, Hittable {
+public class HittableView: SingleChildElement, Hittable, PointerHandling {
   public var position: SIMD2<Float> = .init()
   public var size: SIMD2<Float> = .init()
   public var isHovered: Bool = false
@@ -17,12 +17,29 @@ public class HittableView: SingleChildElement, Hittable {
   public var onPress: ((Bool, Input) -> Void)?
   /// Called as the pointer moves while the left button is held, after it went down on this view.
   public var onDrag: ((Input) -> Void)?
+  /// Its pointer style, continuous hover, tap gesture and `.gesture`: made by the first that is
+  /// set. See `PointerHandling`.
+  public var pointer: PointerHandlers?
+  /// `.contentShape(_:)`: where in its rect it is hit. Anywhere in it when nil.
+  public var hitShape: UIShape?
 
   public var hitPosition: float2 { self.position }
   public var hitSize: float2 { self.size }
 
   public func hitTest(_ point: float2) -> Bool {
-    pointInAABBoxTopLeftOrigin(point: point, position: self.position, size: self.size)
+    guard pointInAABBoxTopLeftOrigin(point: point, position: self.position, size: self.size) else { return false }
+    guard let shape = self.hitShape else { return true }
+    return shape.contains(point, in: ClipRect(position: self.position, size: self.size))
+  }
+
+  /// Fits a tap handler with or without a location to `tapAction`: what `@Component` arms
+  /// `.onTapGesture` through.
+  public static func tapAction(_ action: @escaping () -> Void) -> (float2) -> Void {
+    { _ in action() }
+  }
+
+  public static func tapAction(_ action: @escaping (float2) -> Void) -> (float2) -> Void {
+    action
   }
   
   public override func mount(_ context: UIContext) {

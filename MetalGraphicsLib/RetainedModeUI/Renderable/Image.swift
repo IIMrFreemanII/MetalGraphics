@@ -257,4 +257,9 @@ public final class Image : UIRenderableElement {
     self.color = color
     return self
   }
+
+  /// The same as `foregroundColor(_:)`, as SwiftUI spells it now.
+  public func foregroundStyle(_ color: float4) -> Self {
+    self.foregroundColor(color)
+  }
 }

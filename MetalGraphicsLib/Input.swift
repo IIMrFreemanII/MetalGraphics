@@ -66,6 +66,9 @@ extension Drag: CustomStringConvertible {
   public var prevMousePosition = float2()
   public var mousePosition = float2()
   public var mousePositionFromCenter = float2()
+  /// Whether the pointer is over the view. While it is, content moving under a still pointer
+  /// re-hovers what it is over now.
+  public var isPointerInView = false
 
   public var mouseDelta = float2()
   public var mouseScroll = float2()

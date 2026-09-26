@@ -143,6 +143,8 @@
 		5A7E00082E00000000000110 /* MultiChildElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00082E00000000000010 /* MultiChildElement.swift */; };
 		5A7E00092E00000000000112 /* LeafElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00092E00000000000012 /* LeafElement.swift */; };
 		5A7E00112E00000000000108 /* UIElement+ReactiveSetters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7E00112E00000000000008 /* UIElement+ReactiveSetters.swift */; };
+		63414E8C400C46101C9A8A0F /* PointerStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C4422A749F16736BE31F8AB /* PointerStyle.swift */; };
+		687E0E0C468B751C42D4FD1C /* TextStyleElement.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4444394B918CCC9A7144C4F /* TextStyleElement.swift */; };
 		718D373E59F078C493788C75 /* ScrollDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CA65E06B15F6759676FD7CA /* ScrollDemo.swift */; };
 		755A686CC11E4A52AD162450 /* Slider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7893978F9F56B511A85E3ABB /* Slider.swift */; };
 		77445278DE82D5EAF446099C /* ProposedSize.swift in Sources */ = {isa = PBXBuildFile; fileRef = 798406C8E2495018B9BCFE8D /* ProposedSize.swift */; };
@@ -157,17 +159,20 @@
 		7E57A0012F00000000000103 /* Text.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000003 /* Text.swift */; };
 		7E57A0012F00000000000104 /* GlyphSDF.metal in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000004 /* GlyphSDF.metal */; };
 		7E57A0012F00000000000105 /* TextDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000005 /* TextDemo.swift */; };
+		45DDA8ED2F1CEEBB0CA6C94B /* PointerDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 984A4D031CD2A8189EF9CE54 /* PointerDemo.swift */; };
 		7E57A0012F00000000000107 /* Demos.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000007 /* Demos.swift */; };
 		7E57A0012F00000000000108 /* LayoutDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000008 /* LayoutDemo.swift */; };
 		877BB6A2CF70ABBBC889D72B /* Picker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B77EF9B62CBFBF6DD7CC188D /* Picker.swift */; };
+		8B2331362D0BAEFF1440AF7F /* DragDropDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8025C1694A7F503958FE6A35 /* DragDropDemo.swift */; };
 		925EAEFEFC960B27880C050C /* GeometryReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3746BAE0BA2048948146A226 /* GeometryReader.swift */; };
 		95767CB04A8EA5BBCA07F1C5 /* DragAndDrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B3BA430FE19B6E3AE57A5EF /* DragAndDrop.swift */; };
+		95CD6C61372BDE341BF444C3 /* PointerHandlers.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA6F5A6CD80861FAC81CE101 /* PointerHandlers.swift */; };
 		96F5F42BE0B19FF329FFC2E9 /* Grid.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC93AA91A2F4BC10D645FD7E /* Grid.swift */; };
+		99D110C2961BD82981DF829D /* Gesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3817D1DDC6E994BE3EB16D22 /* Gesture.swift */; };
 		9D10EC6FB317D61A68BF0C70 /* LayoutModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2AE975F9083D1F9A9F53FC2 /* LayoutModifiers.swift */; };
 		A4AEB10083A896DA906F4F53 /* ContainersDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3F917A8B566C6616D321D5F /* ContainersDemo.swift */; };
 		A5A0EBFC752DFD04977625C5 /* Toggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41694BD945E750DA2F0B3929 /* Toggle.swift */; };
 		A7989F3092214DBFAE060A26 /* KeyboardDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 841A85879E2A4EF6BA2AEEFE /* KeyboardDemo.swift */; };
-		8B2331362D0BAEFF1440AF7F /* DragDropDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8025C1694A7F503958FE6A35 /* DragDropDemo.swift */; };
 		A7A000000000000000000100 /* UIAnimatable.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000000 /* UIAnimatable.swift */; };
 		A7A000000000000000000101 /* UIAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000001 /* UIAnimation.swift */; };
 		A7A000000000000000000102 /* UITransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7A000000000000000000002 /* UITransaction.swift */; };
@@ -188,8 +193,11 @@
 		E15FF08C7F25C17CA11E90CC /* Overlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E5B185E0DB879C381ECE0D2 /* Overlay.swift */; };
 		ED0071A8924E4C27A79FB79B /* KeyPress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D864408FFDD409D856FE5AC /* KeyPress.swift */; };
 		F4E7B4A31897CFA154F91694 /* Layout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 797228CDE3D12EADFDCA9E8B /* Layout.swift */; };
+		F984DEC15524FB6AF8C43D5A /* TextEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AC0842BDE7D845D994C5B4E /* TextEnvironment.swift */; };
 		FC04D1915E5351BFE67CE725 /* ZStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F03C2C1FA47ECB801E4F8 /* ZStack.swift */; };
+		FCE6597E56EF60DCC1C2856C /* PointerModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 442FFD19E7E51274658608F2 /* PointerModifiers.swift */; };
 		FE4D27901B1B562912B32104 /* Popover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05C4AA6CF5DA1CF0968951C4 /* Popover.swift */; };
+		FF74BED0DD1F0A9FD64C9641 /* TextFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34F0F88F6CA0C5CEA089A0EC /* TextFont.swift */; };
 		FFEB7D5EBC022A54402FDEDA /* ColorPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 440C4715081A8F657604D1C4 /* ColorPicker.swift */; };
 /* End PBXBuildFile section */
 
@@ -343,10 +351,15 @@
 		1A6E00042F00000000000004 /* GlassDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassDemo.swift; sourceTree = "<group>"; };
 		1E5B185E0DB879C381ECE0D2 /* Overlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Overlay.swift; sourceTree = "<group>"; };
 		2684E45F6B87B190EB3D6328 /* ScrollViewReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollViewReader.swift; sourceTree = "<group>"; };
+		34F0F88F6CA0C5CEA089A0EC /* TextFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextFont.swift; sourceTree = "<group>"; };
 		3746BAE0BA2048948146A226 /* GeometryReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeometryReader.swift; sourceTree = "<group>"; };
+		3817D1DDC6E994BE3EB16D22 /* Gesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gesture.swift; sourceTree = "<group>"; };
 		3866B6C27C02789620B7ADAD /* DisclosureGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisclosureGroup.swift; sourceTree = "<group>"; };
+		3C4422A749F16736BE31F8AB /* PointerStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointerStyle.swift; sourceTree = "<group>"; };
 		41694BD945E750DA2F0B3929 /* Toggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Toggle.swift; sourceTree = "<group>"; };
 		440C4715081A8F657604D1C4 /* ColorPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorPicker.swift; sourceTree = "<group>"; };
+		442FFD19E7E51274658608F2 /* PointerModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointerModifiers.swift; sourceTree = "<group>"; };
+		4AC0842BDE7D845D994C5B4E /* TextEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextEnvironment.swift; sourceTree = "<group>"; };
 		4E7A00000000000000000001 /* HotReload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotReload.swift; sourceTree = "<group>"; };
 		4E7A00000000000000000003 /* FileWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileWatcher.swift; sourceTree = "<group>"; };
 		4E7A00000000000000000005 /* ShaderReloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShaderReloader.swift; sourceTree = "<group>"; };
@@ -382,10 +395,11 @@
 		7E57A0012F00000000000003 /* Text.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Text.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000004 /* GlyphSDF.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = GlyphSDF.metal; sourceTree = "<group>"; };
 		7E57A0012F00000000000005 /* TextDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextDemo.swift; sourceTree = "<group>"; };
+		984A4D031CD2A8189EF9CE54 /* PointerDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointerDemo.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000007 /* Demos.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Demos.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000008 /* LayoutDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutDemo.swift; sourceTree = "<group>"; };
-		841A85879E2A4EF6BA2AEEFE /* KeyboardDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardDemo.swift; sourceTree = "<group>"; };
 		8025C1694A7F503958FE6A35 /* DragDropDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DragDropDemo.swift; sourceTree = "<group>"; };
+		841A85879E2A4EF6BA2AEEFE /* KeyboardDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardDemo.swift; sourceTree = "<group>"; };
 		8A18677F9A9E1EF81386C9EC /* DatePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePicker.swift; sourceTree = "<group>"; };
 		8D864408FFDD409D856FE5AC /* KeyPress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyPress.swift; sourceTree = "<group>"; };
 		92F1C597962AF70F2150EC48 /* Section.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Section.swift; sourceTree = "<group>"; };
@@ -404,6 +418,8 @@
 		B77EF9B62CBFBF6DD7CC188D /* Picker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Picker.swift; sourceTree = "<group>"; };
 		B8AE66C8436440699CF3938E /* Focusable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Focusable.swift; sourceTree = "<group>"; };
 		C3E08476B668B27B38DD6E8F /* Edge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Edge.swift; sourceTree = "<group>"; };
+		C4444394B918CCC9A7144C4F /* TextStyleElement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextStyleElement.swift; sourceTree = "<group>"; };
+		CA6F5A6CD80861FAC81CE101 /* PointerHandlers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PointerHandlers.swift; sourceTree = "<group>"; };
 		D990728057A0883980C42811 /* ViewThatFits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewThatFits.swift; sourceTree = "<group>"; };
 		E2AE975F9083D1F9A9F53FC2 /* LayoutModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutModifiers.swift; sourceTree = "<group>"; };
 		E3C6FEAE53CC9D27C79D39DB /* GridsDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GridsDemo.swift; sourceTree = "<group>"; };
@@ -535,6 +551,7 @@
 				8025C1694A7F503958FE6A35 /* DragDropDemo.swift */,
 				15A1B2C52C147B0E00C56203 /* ConditionalDemo.swift */,
 				7E57A0012F00000000000005 /* TextDemo.swift */,
+				984A4D031CD2A8189EF9CE54 /* PointerDemo.swift */,
 				1A6E00012F00000000000007 /* ImageDemo.swift */,
 				1A6E00022F00000000000009 /* VectorDemo.swift */,
 				1A6E00032F00000000000003 /* ShapesDemo.swift */,
@@ -823,6 +840,8 @@
 				5A7E00072E0000000000000E /* UIRenderableElement.swift */,
 				157C8D9B2C5188FC009CD7CE /* Rectangle.swift */,
 				7E57A0012F00000000000003 /* Text.swift */,
+				C4444394B918CCC9A7144C4F /* TextStyleElement.swift */,
+				4AC0842BDE7D845D994C5B4E /* TextEnvironment.swift */,
 				1A6E00012F00000000000006 /* Image.swift */,
 				157C8D8D2C504CF7009CD7CE /* Background.swift */,
 				1A6E00032F00000000000002 /* Border.swift */,
@@ -834,6 +853,10 @@
 			isa = PBXGroup;
 			children = (
 				159CB8D82CFCF4CC006E74C5 /* HittableView.swift */,
+				442FFD19E7E51274658608F2 /* PointerModifiers.swift */,
+				CA6F5A6CD80861FAC81CE101 /* PointerHandlers.swift */,
+				3817D1DDC6E994BE3EB16D22 /* Gesture.swift */,
+				3C4422A749F16736BE31F8AB /* PointerStyle.swift */,
 				B8AE66C8436440699CF3938E /* Focusable.swift */,
 				8D864408FFDD409D856FE5AC /* KeyPress.swift */,
 				0B3BA430FE19B6E3AE57A5EF /* DragAndDrop.swift */,
@@ -877,6 +900,7 @@
 			children = (
 				7E57A0012F00000000000001 /* SDFFont.swift */,
 				7E57A0012F00000000000002 /* TextLayout.swift */,
+				34F0F88F6CA0C5CEA089A0EC /* TextFont.swift */,
 			);
 			path = Text;
 			sourceTree = "<group>";
@@ -1050,6 +1074,7 @@
 				8B2331362D0BAEFF1440AF7F /* DragDropDemo.swift in Sources */,
 				15A1B2C62C147B0E00C56203 /* ConditionalDemo.swift in Sources */,
 				7E57A0012F00000000000105 /* TextDemo.swift in Sources */,
+				45DDA8ED2F1CEEBB0CA6C94B /* PointerDemo.swift in Sources */,
 				1A6E00012F00000000000107 /* ImageDemo.swift in Sources */,
 				1A6E00022F00000000000109 /* VectorDemo.swift in Sources */,
 				1A6E00032F00000000000103 /* ShapesDemo.swift in Sources */,
@@ -1125,7 +1150,10 @@
 				1A6E00022F00000000000108 /* VectorCanvas.swift in Sources */,
 				7E57A0012F00000000000101 /* SDFFont.swift in Sources */,
 				7E57A0012F00000000000102 /* TextLayout.swift in Sources */,
+				FF74BED0DD1F0A9FD64C9641 /* TextFont.swift in Sources */,
 				7E57A0012F00000000000103 /* Text.swift in Sources */,
+				687E0E0C468B751C42D4FD1C /* TextStyleElement.swift in Sources */,
+				F984DEC15524FB6AF8C43D5A /* TextEnvironment.swift in Sources */,
 				7E57A0012F00000000000104 /* GlyphSDF.metal in Sources */,
 				159419F92C14917A00C56203 /* String.swift in Sources */,
 				15A049E82C27163400D28009 /* Global.swift in Sources */,
@@ -1145,6 +1173,10 @@
 				157C8D902C504D29009CD7CE /* Frame.swift in Sources */,
 				157C8D722C4C57F4009CD7CE /* IMStack.swift in Sources */,
 				159CB8D92CFCF4D3006E74C5 /* HittableView.swift in Sources */,
+				FCE6597E56EF60DCC1C2856C /* PointerModifiers.swift in Sources */,
+				95CD6C61372BDE341BF444C3 /* PointerHandlers.swift in Sources */,
+				99D110C2961BD82981DF829D /* Gesture.swift in Sources */,
+				63414E8C400C46101C9A8A0F /* PointerStyle.swift in Sources */,
 				4C7FC7094BFF4D8890013ED2 /* Focusable.swift in Sources */,
 				ED0071A8924E4C27A79FB79B /* KeyPress.swift in Sources */,
 				95767CB04A8EA5BBCA07F1C5 /* DragAndDrop.swift in Sources */,

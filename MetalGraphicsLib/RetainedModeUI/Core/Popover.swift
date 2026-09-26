@@ -15,12 +15,22 @@ extension UIContext {
   /// A click outside the card, Escape, a scroll outside the card, or the anchor going away
   /// dismisses it; `onDismiss` runs once it is gone. It takes key presses: focus is cleared, so
   /// handlers in `content` that belong to no focusable element get them first.
+  ///
+  /// The popover is laid out apart from the tree, so the text style around the anchor does not
+  /// reach it: pass it as `textStyle`, with `textDefaults` under it, to style the texts inside as
+  /// if they were there. It is taken as it is now, and not updated while the popover is open.
   @discardableResult
   public func presentPopover(
     _ content: UIElement, anchor: any Hittable, alignment: HorizontalAlignment = .trailing,
+    textStyle: TextEnvironment? = nil, textDefaults: TextEnvironment = TextEnvironment(),
     onDismiss: (() -> Void)? = nil
   ) -> PopoverHandle {
     let handle = PopoverHandle()
+    var content = content
+    if textStyle != nil || textDefaults != TextEnvironment() {
+      let wrapped = content
+      content = TextStyleElement(overrides: textStyle ?? TextEnvironment(), defaults: textDefaults) { wrapped }
+    }
     let layer = PopoverLayer(content, anchor: anchor, alignment: alignment, onDismiss: onDismiss)
     layer.handle = handle
     handle.layer = layer

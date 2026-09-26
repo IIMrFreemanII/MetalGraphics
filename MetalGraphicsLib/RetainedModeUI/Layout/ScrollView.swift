@@ -82,6 +82,9 @@ public final class ScrollView : SingleChildElement {
 
   // Asks its content for its ideal length along the axes it scrolls, so the content takes what
   // it needs there: a `Rectangle` its ideal 10 points, not forever.
+  /// The text style this scroll view was last laid out under. See `positionContent`.
+  private var textScope = TextEnvironment()
+
   private func contentProposal(_ proposal: ProposedSize) -> ProposedSize {
     ProposedSize(
       width: self.axes.horizontal != 0 ? nil : proposal.width,
@@ -102,6 +105,7 @@ public final class ScrollView : SingleChildElement {
     let wasInScrollView = LazyStackViewport.inScrollView
     LazyStackViewport.inScrollView = true
     defer { LazyStackViewport.inScrollView = wasInScrollView }
+    self.textScope = TextScope.current
     self.contentSize = self.child?.calcSize(self.contentProposal(proposal)) ?? .zero
     self.size = proposal.replacingUnspecified(with: self.contentSize)
     return self.size
@@ -133,7 +137,11 @@ public final class ScrollView : SingleChildElement {
     let shown = ClipRect(position: self.position, size: self.size)
     LazyStackViewport.current = outer.map { $0.intersection(shown) } ?? shown
     defer { LazyStackViewport.current = outer }
-    child.calcPosition(self.position + slack - self.offset)
+    // A lazy stack builds and sizes the rows scrolled into view as it is placed, which may be
+    // outside a layout pass: under the text style it was laid out under, not whatever is current.
+    TextScope.with(self.textScope) {
+      child.calcPosition(self.position + slack - self.offset)
+    }
   }
 
 

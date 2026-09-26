@@ -48,7 +48,9 @@ effect.
 - **Cast once, not per frame.** `UIContext.collect` does `as?` checks when the tree order is
   rebuilt; the per-frame loops then work on concrete arrays.
 - **Work proportional to change, not tree size.** Gate on `pending` flags; cache and rebuild on
-  invalidation only (`rebuildTreeOrder`, `rebuildHitGrid`). Hit-testing runs only on mouse input.
+  invalidation only (`rebuildTreeOrder`, `rebuildHitGrid`). Hit-testing runs only on mouse input,
+  and once more when content moved under a still pointer comes to rest (the re-hover at the end
+  of `UIContext.update`): never once per frame of an animation or a scroll.
 - **Cull early.** Empty clips skip their draws; `Graphics2D.mapToGrid` does not file shapes
   clipped away entirely, which is what keeps long scrolled content cheap. New drawables must
   report tight bounds and respect the clip.

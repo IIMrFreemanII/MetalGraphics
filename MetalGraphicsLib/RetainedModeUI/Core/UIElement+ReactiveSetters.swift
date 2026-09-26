@@ -331,19 +331,218 @@ extension ExpandedFrame {
   }
 }
 
-// Color and size animate; a new face snaps. See `Text.restyle`.
+// Color and size animate; a new face snaps. See `Text.restyle`. The rest only relayout, and
+// skip a value that did not change.
 extension Text {
   public func setText(_ value: String, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.text else { return }
     self.text = value
     context.invalidate(.layout, animation: animation)
   }
 
-  public func setFont(_ value: TextFont, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
-    self.restyle(context, animation) { $0.font = value }
+  public func setFont(_ value: TextFont?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyle(context, animation) { $0.style.font = value }
   }
 
   public func setForegroundColor(_ value: float4, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
-    self.restyle(context, animation) { $0.color = value }
+    self.restyle(context, animation) { $0.style.foreground = value }
+  }
+
+  public func setFontWeight(_ value: TextFont.Weight?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.weight, value, context, animation)
+  }
+
+  public func setFontDesign(_ value: TextFont.Design?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.design, value, context, animation)
+  }
+
+  public func setBold(_ value: Bool, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.weight, value ? .bold : .regular, context, animation)
+  }
+
+  public func setItalic(_ value: Bool, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.italic, value, context, animation)
+  }
+
+  public func setMonospaced(_ value: Bool, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.monospaced, value, context, animation)
+  }
+
+  public func setUnderline(_ value: Bool, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.underline, TextDecorationStyle(isActive: value, color: self.style.underline?.color), context, animation)
+  }
+
+  public func setUnderlineColor(_ value: float4?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.underline, TextDecorationStyle(isActive: self.style.underline?.isActive ?? true, color: value), context, animation)
+  }
+
+  public func setStrikethrough(_ value: Bool, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.strikethrough, TextDecorationStyle(isActive: value, color: self.style.strikethrough?.color), context, animation)
+  }
+
+  public func setStrikethroughColor(_ value: float4?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(
+      \.strikethrough, TextDecorationStyle(isActive: self.style.strikethrough?.isActive ?? true, color: value), context, animation
+    )
+  }
+
+  public func setKerning(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.kerning, value, context, animation)
+  }
+
+  public func setTracking(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.tracking, value, context, animation)
+  }
+
+  public func setBaselineOffset(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.baselineOffset, value, context, animation)
+  }
+
+  public func setLineLimit(_ value: Int?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.lineLimit, .some(value), context, animation)
+  }
+
+  public func setMultilineTextAlignment(_ value: TextAlignment, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.alignment, value, context, animation)
+  }
+
+  public func setTruncationMode(_ value: TextTruncationMode, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.truncation, value, context, animation)
+  }
+
+  public func setLineSpacing(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.lineSpacing, value, context, animation)
+  }
+
+  public func setMinimumScaleFactor(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.minimumScaleFactor, value, context, animation)
+  }
+
+  public func setTextCase(_ value: TextCase?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.textCase, .some(value), context, animation)
+  }
+}
+
+// The colour only redraws, and animates; the rest relayout every text under it, and skip a
+// value that did not change.
+extension TextStyleElement {
+  public func setFont(_ value: TextFont?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.font, value, context, animation)
+  }
+
+  public func setFontWeight(_ value: TextFont.Weight?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.weight, value, context, animation)
+  }
+
+  public func setFontDesign(_ value: TextFont.Design?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.design, value, context, animation)
+  }
+
+  public func setBold(_ value: Bool, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.weight, value ? .bold : .regular, context, animation)
+  }
+
+  public func setItalic(_ value: Bool, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.italic, value, context, animation)
+  }
+
+  public func setMonospaced(_ value: Bool, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.monospaced, value, context, animation)
+  }
+
+  public func setUnderline(_ value: Bool, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.underline, TextDecorationStyle(isActive: value, color: self.overrides.underline?.color), context, animation)
+  }
+
+  public func setUnderlineColor(_ value: float4?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(
+      \.underline, TextDecorationStyle(isActive: self.overrides.underline?.isActive ?? true, color: value), context, animation
+    )
+  }
+
+  public func setStrikethrough(_ value: Bool, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(
+      \.strikethrough, TextDecorationStyle(isActive: value, color: self.overrides.strikethrough?.color), context, animation
+    )
+  }
+
+  public func setStrikethroughColor(_ value: float4?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(
+      \.strikethrough, TextDecorationStyle(isActive: self.overrides.strikethrough?.isActive ?? true, color: value),
+      context, animation
+    )
+  }
+
+  public func setKerning(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.kerning, value, context, animation)
+  }
+
+  public func setTracking(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.tracking, value, context, animation)
+  }
+
+  public func setBaselineOffset(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.baselineOffset, value, context, animation)
+  }
+
+  public func setLineLimit(_ value: Int?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.lineLimit, .some(value), context, animation)
+  }
+
+  public func setMultilineTextAlignment(_ value: TextAlignment, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.alignment, value, context, animation)
+  }
+
+  public func setTruncationMode(_ value: TextTruncationMode, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.truncation, value, context, animation)
+  }
+
+  public func setLineSpacing(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.lineSpacing, value, context, animation)
+  }
+
+  public func setMinimumScaleFactor(_ value: Float, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.minimumScaleFactor, value, context, animation)
+  }
+
+  public func setTextCase(_ value: TextCase?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.restyleLayout(\.textCase, .some(value), context, animation)
+  }
+}
+
+// The pointer's shape changes at once, never animated. Over what the pointer is on, it is
+// re-resolved at the end of the frame, with no hit test.
+extension HittableView {
+  public func setPointerStyle(_ value: PointerStyle?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.pointerStyle else { return }
+    self.pointerStyle = value
+    if self.isHovered || self.isPressed {
+      context.pointerStyleStale = true
+    }
+  }
+
+  /// Read live by `hitTest`: nothing to invalidate.
+  public func setContentShape(_ value: UIShape, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.hitShape = value
+  }
+}
+
+extension VectorShape {
+  public func setPointerStyle(_ value: PointerStyle?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.pointerStyle else { return }
+    self.pointerStyle = value
+    if self.isHovered || self.isPressed {
+      context.pointerStyleStale = true
+    }
+  }
+}
+
+extension UIElement {
+  /// Changes what the pointer can reach, so the hit order is rebuilt; once, never animated.
+  public func setAllowsHitTesting(_ value: Bool, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.allowsHitTesting else { return }
+    self.allowsHitTesting = value
+    context.invalidate(.treeOrder)
   }
 }
 

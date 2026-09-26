@@ -202,6 +202,8 @@ public class MyMTKView: MTKView {
     self.input.mousePosition = outside
     self.input.mousePositionFromCenter = outside
     self.input.prevMousePosition = outside
+    self.input.isPointerInView = false
+    NSCursor.arrow.set()
   }
 
   override public func mouseEntered(with event: NSEvent) {
@@ -210,6 +212,8 @@ public class MyMTKView: MTKView {
 
   func updateInput(with event: NSEvent) {
     let position = convert(event.locationInWindow, from: nil)
+    // A drag goes on outside the view, and still reports where it is.
+    self.input.isPointerInView = self.bounds.contains(position)
 
     let newX = Float(position.x.clamped(to: 0.0...CGFloat.greatestFiniteMagnitude))
     // flip because origin in bottom-left corner
@@ -266,12 +270,77 @@ public class MyMTKView: MTKView {
       removeTrackingArea(item)
     }
 
+    // The visible rect, in the view's own coordinates, kept up to date by AppKit.
     addTrackingArea(
       NSTrackingArea(
-        rect: frame,
-        options: [.activeInKeyWindow, .mouseMoved, .mouseEnteredAndExited],
+        rect: .zero,
+        options: [.activeInKeyWindow, .mouseMoved, .mouseEnteredAndExited, .cursorUpdate, .inVisibleRect],
         owner: self
       )
     )
+  }
+
+  // MARK: - Pointer style
+
+  /// The cursor over the view: `UIContext.pointerStyle`, set by the renderer every frame and
+  /// applied only when it changes, and only while the pointer is over the view, so another view
+  /// keeps its own.
+  public var pointerStyle: PointerStyle = .default {
+    didSet {
+      guard self.pointerStyle != oldValue else { return }
+      if Self.logsCursor {
+        print("[cursor] \(self.pointerStyle)")
+      }
+      if self.input.isPointerInView {
+        Self.cursor(for: self.pointerStyle).set()
+      }
+    }
+  }
+
+  /// `MG_LOG_CURSOR=1` prints each change of cursor, for checking it from outside the app.
+  private static let logsCursor = ProcessInfo.processInfo.environment["MG_LOG_CURSOR"] != nil
+
+  // AppKit sets the arrow back when the pointer comes into the view; this is where it asks.
+  override public func cursorUpdate(with event: NSEvent) {
+    Self.cursor(for: self.pointerStyle).set()
+  }
+
+  static func cursor(for style: PointerStyle) -> NSCursor {
+    switch style.kind {
+    case .default: return .arrow
+    case .link: return .pointingHand
+    case .horizontalText: return .iBeam
+    case .verticalText: return .iBeamCursorForVerticalLayout
+    case .rectSelection: return .crosshair
+    case .grabIdle: return .openHand
+    case .grabActive: return .closedHand
+    case .zoomIn: return .zoomIn
+    case .zoomOut: return .zoomOut
+    case .columnResize(let directions):
+      var horizontal: NSHorizontalDirection.Set = []
+      if directions.contains(.leading) { horizontal.insert(.left) }
+      if directions.contains(.trailing) { horizontal.insert(.right) }
+      return .columnResize(directions: horizontal)
+    case .rowResize(let directions):
+      var vertical: NSVerticalDirection.Set = []
+      if directions.contains(.up) { vertical.insert(.up) }
+      if directions.contains(.down) { vertical.insert(.down) }
+      return .rowResize(directions: vertical)
+    case .frameResize(let position, let directions):
+      var set: NSCursor.FrameResizeDirection.Set = []
+      if directions.contains(.inward) { set.insert(.inward) }
+      if directions.contains(.outward) { set.insert(.outward) }
+      let edge: NSCursor.FrameResizePosition = switch position {
+      case .top: .top
+      case .leading: .left
+      case .bottom: .bottom
+      case .trailing: .right
+      case .topLeading: .topLeft
+      case .topTrailing: .topRight
+      case .bottomLeading: .bottomLeft
+      case .bottomTrailing: .bottomRight
+      }
+      return .frameResize(position: edge, directions: set)
+    }
   }
 }

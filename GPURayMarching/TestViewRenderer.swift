@@ -35,6 +35,8 @@ class TestViewRenderer: ViewRenderer {
     }
 
     self.uiContext.update(root: self.root, size: self.windowSize, input: self.input, graphics: graphics)
+    // A cursor is set only when it changes, so this costs a compare on an idle frame.
+    (view as? MyMTKView)?.pointerStyle = self.uiContext.pointerStyle
 
     // Nothing changed since the last frame, so there is nothing new to present: the layer keeps
     // showing the last drawable. A running animation keeps `needsRender` set every frame.

@@ -18,11 +18,23 @@ import simd
   /// Called as the pointer moves while the left button is held, after it went down on this view,
   /// wherever the pointer is by then.
   var onDrag: ((Input) -> Void)? { get }
+  /// Its pointer style, continuous hover, tap gesture and `.gesture`, when it has any.
+  var pointer: PointerHandlers? { get }
 
   /// Whether `point` — window top left origin, y down, in points — hits it.
   func hitTest(_ point: float2) -> Bool
 }
 
 extension Hittable {
-  var handlesEvents: Bool { self.onTap != nil || self.onHover != nil || self.onPress != nil || self.onDrag != nil }
+  /// Whether the pointer has anything to deliver to it. One that has nothing is passed over:
+  /// it neither takes the pointer nor stops it reaching what is under it.
+  var handlesEvents: Bool {
+    self.onTap != nil || self.onHover != nil || self.onPress != nil || self.onDrag != nil
+      || self.pointer?.handlesEvents == true
+  }
+
+  /// Whether a left press on it goes to it.
+  var handlesPress: Bool {
+    self.onPress != nil || self.onDrag != nil || self.pointer?.handlesPress == true
+  }
 }

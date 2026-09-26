@@ -38,6 +38,8 @@ public final class Picker : FormControl {
   private var menu: PopoverHandle?
   /// The menu row the arrow keys are on.
   private var highlighted = -1
+  /// The text style the picker was last laid out under, which its menu's options take too.
+  private var textScope = TextEnvironment()
 
   public init<T: Hashable>(
     _ label: String, selection: T, onSelectionChange: ((AnyHashable) -> Void)? = nil,
@@ -89,12 +91,6 @@ public final class Picker : FormControl {
   /// style change, never for a new selection.
   private func rebuild(_ animation: UIAnimation?) {
     self.marks.removeAll(keepingCapacity: true)
-    for option in self.options {
-      if let text = option as? Text, text.font.size == 16, text.font.font == nil {
-        // Drawn in the form's font unless the option set its own.
-        _ = text.font(FormMetrics.font)
-      }
-    }
 
     let label = self.label
     let tree: UIElement
@@ -137,7 +133,15 @@ public final class Picker : FormControl {
     if self.style != .menu {
       self.menuButton = nil
     }
-    self.setContent(tree, animation: animation)
+    // Options are drawn in the form's font unless they, or something around the picker, set one.
+    self.setContent(TextStyleElement(defaults: Self.optionStyle) { tree }, animation: animation)
+  }
+
+  private static let optionStyle = TextEnvironment().font(FormMetrics.font)
+
+  public override func calcSize(_ proposal: ProposedSize) -> float2 {
+    self.textScope = TextScope.current
+    return super.calcSize(proposal)
   }
 
   /// Each option wrapped in its mark and a tap target, in option order.
@@ -195,7 +199,9 @@ public final class Picker : FormControl {
     // On the selected option, as a macOS menu opens.
     self.highlighted = -1
     self.highlight(self.options.firstIndex { $0.tagValue == self.selection } ?? -1)
-    self.menu = context.presentPopover(keys, anchor: button, alignment: .trailing) { [weak self] in
+    self.menu = context.presentPopover(
+      keys, anchor: button, alignment: .trailing, textStyle: self.textScope, textDefaults: Self.optionStyle
+    ) { [weak self] in
       guard let self else { return }
       self.menu = nil
       self.marks.removeAll(keepingCapacity: true)

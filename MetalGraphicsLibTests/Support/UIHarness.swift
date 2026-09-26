@@ -106,12 +106,13 @@ final class UIHarness {
     self.step()
   }
 
-  /// A press and a release at `point`, a frame each, as a real click arrives.
-  func click(at point: float2) {
+  /// A press and a release at `point`, a frame each, as a real click arrives. `count` is the
+  /// click's number in a run of them: 2 for the second click of a double click.
+  func click(at point: float2, count: Int = 1) {
     self.setMouse(point)
     self.input.leftMousePressed = true
     self.input.leftMouseDown = true
-    self.input.clickCount = 1
+    self.input.clickCount = count
     self.step()
     self.input.leftMousePressed = false
     self.input.leftMouseUp = true
@@ -126,6 +127,27 @@ final class UIHarness {
     self.input.clickCount = 1
     self.step()
   }
+
+  /// Two clicks at `point`, as AppKit reports a double click: the second counts 2.
+  func doubleClick(at point: float2) {
+    self.click(at: point, count: 1)
+    self.click(at: point, count: 2)
+  }
+
+  /// The pointer leaving the window, as `MyMTKView.mouseExited` reports it.
+  func mouseExit() {
+    let input = self.input
+    let outside = float2(repeating: -1_000_000)
+    input.mouseDelta = outside - input.prevMousePosition
+    input.mousePosition = outside
+    input.mousePositionFromCenter = outside
+    input.prevMousePosition = outside
+    input.isPointerInView = false
+    self.step()
+  }
+
+  /// The pointer's shape, as the view would show it.
+  var pointerStyle: PointerStyle { self.context.pointerStyle }
 
   func click(on hittable: any Hittable) {
     self.click(at: hittable.hitPosition + hittable.hitSize * 0.5)
@@ -187,6 +209,7 @@ final class UIHarness {
     input.mousePosition = point
     input.prevMousePosition = point
     input.mousePositionFromCenter = (point - self.size * 0.5) * float2(1, -1)
+    input.isPointerInView = ClipRect(position: .zero, size: self.size).contains(point)
   }
 
   // MARK: - Keys

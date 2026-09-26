@@ -52,6 +52,12 @@ struct CodeGen {
       decls.append("private var \(raw: Naming.tag(branch.path)): Int = -1")
       decls.append("private var \(raw: Naming.slot(branch.path)): [UIElement] = []")
     }
+    // A folded text style is built once, however many texts it is written into.
+    forEachElement { element in
+      for constant in element.styleConstants {
+        decls.append("private static let \(raw: constant.field): TextEnvironment = \(raw: constant.value)")
+      }
+    }
     // A constant animation is built once. For a spring that also means its coefficients are.
     forEachElement { element in
       for scope in element.scopes {
@@ -138,11 +144,17 @@ struct CodeGen {
         // through the public setChild/replaceChildren door. A list keeps its trailing closure,
         // which is a row factory rather than content.
         lines.append("let \(link.local) = \(constructorExpr(call, stripContent: type.takesContent))")
+        // The styles of the containers around a text, folded into it: innermost first.
+        for style in element.inheritedStyles {
+          lines.append("_ = \(link.local).inheritStyle(\(style))")
+        }
       case .modifier(let call, let spec):
         // Call the modifier itself rather than its wrapper's constructor: the modifiers are
         // public, the wrappers' initializers are not, and this preserves the chain exactly.
         let previous = element.chain[index - 1].local
         lines.append("let \(link.local) = \(previous)\(modifierSuffix(call, spec))")
+      case .passThrough:
+        lines.append("let \(link.local) = \(element.chain[index - 1].local)")
       }
       lines.append("self.\(link.field) = \(link.local)")
     }
@@ -675,6 +687,10 @@ struct CodeGen {
 
     // A handler's real closure is assigned in `__armHandlers`; the chain only needs something of
     // the right arity to produce the element with.
+    if let handler = spec.handler, handler.isArgument {
+      // The whole argument is the handler: the placeholder stands in for it.
+      return ".\(member.declName.baseName.text)\(handler.placeholder)"
+    }
     if let handler = spec.handler {
       // Any other arguments are kept, as written; only the handler is swapped for a placeholder.
       // An `action:` closure is the handler too, when it is not written trailing.

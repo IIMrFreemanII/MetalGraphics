@@ -383,22 +383,6 @@ struct DiagnosticsTests {
     )
   }
 
-  @Test("F13: an in-place modifier must be called on its own type, not on a wrapper")
-  func inPlaceModifierOnWrapper() {
-    assertMacroExpansion(
-      component("    Text(\"a\").padding(Inset(all: 1)).font(.system(size: 12))"),
-      expandedSource: stubsOnly("    Text(\"a\").padding(Inset(all: 1)).font(.system(size: 12))"),
-      diagnostics: [
-        DiagnosticSpec(
-          message: "'.font' applies to Text only; call it directly on the Text, before 'Padding' wraps it.",
-          line: 6, column: 38
-        )
-      ],
-      macros: ["Component": ComponentMacro.self],
-      applyFixIts: [], fixedSource: nil
-    )
-  }
-
   @Test("F13: buttonStyle must be called on the Button, not on a wrapper")
   func buttonStyleOnWrapper() {
     assertMacroExpansion(
@@ -423,22 +407,6 @@ struct DiagnosticsTests {
       diagnostics: [
         DiagnosticSpec(
           message: "'.resizable' applies to Image or VectorCanvas only; call it directly on the Image or VectorCanvas, before 'Padding' wraps it.",
-          line: 6, column: 39
-        )
-      ],
-      macros: ["Component": ComponentMacro.self],
-      applyFixIts: [], fixedSource: nil
-    )
-  }
-
-  @Test("F13: a modifier in place on several types names them all")
-  func sharedInPlaceModifierOnWrapper() {
-    assertMacroExpansion(
-      component("    Image(\"a\").padding(Inset(all: 1)).foregroundColor(.red)"),
-      expandedSource: stubsOnly("    Image(\"a\").padding(Inset(all: 1)).foregroundColor(.red)"),
-      diagnostics: [
-        DiagnosticSpec(
-          message: "'.foregroundColor' applies to Image or Text only; call it directly on the Image or Text, before 'Padding' wraps it.",
           line: 6, column: 39
         )
       ],

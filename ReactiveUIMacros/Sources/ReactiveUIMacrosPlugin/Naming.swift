@@ -50,6 +50,10 @@ enum Naming {
   /// scopes written back to back cover the same links.
   static func animationConstant(_ path: String, _ index: Int) -> String { "__anim\(path)_\(index)" }
 
+  /// A constant text style the macro folded out of a chain, hoisted into a `static let`: named
+  /// by the element's path and the link it starts at.
+  static func textStyle(_ path: String, _ link: Int) -> String { "__style\(path)_\(link)" }
+
   /// The update methods' local holding `UITransaction.animation`, for bindings no scope claims.
   static let transaction = "transaction"
 

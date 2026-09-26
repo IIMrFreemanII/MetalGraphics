@@ -72,8 +72,8 @@
     "semantic_hash": "65db8ecbe02e10fe2653529d5387285c"
   },
   "MetalGraphicsLib/Extentions/Array.swift": {
-    "mtime": 1790439472.2056158,
-    "seen": 1790439483.5778089,
+    "mtime": 1790439602.3852108,
+    "seen": 1790443838.42588,
     "ast_hash": "07b1b0c8cbb6c2256dc7f0736f14d8ac",
     "semantic_hash": ""
   },
@@ -114,9 +114,9 @@
     "semantic_hash": "d5cd50cd8272b709721547f37d6593c8"
   },
   "MetalGraphicsLib/Graphics/2D/Graphics2D.swift": {
-    "mtime": 1790434532.723684,
-    "seen": 1790435107.52202,
-    "ast_hash": "d52f498d69ca2bff0a40a52687684fd1",
+    "mtime": 1790442423.8452265,
+    "seen": 1790443838.4258869,
+    "ast_hash": "c8c10ea3778209abc62ba58a98c627e3",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/Graphics/2D/Shapes2D/Circle.swift": {
@@ -138,15 +138,15 @@
     "semantic_hash": "45dd923c137696a67e95885205b0f5d9"
   },
   "MetalGraphicsLib/Graphics/2D/Text/SDFFont.swift": {
-    "mtime": 1790202980.633808,
-    "seen": 1790270199.5811489,
-    "ast_hash": "04a762d5cc34595f163cea8e028829a9",
+    "mtime": 1790442988.113878,
+    "seen": 1790443838.425896,
+    "ast_hash": "ef213f28605ad477e3db52bc4d304c4e",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/Graphics/2D/Text/TextLayout.swift": {
-    "mtime": 1790288651.7547703,
-    "seen": 1790290980.350255,
-    "ast_hash": "48386f245ab36a7fd47ce2782550e0f2",
+    "mtime": 1790441893.410393,
+    "seen": 1790443838.425898,
+    "ast_hash": "1c3e1751564ead64613b600070f3af68",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/Graphics/3D/Graphics3D.swift": {
@@ -360,9 +360,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Core/UIContext.swift": {
-    "mtime": 1790439472.2058797,
-    "seen": 1790439483.5778859,
-    "ast_hash": "74b815da1e68ee83828c3338253102d6",
+    "mtime": 1790442480.4765935,
+    "seen": 1790443838.4259489,
+    "ast_hash": "9d5574ad79637be23a38521133881c11",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Core/UIElement+Modifiers.swift": {
@@ -372,15 +372,15 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Core/UIElement+ReactiveSetters.swift": {
-    "mtime": 1790439472.206112,
-    "seen": 1790439483.577888,
-    "ast_hash": "3ed77f06d656ff006e8c5189b5100ef8",
+    "mtime": 1790442398.2059956,
+    "seen": 1790443838.425951,
+    "ast_hash": "bfb6a7937352cc941096fbc04e480762",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Core/UIElement.swift": {
-    "mtime": 1790293616.1957095,
-    "seen": 1790293955.403948,
-    "ast_hash": "d0783785a02d566ced456278897522e0",
+    "mtime": 1790443678.7182376,
+    "seen": 1790443838.425952,
+    "ast_hash": "75a85c6bc8c0e56c9fc740cc015fb65d",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Core/UIElementBuilder.swift": {
@@ -468,9 +468,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Renderable/Text.swift": {
-    "mtime": 1790274585.098005,
-    "seen": 1790276588.87427,
-    "ast_hash": "41f54d10836e22ea3c90a23f2c27d981",
+    "mtime": 1790443262.41643,
+    "seen": 1790443838.425993,
+    "ast_hash": "482b7854d9ea51f980841d6f27950339",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Renderable/UIRenderableElement.swift": {
@@ -624,20 +624,20 @@
     "semantic_hash": "9bf2fdae0d26927b4742b7ac8b8a26d0"
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/BodyParser.swift": {
-    "mtime": 1790439472.2071614,
-    "seen": 1790439483.5783129,
-    "ast_hash": "20039a80ec2a960e3bebc9c2e68ba057",
+    "mtime": 1790443424.2878287,
+    "seen": 1790443838.426035,
+    "ast_hash": "129971d1533b034b9a5d5b8c380e4a74",
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/CodeGen.swift": {
-    "mtime": 1790439472.2073777,
-    "seen": 1790439483.578314,
-    "ast_hash": "19e76ad522434d6873509b20e4604a7b",
+    "mtime": 1790443348.3990476,
+    "seen": 1790443838.426036,
+    "ast_hash": "1720e5aa3b886de2f97b7ca2e8a07e52",
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/ComponentMacro.swift": {
-    "mtime": 1790439472.2075498,
-    "seen": 1790439483.578315,
+    "mtime": 1790439602.388956,
+    "seen": 1790443838.426036,
     "ast_hash": "2694eb6125e93d27607825827bf177fc",
     "semantic_hash": ""
   },
@@ -654,21 +654,21 @@
     "semantic_hash": "851a425431ab876a65ad81689c026419"
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/ElementCatalog.swift": {
-    "mtime": 1790439472.2077627,
-    "seen": 1790439483.578318,
-    "ast_hash": "20608f7eb8972f71c484613cdd1a7d04",
+    "mtime": 1790443544.1327353,
+    "seen": 1790443838.426039,
+    "ast_hash": "7aa9354018ed8b7e2d96b40b3fa8f935",
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/IR.swift": {
-    "mtime": 1790288547.8348744,
-    "seen": 1790290980.350392,
-    "ast_hash": "aa842c54f3029a559b18423798c4d1f2",
+    "mtime": 1790443348.3986242,
+    "seen": 1790443838.4260402,
+    "ast_hash": "c2103357bd5252996a7de0aef369109b",
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/Naming.swift": {
-    "mtime": 1790439472.2081387,
-    "seen": 1790439483.5783198,
-    "ast_hash": "135c831610d4a4252fd47a92476f6de2",
+    "mtime": 1790443348.398843,
+    "seen": 1790443838.4260402,
+    "ast_hash": "d9827aab5f4ff82d40d575429667cacc",
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/Plugin.swift": {
@@ -696,14 +696,14 @@
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Tests/ReactiveUIMacrosTests/DiagnosticsTests.swift": {
-    "mtime": 1790439472.208559,
-    "seen": 1790439483.5783281,
-    "ast_hash": "3c0b2efe656b8035bda3a94d9995b68c",
+    "mtime": 1790443516.995487,
+    "seen": 1790443838.426048,
+    "ast_hash": "344549d620e3b3d554ba7791e347688e",
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Tests/ReactiveUIMacrosTests/ListMacroTests.swift": {
-    "mtime": 1790439472.2093208,
-    "seen": 1790439483.578331,
+    "mtime": 1790439602.3906038,
+    "seen": 1790443838.42605,
     "ast_hash": "5349dd34211abb442989d3dd918d400c",
     "semantic_hash": ""
   },
@@ -714,9 +714,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/docs/CompileTimeState.md": {
-    "mtime": 1790439270.29545,
-    "seen": 1790439483.578342,
-    "ast_hash": "5d623a96cdefaf80d33dcfb3a6b1adf3",
+    "mtime": 1790443671.020152,
+    "seen": 1790443838.42606,
+    "ast_hash": "d04c5f0f72e2983e55a576577b8bb4fb",
     "semantic_hash": ""
   },
   ".claude/settings.json": {
@@ -732,14 +732,14 @@
     "semantic_hash": ""
   },
   "GPURayMarching/TextDemo.swift": {
-    "mtime": 1790437809.8717828,
-    "seen": 1790438227.109893,
-    "ast_hash": "8d7af7328f70fa1044b423649f41f847",
+    "mtime": 1790443731.7077334,
+    "seen": 1790443838.425877,
+    "ast_hash": "d6ac9433df87e18fe6bfe8cf56a1fade",
     "semantic_hash": ""
   },
   "GPURayMarching/Demos.swift": {
-    "mtime": 1790439472.204671,
-    "seen": 1790439483.5777862,
+    "mtime": 1790439602.3839715,
+    "seen": 1790443838.4258602,
     "ast_hash": "e71c5fba0ab0b3d08ede9aae30fc01c9",
     "semantic_hash": ""
   },
@@ -798,8 +798,8 @@
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Tests/ReactiveUIMacrosTests/AnimationMacroTests.swift": {
-    "mtime": 1790439472.2083466,
-    "seen": 1790439483.578325,
+    "mtime": 1790439602.389538,
+    "seen": 1790443838.426046,
     "ast_hash": "792a5b1cd93a6c368566c767eca7adb6",
     "semantic_hash": ""
   },
@@ -960,9 +960,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Renderable/Image.swift": {
-    "mtime": 1790272956.993238,
-    "seen": 1790276588.8742678,
-    "ast_hash": "0a6ec816878bc0aef967552a2e17f0d4",
+    "mtime": 1790443268.433524,
+    "seen": 1790443838.425992,
+    "ast_hash": "3014c2713521ddd00be103b6f1d40371",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Vector/Path.swift": {
@@ -1056,9 +1056,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Layout/ScrollView.swift": {
-    "mtime": 1790293828.035718,
-    "seen": 1790293955.403976,
-    "ast_hash": "910f09650ef5b7ff83d0affed98f828a",
+    "mtime": 1790442443.340665,
+    "seen": 1790443838.425983,
+    "ast_hash": "35d786ddb58e080388f32e7b934396a9",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Layout/ScrollViewReader.swift": {
@@ -1158,8 +1158,8 @@
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Tests/ReactiveUIMacrosTests/LayoutMacroTests.swift": {
-    "mtime": 1790439472.2089264,
-    "seen": 1790439483.57833,
+    "mtime": 1790439602.3904104,
+    "seen": 1790443838.42605,
     "ast_hash": "5b08f4942c35aff7bf7abad47d949b97",
     "semantic_hash": ""
   },
@@ -1248,8 +1248,8 @@
     "semantic_hash": ""
   },
   "GPURayMarching/FormDemo.swift": {
-    "mtime": 1790439233.0399265,
-    "seen": 1790439483.5777888,
+    "mtime": 1790439602.3844707,
+    "seen": 1790443838.4258618,
     "ast_hash": "38bae326a5151e53e4a5fa47aed91179",
     "semantic_hash": ""
   },
@@ -1260,9 +1260,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Form/Button.swift": {
-    "mtime": 1790439010.7737312,
-    "seen": 1790439483.577892,
-    "ast_hash": "e6aef1b4c941a0712a70de8d04a15eba",
+    "mtime": 1790442553.5898771,
+    "seen": 1790443838.425954,
+    "ast_hash": "4895cc5ce4dcde6189e411b3bc100381",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Form/DisclosureGroup.swift": {
@@ -1290,15 +1290,15 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Form/Picker.swift": {
-    "mtime": 1790293616.1912756,
-    "seen": 1790293955.403955,
-    "ast_hash": "d7a1b7f53b7cb83936742294b70cd94c",
+    "mtime": 1790442575.80744,
+    "seen": 1790443838.4259598,
+    "ast_hash": "c2fa6ccbedab5059059879727129f147",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Form/Section.swift": {
-    "mtime": 1790293616.1932235,
-    "seen": 1790293955.403956,
-    "ast_hash": "71c5cb7f29f761abc0bdcfcc71633fd0",
+    "mtime": 1790442613.6008935,
+    "seen": 1790443838.425961,
+    "ast_hash": "7d6140188a80150297c73898e1d211a3",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Form/Slider.swift": {
@@ -1314,9 +1314,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Form/TextField.swift": {
-    "mtime": 1790293616.1929994,
-    "seen": 1790293955.403958,
-    "ast_hash": "4330522c8b97ba1be1650d07a5259dbe",
+    "mtime": 1790442613.6014574,
+    "seen": 1790443838.425964,
+    "ast_hash": "1c4363da7560c082d36c1a27aaa16230",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Form/Toggle.swift": {
@@ -1326,8 +1326,8 @@
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Tests/ReactiveUIMacrosTests/BindingMacroTests.swift": {
-    "mtime": 1790438947.3918424,
-    "seen": 1790439483.578326,
+    "mtime": 1790439602.3897696,
+    "seen": 1790443838.426046,
     "ast_hash": "57a29c071859e5e427979a251b4ab16d",
     "semantic_hash": ""
   },
@@ -1356,9 +1356,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Core/Popover.swift": {
-    "mtime": 1790289207.4055734,
-    "seen": 1790290980.350304,
-    "ast_hash": "9d1dc36b5d6284f57e0e67b6561f4b91",
+    "mtime": 1790442455.7676547,
+    "seen": 1790443838.425947,
+    "ast_hash": "fbc32d843e4ac6f725f0fc93530d529f",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Core/UIStorage.swift": {
@@ -1428,9 +1428,9 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLibTests/Support/UIHarness.swift": {
-    "mtime": 1790439472.206646,
-    "seen": 1790439483.578308,
-    "ast_hash": "565bc5b3beba960514e24e7a64af1d6c",
+    "mtime": 1790439602.387457,
+    "seen": 1790443838.4260302,
+    "ast_hash": "1696a36fc795e583001cdcdc0d3053e1",
     "semantic_hash": ""
   },
   ".claude/skills/ui-tests/SKILL.md": {
@@ -1440,63 +1440,123 @@
     "semantic_hash": ""
   },
   "MetalGraphicsLibTests/__Snapshots__/SnapshotTests/card-hovered.png": {
-    "mtime": 1790435064.9310257,
-    "seen": 1790435107.522214,
-    "ast_hash": "745ff52701bea215ef294865aeb60fab",
+    "mtime": 1790442044.353055,
+    "seen": 1790443838.426076,
+    "ast_hash": "2a37c0e6a5ae70d9dfbf21f856e064be",
     "semantic_hash": ""
   },
   "MetalGraphicsLibTests/__Snapshots__/SnapshotTests/card.png": {
-    "mtime": 1790435064.4125,
-    "seen": 1790435107.522215,
-    "ast_hash": "0692a865438cc8651bb7d0c26d6cfad1",
+    "mtime": 1790442043.829783,
+    "seen": 1790443838.426076,
+    "ast_hash": "d39db1ff06ec4f666fd440f365168969",
     "semantic_hash": ""
   },
   "GPURayMarching/DragDropDemo.swift": {
-    "mtime": 1790439472.204808,
-    "seen": 1790439483.5777879,
+    "mtime": 1790439602.3841343,
+    "seen": 1790443838.4258611,
     "ast_hash": "fa056fca41ea22a7c8a7fd10e759f1a3",
     "semantic_hash": ""
   },
   "MetalGraphicsLib/RetainedModeUI/Interaction/DragAndDrop.swift": {
-    "mtime": 1790439472.2062573,
-    "seen": 1790439483.577906,
-    "ast_hash": "f822bf6c81f5150d6aa0413eae1bb3dd",
+    "mtime": 1790442480.476335,
+    "seen": 1790443838.425965,
+    "ast_hash": "bda130cae2b14af2f26667af60970da3",
     "semantic_hash": ""
   },
   "MetalGraphicsLibTests/DragAndDropTests.swift": {
-    "mtime": 1790439472.206429,
-    "seen": 1790439483.5783029,
+    "mtime": 1790439602.3870943,
+    "seen": 1790443838.426025,
     "ast_hash": "2f39bbea3f342cf407f0088f3b9886af",
     "semantic_hash": ""
   },
   "ReactiveUIMacros/Tests/ReactiveUIMacrosTests/DragDropMacroTests.swift": {
-    "mtime": 1790439472.208702,
-    "seen": 1790439483.578329,
+    "mtime": 1790439602.390199,
+    "seen": 1790443838.426049,
     "ast_hash": "f9f6dae019d0e28c2eb254ba0c485dc5",
     "semantic_hash": ""
   },
   "MetalGraphicsLibTests/__Snapshots__/DragAndDropTests/drag-ghost.png": {
-    "mtime": 1790439472.2068253,
-    "seen": 1790439483.578356,
+    "mtime": 1790439602.388206,
+    "seen": 1790443838.426074,
     "ast_hash": "148e00e7492b2fe827fb9190e48f8806",
     "semantic_hash": ""
   },
   "MetalGraphicsLibTests/__Snapshots__/DragAndDropTests/reorder-indicator.png": {
-    "mtime": 1790439472.2069335,
-    "seen": 1790439483.578357,
+    "mtime": 1790439602.3883326,
+    "seen": 1790443838.426075,
     "ast_hash": "b07d4a24d000bf32c91d58a1fca7b8bc",
     "semantic_hash": ""
   },
   "MetalGraphicsLibTests/ButtonTests.swift": {
-    "mtime": 1790439044.7214925,
-    "seen": 1790439483.578302,
-    "ast_hash": "d20fe4b48d6c854a5d5710c3dcf2f142",
+    "mtime": 1790442656.1805656,
+    "seen": 1790443838.426025,
+    "ast_hash": "1ea488c0713619b38e0b4b6a91eff724",
     "semantic_hash": ""
   },
   "MetalGraphicsLibTests/__Snapshots__/ButtonTests/button-styles.png": {
-    "mtime": 1790439052.4057465,
-    "seen": 1790439483.5783548,
+    "mtime": 1790439602.387985,
+    "seen": 1790443838.426073,
     "ast_hash": "faa9770667974a9b9fe8945a6c155f31",
+    "semantic_hash": ""
+  },
+  "MetalGraphicsLib/Graphics/2D/Text/TextFont.swift": {
+    "mtime": 1790441697.0678294,
+    "seen": 1790443838.425897,
+    "ast_hash": "6257facc31a56c0507828fe54e5d126d",
+    "semantic_hash": ""
+  },
+  "MetalGraphicsLib/RetainedModeUI/Renderable/TextEnvironment.swift": {
+    "mtime": 1790442500.039035,
+    "seen": 1790443838.425994,
+    "ast_hash": "390eb8a9cc136e90780245b6354e0941",
+    "semantic_hash": ""
+  },
+  "MetalGraphicsLib/RetainedModeUI/Renderable/TextStyleElement.swift": {
+    "mtime": 1790442597.2062924,
+    "seen": 1790443838.425995,
+    "ast_hash": "aeeaff7a5240cfce6b1d904f5acced5b",
+    "semantic_hash": ""
+  },
+  "MetalGraphicsLibTests/TextTests.swift": {
+    "mtime": 1790443628.7544436,
+    "seen": 1790443838.426031,
+    "ast_hash": "6e59c64e44c4aced329bbe05d3093dd8",
+    "semantic_hash": ""
+  },
+  "ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/TextLowering.swift": {
+    "mtime": 1790443424.2875175,
+    "seen": 1790443838.426045,
+    "ast_hash": "4b16d9ef9ac2cd56cd370c1a046ca4eb",
+    "semantic_hash": ""
+  },
+  "ReactiveUIMacros/Tests/ReactiveUIMacrosTests/TextMacroTests.swift": {
+    "mtime": 1790443516.750889,
+    "seen": 1790443838.426053,
+    "ast_hash": "7c2c9e13593a60bbd4863e3a8113f0cd",
+    "semantic_hash": ""
+  },
+  "MetalGraphicsLibTests/__Snapshots__/TextTests/text-decorations.png": {
+    "mtime": 1790443028.2233624,
+    "seen": 1790443838.426077,
+    "ast_hash": "09b58f2ff148e37793860578d21cb182",
+    "semantic_hash": ""
+  },
+  "MetalGraphicsLibTests/__Snapshots__/TextTests/text-runs.png": {
+    "mtime": 1790443029.0341878,
+    "seen": 1790443838.4260778,
+    "ast_hash": "156cbbbb114cac556fd910e334d8907d",
+    "semantic_hash": ""
+  },
+  "MetalGraphicsLibTests/__Snapshots__/TextTests/text-styles.png": {
+    "mtime": 1790443029.1058114,
+    "seen": 1790443838.426079,
+    "ast_hash": "3cb9edd2f1a9f733b50a21861912cac9",
+    "semantic_hash": ""
+  },
+  "MetalGraphicsLibTests/__Snapshots__/TextTests/text-truncation-alignment.png": {
+    "mtime": 1790443029.1757689,
+    "seen": 1790443838.426079,
+    "ast_hash": "1ca343e26d2782eda3415ff1c1c7c22c",
     "semantic_hash": ""
   }
 }

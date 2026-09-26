@@ -112,6 +112,10 @@ import simd
   // To settle on a proposal, a parent may first `measure` a child at others, which commits
   // nothing. Stacks measure each child at its smallest and largest to share space by
   // flexibility.
+  //
+  // Text styles reach the texts through `TextScope.current`, pushed around a subtree's layout
+  // calls. Anything that sizes or places a subtree outside its ancestors' calls must capture the
+  // scope where the subtree belongs and lay it out under it, as `ScrollView.positionContent` does.
 
   /// The size this element takes when offered `proposal`. Commits nothing, so it may be called
   /// any number of times; implementations measure their children with `measure`, never
@@ -148,6 +152,9 @@ import simd
 
   /// Set by `.hidden()`: laid out as usual, but neither drawn nor hit, nor anything under it.
   public internal(set) var isHidden = false
+  /// False after `.allowsHitTesting(false)`: drawn, but the pointer passes through it and
+  /// everything in it to what is underneath.
+  public internal(set) var allowsHitTesting = true
 
   // MARK: - Layout values
 
