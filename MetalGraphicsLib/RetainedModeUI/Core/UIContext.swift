@@ -135,6 +135,10 @@ public class UIContext {
 
   public var needsRender: Bool { self.pending.contains(.render) }
 
+  /// The time animations start and advance by. Tests swap it for a fake clock so frames can be
+  /// stepped deterministically; `update` reads it once per frame when no `time` is passed.
+  public var clock: () -> Double = CACurrentMediaTime
+
   public init() {}
 
   // MARK: - Invalidation
@@ -235,8 +239,9 @@ public class UIContext {
   /// had a position. Animations advance in between, so one a handler just started is laid out
   /// at its first step in the same frame.
   public func update(
-    root: Frame, size: float2, input: Input, graphics: Graphics2D, time: Double = CACurrentMediaTime()
+    root: Frame, size: float2, input: Input, graphics: Graphics2D, time: Double? = nil
   ) -> Void {
+    let time = time ?? self.clock()
     if size != self.lastSize {
       self.lastSize = size
       self.invalidate(.layout)

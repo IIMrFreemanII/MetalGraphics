@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -150,6 +150,8 @@
 		7AB1E0000000000000000102 /* TableColumn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AB1E0000000000000000002 /* TableColumn.swift */; };
 		7AB1E0000000000000000103 /* TableRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AB1E0000000000000000003 /* TableRow.swift */; };
 		7AB1E0000000000000000104 /* TableDemo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AB1E0000000000000000004 /* TableDemo.swift */; };
+		7E5700022F10000100AAAAAA /* Graphics2D+Offscreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5700012F10000100AAAAAA /* Graphics2D+Offscreen.swift */; };
+		7E5700082F10000100AAAAAA /* MetalGraphicsLib.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 159419E32C1490A200C56203 /* MetalGraphicsLib.framework */; };
 		7E57A0012F00000000000101 /* SDFFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000001 /* SDFFont.swift */; };
 		7E57A0012F00000000000102 /* TextLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000002 /* TextLayout.swift */; };
 		7E57A0012F00000000000103 /* Text.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E57A0012F00000000000003 /* Text.swift */; };
@@ -191,6 +193,13 @@
 
 /* Begin PBXContainerItemProxy section */
 		159419F12C1490F600C56203 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 159419862C147A6900C56203 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 159419E22C1490A200C56203;
+			remoteInfo = MetalGraphicsLib;
+		};
+		7E5700092F10000100AAAAAA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 159419862C147A6900C56203 /* Project object */;
 			proxyType = 1;
@@ -363,6 +372,8 @@
 		7AB1E0000000000000000002 /* TableColumn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableColumn.swift; sourceTree = "<group>"; };
 		7AB1E0000000000000000003 /* TableRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableRow.swift; sourceTree = "<group>"; };
 		7AB1E0000000000000000004 /* TableDemo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableDemo.swift; sourceTree = "<group>"; };
+		7E5700012F10000100AAAAAA /* Graphics2D+Offscreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Graphics2D+Offscreen.swift"; sourceTree = "<group>"; };
+		7E5700042F10000100AAAAAA /* MetalGraphicsLibTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MetalGraphicsLibTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7E57A0012F00000000000001 /* SDFFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SDFFont.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000002 /* TextLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextLayout.swift; sourceTree = "<group>"; };
 		7E57A0012F00000000000003 /* Text.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Text.swift; sourceTree = "<group>"; };
@@ -399,6 +410,10 @@
 		FF714DB11A023025D108FFF9 /* FormControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormControl.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		7E5700032F10000100AAAAAA /* MetalGraphicsLibTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = MetalGraphicsLibTests; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		159419A12C147B0E00C56203 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
@@ -413,6 +428,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7E5700072F10000100AAAAAA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7E5700082F10000100AAAAAA /* MetalGraphicsLib.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -477,6 +500,7 @@
 			children = (
 				159419A52C147B0E00C56203 /* GPURayMarching */,
 				159419E42C1490A200C56203 /* MetalGraphicsLib */,
+				7E5700032F10000100AAAAAA /* MetalGraphicsLibTests */,
 				1594198F2C147A6900C56203 /* Products */,
 				159419D22C14831000C56203 /* Frameworks */,
 			);
@@ -487,6 +511,7 @@
 			children = (
 				159419A42C147B0E00C56203 /* GPURayMarching.app */,
 				159419E32C1490A200C56203 /* MetalGraphicsLib.framework */,
+				7E5700042F10000100AAAAAA /* MetalGraphicsLibTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -657,6 +682,7 @@
 				1A6E00012F00000000000013 /* SVG */,
 				1A6E00022F00000000000011 /* Vector */,
 				15C91D3A2C1F1B9F00A2857F /* Graphics2D.swift */,
+				7E5700012F10000100AAAAAA /* Graphics2D+Offscreen.swift */,
 			);
 			path = 2D;
 			sourceTree = "<group>";
@@ -918,6 +944,26 @@
 			productReference = 159419E32C1490A200C56203 /* MetalGraphicsLib.framework */;
 			productType = "com.apple.product-type.framework";
 		};
+		7E5700052F10000100AAAAAA /* MetalGraphicsLibTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7E57000B2F10000100AAAAAA /* Build configuration list for PBXNativeTarget "MetalGraphicsLibTests" */;
+			buildPhases = (
+				7E5700062F10000100AAAAAA /* Sources */,
+				7E5700072F10000100AAAAAA /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7E57000A2F10000100AAAAAA /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				7E5700032F10000100AAAAAA /* MetalGraphicsLibTests */,
+			);
+			name = MetalGraphicsLibTests;
+			productName = MetalGraphicsLibTests;
+			productReference = 7E5700042F10000100AAAAAA /* MetalGraphicsLibTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -933,6 +979,9 @@
 					};
 					159419E22C1490A200C56203 = {
 						CreatedOnToolsVersion = 15.4;
+					};
+					7E5700052F10000100AAAAAA = {
+						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
@@ -954,6 +1003,7 @@
 			targets = (
 				159419A32C147B0E00C56203 /* GPURayMarching */,
 				159419E22C1490A200C56203 /* MetalGraphicsLib */,
+				7E5700052F10000100AAAAAA /* MetalGraphicsLibTests */,
 			);
 		};
 /* End PBXProject section */
@@ -1109,6 +1159,7 @@
 				159419F42C14916C00C56203 /* MathLib.swift in Sources */,
 				159419F52C14917200C56203 /* Array.swift in Sources */,
 				15C91D3B2C1F1B9F00A2857F /* Graphics2D.swift in Sources */,
+				7E5700022F10000100AAAAAA /* Graphics2D+Offscreen.swift in Sources */,
 				159419FF2C1499CC00C56203 /* float4.swift in Sources */,
 				15B5F055300AC32C00CFE193 /* SparseSet.swift in Sources */,
 				157C8D8E2C504CF7009CD7CE /* Background.swift in Sources */,
@@ -1166,6 +1217,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7E5700062F10000100AAAAAA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -1173,6 +1231,11 @@
 			isa = PBXTargetDependency;
 			target = 159419E22C1490A200C56203 /* MetalGraphicsLib */;
 			targetProxy = 159419F12C1490F600C56203 /* PBXContainerItemProxy */;
+		};
+		7E57000A2F10000100AAAAAA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 159419E22C1490A200C56203 /* MetalGraphicsLib */;
+			targetProxy = 7E5700092F10000100AAAAAA /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1464,6 +1527,46 @@
 			};
 			name = Release;
 		};
+		7E57000C2F10000100AAAAAA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 3KB6K4T6NP;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.company.MetalGraphicsLibTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		7E57000D2F10000100AAAAAA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 3KB6K4T6NP;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.company.MetalGraphicsLibTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1490,6 +1593,15 @@
 			buildConfigurations = (
 				159419E82C1490A200C56203 /* Debug */,
 				159419E92C1490A200C56203 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7E57000B2F10000100AAAAAA /* Build configuration list for PBXNativeTarget "MetalGraphicsLibTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7E57000C2F10000100AAAAAA /* Debug */,
+				7E57000D2F10000100AAAAAA /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

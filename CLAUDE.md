@@ -15,3 +15,7 @@ Before implementing or changing any feature in MetalGraphicsLib, GPURayMarching 
 ## Hot reload
 
 Debug builds reload Swift (via InjectionNext), shaders and the ReactiveUI macros live, and restore the selected tab from `UIStorage`. Setup, limits and what still needs a relaunch: `MetalGraphicsLib/docs/HotReload.md`.
+
+## UI tests
+
+Check UI changes with the headless tests in `MetalGraphicsLibTests` (the `ui-tests` skill, `.claude/skills/ui-tests/SKILL.md`): no window, synthetic input, fake clock, golden PNGs, seconds per run. Launch the app with `drive-app` only for what the harness does not cover (real `NSEvent`s, windowing, hot reload, frame pacing) and for a final end-to-end check.
