@@ -1,7 +1,7 @@
 # Graph Report - MetalGraphics  (2026-09-26)
 
 ## Corpus Check
-- 248 files · ~213,933 words
+- 248 files · ~213,951 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 16 file(s) not represented in the graph (top: (none) 4, .plist 3, .resolved 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e2951072`
+- Built from commit: `b746b1eb`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

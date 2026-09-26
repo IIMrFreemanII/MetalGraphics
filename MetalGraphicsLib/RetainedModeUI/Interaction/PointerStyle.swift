@@ -92,8 +92,9 @@ public enum FrameResizeDirection: Hashable, Sendable {
   }
 }
 
-/// Where the pointer is over an element, as `.onContinuousHover` reports it.
-public enum HoverPhase: Equatable, Sendable {
+/// Where the pointer is over an element, as `.onContinuousHover` reports it. Frozen, as SwiftUI's,
+/// so a switch over its two cases is exhaustive outside the library too.
+@frozen public enum HoverPhase: Equatable, Sendable {
   /// Over it, at a location in the coordinate space asked for.
   case active(float2)
   /// No longer over it.
