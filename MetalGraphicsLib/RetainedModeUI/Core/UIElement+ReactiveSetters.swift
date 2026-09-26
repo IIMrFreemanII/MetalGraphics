@@ -672,3 +672,10 @@ extension BorderElement {
     }
   }
 }
+
+extension DraggableElement {
+  /// Invalidates nothing: the payload is never drawn, only handed to a destination on drop.
+  public func setDragPayload(_ value: Any, _ context: UIContext) -> Void {
+    self.payload = value
+  }
+}

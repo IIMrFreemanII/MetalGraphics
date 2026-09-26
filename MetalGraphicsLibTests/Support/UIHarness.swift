@@ -144,6 +144,39 @@ final class UIHarness {
     self.step()
   }
 
+  /// The left button going down at `point`, and staying down until `mouseUp`.
+  func mouseDown(at point: float2) {
+    self.setMouse(point)
+    self.input.leftMousePressed = true
+    self.input.leftMouseDown = true
+    self.input.clickCount = 1
+    self.step()
+  }
+
+  /// Moves the pointer to `point` with the button still down.
+  func mouseDrag(to point: float2) {
+    self.setMouse(point)
+    self.step()
+  }
+
+  /// The left button coming up at `point`.
+  func mouseUp(at point: float2) {
+    self.setMouse(point)
+    self.input.leftMousePressed = false
+    self.input.leftMouseUp = true
+    self.step()
+  }
+
+  /// A press at `from`, `steps` moves in a straight line to `to`, a frame each, and a release
+  /// there, as a real drag arrives.
+  func drag(from: float2, to: float2, steps: Int = 4) {
+    self.mouseDown(at: from)
+    for step in 1 ... max(steps, 1) {
+      self.mouseDrag(to: from + (to - from) * Float(step) / Float(max(steps, 1)))
+    }
+    self.mouseUp(at: to)
+  }
+
   private func setMouse(_ point: float2) {
     let input = self.input
     input.mouseDelta = point - input.prevMousePosition

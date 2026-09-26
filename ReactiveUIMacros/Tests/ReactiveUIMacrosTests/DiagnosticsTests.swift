@@ -197,6 +197,11 @@ struct DiagnosticsTests {
             self._rows = newValue
             self.__update_rows()
           }
+
+          public func moveRows(fromOffsets source: IndexSet, toOffset destination: Int) {
+            self._rows.moveElements(fromOffsets: source, toOffset: destination)
+            self.__update_rows()
+          }
       }
 
       extension C: ReactiveComponent {
@@ -322,6 +327,11 @@ struct DiagnosticsTests {
 
           public func replaceRows(_ newValue: [Item]) {
             self._rows = newValue
+            self.__update_rows()
+          }
+
+          public func moveRows(fromOffsets source: IndexSet, toOffset destination: Int) {
+            self._rows.moveElements(fromOffsets: source, toOffset: destination)
             self.__update_rows()
           }
       }

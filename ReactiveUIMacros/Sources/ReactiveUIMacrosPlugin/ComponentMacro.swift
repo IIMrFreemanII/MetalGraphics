@@ -55,7 +55,7 @@ extension ComponentMacro: MemberMacro {
       guard BodyParser.arrayElementType(state.type) != nil else { continue }
       let generated = [
         Naming.mutationAppend(state.name), Naming.mutationInsert(state.name),
-        Naming.mutationRemove(state.name), Naming.mutationReplace(state.name),
+        Naming.mutationRemove(state.name), Naming.mutationReplace(state.name), Naming.mutationMove(state.name),
       ]
       for name in generated where declaredFunctions.contains(name) {
         context.error(
