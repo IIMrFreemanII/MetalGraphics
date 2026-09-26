@@ -290,6 +290,11 @@ struct ListMacroTests {
             self.__update_rows()
           }
 
+          public func moveRows(fromOffsets source: IndexSet, toOffset destination: Int) {
+            self._rows.moveElements(fromOffsets: source, toOffset: destination)
+            self.__update_rows()
+          }
+
           private func __rows_didInsert(_ element: Item, at index: Int, _ animated: Bool = true) {
             guard let context = self.__context else {
               self.__needsRefresh = true
@@ -486,6 +491,11 @@ struct ListMacroTests {
 
           public func replaceTags(_ newValue: [String]) {
             self._tags = newValue
+            self.__update_tags()
+          }
+
+          public func moveTags(fromOffsets source: IndexSet, toOffset destination: Int) {
+            self._tags.moveElements(fromOffsets: source, toOffset: destination)
             self.__update_tags()
           }
       }
@@ -693,6 +703,11 @@ struct ListMacroTests {
 
           public func replacePeople(_ newValue: [Person]) {
             self._people = newValue
+            self.__update_people()
+          }
+
+          public func movePeople(fromOffsets source: IndexSet, toOffset destination: Int) {
+            self._people.moveElements(fromOffsets: source, toOffset: destination)
             self.__update_people()
           }
 

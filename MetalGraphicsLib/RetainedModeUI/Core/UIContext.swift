@@ -119,6 +119,18 @@ public class UIContext {
   /// always, and then they cost nothing. See `presentPopover`.
   var overlays: [PopoverLayer] = []
 
+  /// Mounted drop destinations, and those in the tree in pre-order with the clip above each,
+  /// which is where a drag looks for its target. See `routeDrop`.
+  private var dropTargets: [ObjectIdentifier : DropDestinationBase] = [:]
+  private var dropOrder: [DropDestinationBase] = []
+  private var dropClips: [Int] = []
+
+  /// The drag in progress, if any. See `beginDrag`.
+  private(set) var drag: DragSession? = nil
+  /// The element whose drawing follows the pointer during the drag, found in `collect` by
+  /// identity, which is cheaper than reading the session's weak reference per element.
+  private var ghostID: ObjectIdentifier? = nil
+
   /// Drives every running animation, once per frame from `update`.
   public let animator = Animator()
 
@@ -220,6 +232,19 @@ public class UIContext {
     self.invalidate(.treeOrder)
   }
 
+  func registerDropTarget(_ view: DropDestinationBase) -> Void {
+    self.dropTargets[ObjectIdentifier(view)] = view
+    self.invalidate(.treeOrder)
+  }
+
+  func unregisterDropTarget(_ view: DropDestinationBase) -> Void {
+    self.dropTargets.removeValue(forKey: ObjectIdentifier(view))
+    if self.drag?.target === view {
+      self.drag?.target = nil
+    }
+    self.invalidate(.treeOrder)
+  }
+
   func registerKeyHandler(_ view: KeyPressElement) -> Void {
     self.keyHandlers[ObjectIdentifier(view)] = view
     self.invalidate(.treeOrder)
@@ -276,6 +301,10 @@ public class UIContext {
 
     // After the click, so a click and the typing after it that land in one frame go together.
     if !input.keyPresses.isEmpty {
+      // Escape cancels a drag, and still goes on to whatever handles it.
+      if self.drag != nil, input.keyPresses.contains(where: { $0.key == .escape && $0.phase == .down }) {
+        self.cancelDrag()
+      }
       if self.pending.contains(.treeOrder) {
         self.rebuildTreeOrder(root)
       }
@@ -302,6 +331,11 @@ public class UIContext {
       for overlay in self.overlays {
         _ = overlay.calcSize(ProposedSize(size))
         overlay.calcPosition(.zero)
+      }
+      // At its ideal size, wherever the pointer is: it is moved there by its effect.
+      if let preview = self.drag?.preview {
+        _ = preview.calcSize(.unspecified)
+        preview.calcPosition(.zero)
       }
       self.layoutAnimation = nil
       if !self.layoutGroups.isEmpty {
@@ -390,6 +424,25 @@ public class UIContext {
         self.paintOrder[index].render(renderer, effect < 0 ? .identity : self.effectResolved[effect])
       }
       renderer.resetClip()
+    }
+    if let drag = self.drag, self.ghostID != nil, drag.ghostEnd > drag.ghostStart,
+       drag.ghostEnd <= self.paintOrder.count {
+      // The dragged element once more, lifted to the pointer: above everything, outside every
+      // clip, and without the shadows and blurs around it.
+      if shadow >= 0 {
+        renderer.resetShadows()
+        shadow = -1
+      }
+      if blur >= 0 {
+        renderer.setBlur(0)
+        blur = -1
+      }
+      renderer.resetClip()
+      let lift = EffectState(opacity: DragSession.ghostOpacity, scale: 1, translate: drag.pointer - drag.start)
+      for index in drag.ghostStart ..< drag.ghostEnd {
+        let effect = self.paintEffects[index]
+        self.paintOrder[index].render(renderer, lift.composed(with: effect < 0 ? .identity : self.effectResolved[effect]))
+      }
     }
     if shadow >= 0 {
       renderer.resetShadows()
@@ -648,6 +701,103 @@ public class UIContext {
     self.pending.remove(.hitGrid)
   }
 
+  // MARK: - Drag and drop
+
+  /// True while something is being dragged.
+  public var isDragging: Bool { self.drag != nil }
+
+  /// Starts a drag of `payload` by `owner`, which alone may move, end or cancel it, from the
+  /// pointer at `start`. `ghost` is drawn again under the pointer, or `preview` is, mounted for
+  /// the drag. A nil payload is dropped nowhere: a list reordering its own rows.
+  func beginDrag(owner: UIElement, payload: Any?, ghost: UIElement?, preview: UIElement?, from start: float2) -> Void {
+    if self.drag != nil {
+      self.cancelDrag()
+    }
+    let drag = DragSession(owner: owner, payload: payload, start: start)
+    self.drag = drag
+    if let ghost {
+      self.ghostID = ObjectIdentifier(ghost)
+      // Once per drag, so `collect` finds where it sits in the paint order.
+      self.invalidate(.treeOrder)
+    }
+    if let preview {
+      let layer = DragPreviewLayer(preview)
+      layer.pointer = start
+      drag.preview = layer
+      layer.handleMount(self)
+      self.invalidate([.layout, .treeOrder])
+    }
+  }
+
+  /// Moves `owner`'s drag to `point`, and with it what is drawn under the pointer and the
+  /// destination it would drop on. Redraws only.
+  func dragMoved(_ owner: UIElement, to point: float2) -> Void {
+    guard let drag = self.drag, drag.owner === owner, drag.pointer != point else { return }
+    drag.pointer = point
+    drag.preview?.pointer = point
+    self.routeDrop(drag)
+    self.invalidate(.render)
+  }
+
+  /// Ends `owner`'s drag at `point`, dropping the payload on the destination there that takes
+  /// it. Returns what the destination's action returned, or false when nothing took it.
+  @discardableResult
+  func endDrag(_ owner: UIElement, at point: float2) -> Bool {
+    guard let drag = self.drag, drag.owner === owner else { return false }
+    drag.pointer = point
+    self.routeDrop(drag)
+    let target = drag.target
+    self.finishDrag(drag)
+    guard let target, target.mounted, let payload = drag.payload else { return false }
+    return target.perform(payload, at: point - target.position)
+  }
+
+  /// Ends the drag without dropping anything: Escape, or its owner going away.
+  func cancelDrag() -> Void {
+    guard let drag = self.drag else { return }
+    self.finishDrag(drag)
+  }
+
+  private func finishDrag(_ drag: DragSession) -> Void {
+    self.drag = nil
+    self.ghostID = nil
+    if let target = drag.target {
+      drag.target = nil
+      target.setTargeted(false)
+    }
+    if let preview = drag.preview {
+      drag.preview = nil
+      preview.handleUnmount(self)
+      self.invalidate(.treeOrder)
+    }
+    self.invalidate(.render)
+  }
+
+  /// Finds the innermost destination under the pointer that takes the payload, and tells the
+  /// old and new ones when that changes. O(destinations), and only while dragging.
+  private func routeDrop(_ drag: DragSession) -> Void {
+    var found: DropDestinationBase? = nil
+    if let payload = drag.payload, !self.dropOrder.isEmpty {
+      self.resolveClips(withEffects: false)
+      let point = drag.pointer
+      // Pre-order, so walking it backwards meets a destination before the ones it is inside.
+      for index in self.dropOrder.indices.reversed() {
+        let target = self.dropOrder[index]
+        guard target.mounted, ClipRect(position: target.position, size: target.size).contains(point) else { continue }
+        let clip = self.dropClips[index]
+        if clip >= 0, !self.clipResolved[clip].contains(point) { continue }
+        guard target.accepts(payload) else { continue }
+        found = target
+        break
+      }
+    }
+    guard found !== drag.target else { return }
+    let old = drag.target
+    drag.target = found
+    old?.setTargeted(false)
+    found?.setTargeted(true)
+  }
+
   // MARK: - Tree order
 
   private func rebuildTreeOrder(_ root: UIElement) -> Void {
@@ -678,9 +828,19 @@ public class UIContext {
     self.keyOrder.removeAll(keepingCapacity: true)
     self.keyParents.removeAll(keepingCapacity: true)
     self.keyNeedsFocus.removeAll(keepingCapacity: true)
+    self.dropOrder.removeAll(keepingCapacity: true)
+    self.dropClips.removeAll(keepingCapacity: true)
+    if let drag = self.drag {
+      drag.ghostStart = 0
+      drag.ghostEnd = 0
+    }
     self.collect(root, effect: -1, clip: -1, shadow: -1, blur: -1, key: -1, spine: -1, inFocusable: false, leaving: false)
     for overlay in self.overlays {
       self.collect(overlay, effect: -1, clip: -1, shadow: -1, blur: -1, key: -1, spine: -1, inFocusable: false, leaving: false)
+    }
+    // Last, so it draws over the popovers too; as if leaving, so it is drawn and never hit.
+    if let preview = self.drag?.preview {
+      self.collect(preview, effect: -1, clip: -1, shadow: -1, blur: -1, key: -1, spine: -1, inFocusable: false, leaving: true)
     }
     self.effectResolved = Array(repeating: .identity, count: self.effectOrder.count)
     self.shadowResolved = Array(repeating: ShadowState(color: .zero, sigma: 0, offset: .zero), count: self.shadowOrder.count)
@@ -720,6 +880,15 @@ public class UIContext {
   ) -> Void {
     // Still laid out, but nothing under it is drawn, hit or scrolled.
     guard !element.isHidden else { return }
+    let isGhost = self.ghostID == ObjectIdentifier(element)
+    if isGhost {
+      self.drag?.ghostStart = self.paintOrder.count
+    }
+    defer {
+      if isGhost {
+        self.drag?.ghostEnd = self.paintOrder.count
+      }
+    }
     var effect = effect
     var clip = clip
     var shadow = shadow
@@ -762,6 +931,11 @@ public class UIContext {
         spine = key
       }
       self.keyOrder.append(handler)
+    }
+    if !leaving, !self.dropTargets.isEmpty, let target = element as? DropDestinationBase,
+       self.dropTargets[ObjectIdentifier(target)] != nil {
+      self.dropOrder.append(target)
+      self.dropClips.append(clip)
     }
     if !leaving, let focusable = element as? FocusableElement,
        self.focusables[ObjectIdentifier(focusable)] != nil {

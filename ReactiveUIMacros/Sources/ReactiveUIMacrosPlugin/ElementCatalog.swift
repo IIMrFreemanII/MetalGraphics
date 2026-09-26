@@ -114,11 +114,16 @@ struct HandlerSpec {
   /// Wraps the closure when it is assigned, for a property that takes more than one closure
   /// shape: `KeyPressElement.adapt` fits `.onKeyPress`'s zero-argument handlers to its `action`.
   let adapter: String?
+  /// The argument label it is written with. Nil for a modifier's main handler, which is its
+  /// trailing closure, its `action:` closure, or else its first closure; set for the others,
+  /// which are found by label, as an argument or a further trailing closure: `isTargeted:`.
+  let label: String?
 
-  init(property: String, placeholder: String, adapter: String? = nil) {
+  init(property: String, placeholder: String, adapter: String? = nil, label: String? = nil) {
     self.property = property
     self.placeholder = placeholder
     self.adapter = adapter
+    self.label = label
   }
 }
 
@@ -130,6 +135,9 @@ struct ModifierSpec {
   let combine: ArgCombine
   /// Set for `onTap`/`onHover`. Mutually exclusive with `setter`: a handler has no reactive value.
   let handler: HandlerSpec?
+  /// Handlers besides `handler`, each found by its label: `.dropDestination`'s `isTargeted:`.
+  /// Left out of the chain, where the modifier's default stands in until they are armed.
+  let labeledHandlers: [HandlerSpec]
   /// The setter takes `animation: UIAnimation?`. See `ArgSpec.animatable`.
   let animatable: Bool
   /// `.animation(_:value:)`: not an element but a scope marker. It produces no link; the parser
@@ -162,13 +170,17 @@ struct ModifierSpec {
   /// `.onGeometryChange(for: float2.self, …)`, giving a field typed
   /// `GeometryChangeElement<float2>`.
   let genericOverTypeOf: String?
+  /// The label `takesContent`'s closure may be written with instead of trailing: `.draggable(x,
+  /// preview: { … })`.
+  let contentLabel: String
 
   init(
     name: String, labels: [String?], produces: String,
     setter: String?, combine: ArgCombine, handler: HandlerSpec? = nil,
     animatable: Bool = false, isScope: Bool = false, inPlaceOn: Set<String>? = nil,
     wrapsOtherwise: Bool = false, argSetters: [ArgSpec]? = nil, inPlaceOnAny: Bool = false,
-    exactLabels: Bool = false, takesContent: Bool = false, genericOverTypeOf: String? = nil
+    exactLabels: Bool = false, takesContent: Bool = false, genericOverTypeOf: String? = nil,
+    labeledHandlers: [HandlerSpec] = [], contentLabel: String = "content"
   ) {
     self.name = name
     self.labels = labels
@@ -185,6 +197,13 @@ struct ModifierSpec {
     self.exactLabels = exactLabels
     self.takesContent = takesContent
     self.genericOverTypeOf = genericOverTypeOf
+    self.labeledHandlers = labeledHandlers
+    self.contentLabel = contentLabel
+  }
+
+  /// Every closure label a handler of this modifier is written with, the main one's included.
+  var handlerLabels: Set<String> {
+    Set(([self.handler?.label ?? "action"]) + self.labeledHandlers.compactMap(\.label))
   }
 
   /// Whether a call with these argument labels, in order, is this overload.
@@ -725,6 +744,27 @@ enum ElementCatalog {
       name: "onGeometryChange", labels: ["for", "of", "action"],
       produces: "GeometryChangeElement", setter: nil, combine: .identity,
       handler: HandlerSpec(property: "action", placeholder: "{ _ in }"), genericOverTypeOf: "for"
+    ),
+    // The payload is reactive, so a row's draggable carries its current value; the preview is
+    // content, applied through `DraggableElement.replaceContent`.
+    "draggable": ModifierSpec(
+      name: "draggable", labels: [nil, "preview"],
+      produces: "DraggableElement", setter: nil, combine: .identity,
+      argSetters: [ArgSpec(nil, "setDragPayload")], takesContent: true, contentLabel: "preview"
+    ),
+    // Two handlers: the drop, and whether a drag is over it. `for:` is built once.
+    "dropDestination": ModifierSpec(
+      name: "dropDestination", labels: ["for", "action", "isTargeted"],
+      produces: "DropDestinationElement", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "action", placeholder: "{ _, _ in false }"),
+      genericOverTypeOf: "for",
+      labeledHandlers: [HandlerSpec(property: "isTargeted", placeholder: "{ _ in }", label: "isTargeted")]
+    ),
+    // On a `VList` or `HList`: drag-to-reorder its rows.
+    "onMove": ModifierSpec(
+      name: "onMove", labels: ["perform"],
+      produces: "ReorderElement", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "action", placeholder: "{ _, _ in }", label: "perform")
     ),
     "onPress": ModifierSpec(
       name: "onPress", labels: [nil],

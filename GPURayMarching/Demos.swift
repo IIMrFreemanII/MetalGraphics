@@ -17,6 +17,7 @@ enum Demo : String, Identifiable {
   case table
   case keyboard
   case form
+  case dragDrop
 
   var id: Self { self }
 
@@ -37,6 +38,7 @@ enum Demo : String, Identifiable {
     case .table: "Table"
     case .keyboard: "Keyboard"
     case .form: "Form"
+    case .dragDrop: "Drag & Drop"
     }
   }
 
@@ -57,6 +59,7 @@ enum Demo : String, Identifiable {
     case .table: TableDemo()
     case .keyboard: KeyboardDemo()
     case .form: FormDemo()
+    case .dragDrop: DragDropDemo()
     }
   }
 }
@@ -186,6 +189,13 @@ final class Demos : SingleChildElement {
           .background(self.selected == .form ? Self.activeTabColor : Self.inactiveTabColor)
           .animation(Self.tabAnimation, value: self.selected)
           .onTap { _ in self.select(.form) }
+        Text(Demo.dragDrop.title)
+          .font(Self.tabFont)
+          .foregroundColor(self.selected == .dragDrop ? .white : .black)
+          .padding(Self.tabInset)
+          .background(self.selected == .dragDrop ? Self.activeTabColor : Self.inactiveTabColor)
+          .animation(Self.tabAnimation, value: self.selected)
+          .onTap { _ in self.select(.dragDrop) }
         Spacer()
       }
       VList(alignment: .leading, items: self.shown) { demo in

@@ -984,6 +984,11 @@ struct LayoutMacroTests {
             self._columns = newValue
             self.__update_columns()
           }
+
+          public func moveColumns(fromOffsets source: IndexSet, toOffset destination: Int) {
+            self._columns.moveElements(fromOffsets: source, toOffset: destination)
+            self.__update_columns()
+          }
       }
 
       extension Table: ReactiveComponent {
