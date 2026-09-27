@@ -3,12 +3,17 @@ import ReactiveUI
 import simd
 
 /// The editor window's tree: the dock area, and the keys that act on the whole window. ⌘O opens
-/// a folder, ⌘⌥S saves every file; a file's own ⌘S is its panel's.
+/// a folder, ⌘P a file by name, ⌘⌥S saves every file; a file's own keys are its panel's.
 @Component
 final class IDERoot : SingleChildElement {
+  @State var quickOpen: Bool = false
+
   @UIElementBuilder var body: [UIElement] {
     DockArea(IDE.space, host: IDE.host)
       .onKeyPress(phases: .down) { press in self.key(press) }
+      .sheet(isPresented: $quickOpen) {
+        QuickOpenSheet()
+      }
   }
 
   private func key(_ press: KeyPress) -> KeyPress.Result {
@@ -16,6 +21,9 @@ final class IDERoot : SingleChildElement {
     switch press.key {
     case "o":
       IDE.chooseFolder()
+      return .handled
+    case "p" where WorkspaceModel.shared.root != nil:
+      self.quickOpen = true
       return .handled
     case "s" where press.modifiers.contains(.option):
       OpenFiles.shared.saveAll()
@@ -37,7 +45,7 @@ final class WelcomePanel : SingleChildElement {
     VStack(alignment: .leading, spacing: 10) {
       Text("Swift Editor")
         .font(Self.titleFont)
-      Text("Open a folder (⌘O), then pick a file in the navigator. ⌘S saves it, ⌘⌥S saves all.")
+      Text("Open a folder (⌘O), then pick a file in the navigator or by name (⌘P). ⌘S saves it, ⌘⌥S saves all.")
         .font(Self.captionFont)
         .foregroundColor(Self.captionColor)
       Button("Open Folder…") { IDE.chooseFolder() }

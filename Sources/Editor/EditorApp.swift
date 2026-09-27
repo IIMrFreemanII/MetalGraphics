@@ -23,10 +23,12 @@ struct EditorApp: App {
     RetainedWindowGroup(EditorScenes.ide)
       .commands {
         CommandGroup(replacing: .newItem) {
-          // No key equivalents here: ⌘O, ⌘S and ⌘⌥S are the window's own (`IDERoot`), which the
-          // headless tests can press. A menu's would take the key before the window saw it.
+          // No key equivalents here: ⌘O, ⌘P, ⌘S, ⌘F and the rest are the window's own (`IDERoot`,
+          // `FileEditorPanel`), which the headless tests can press. A menu's would take the key
+          // before the window saw it — which is why Print, ⌘P, goes too.
           SwiftUI.Button("Open Folder…") { IDE.chooseFolder() }
         }
+        CommandGroup(replacing: .printItem) {}
       }
   }
 }

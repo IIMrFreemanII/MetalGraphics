@@ -336,3 +336,25 @@ public final class SwiftStyler: TextStyler {
     return nil
   }
 }
+
+// A new line after `{`, `(` or `[` goes one level in; `}`, `)` or `]` typed first on a line goes
+// one level out. Lexical, as the styler is: a bracket in a trailing comment still counts.
+extension SwiftStyler: IndentationRules {
+  public func opensBlock(_ text: [UInt16]) -> Bool {
+    guard let last = text.last else { return false }
+    return self.closer(forOpener: last) != nil
+  }
+
+  public func closer(forOpener unit: UInt16) -> UInt16? {
+    switch unit {
+    case 0x7B: 0x7D
+    case 0x28: 0x29
+    case 0x5B: 0x5D
+    default: nil
+    }
+  }
+
+  public func closesBlock(_ unit: UInt16) -> Bool {
+    unit == 0x7D || unit == 0x29 || unit == 0x5D
+  }
+}

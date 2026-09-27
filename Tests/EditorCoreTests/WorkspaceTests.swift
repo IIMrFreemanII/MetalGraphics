@@ -28,7 +28,7 @@ final class WorkspaceScannerTests: XCTestCase {
 
   func testHiddenAndBuildFoldersAreLeftOut() throws {
     let root = try makeFolder([
-      "main.swift": "", ".build/debug/x.o": "", ".git/HEAD": "", ".DS_Store": "", "DerivedData/x": "",
+      "main.swift": "", ".build/debug/x.o": "", "build/Release/x.o": "", ".git/HEAD": "", ".DS_Store": "", "DerivedData/x": "",
     ], in: self)
     XCTAssertEqual(WorkspaceScanner.scan(root).children.map(\.name), ["main.swift"])
   }

@@ -14,6 +14,34 @@ public struct EditorTransaction {
   }
 }
 
+/// Two characters typed as one: `(` brings its `)`. See `EditorState.autoClosingPairs`.
+public struct AutoClosingPair: Hashable, Sendable {
+  public var open: UInt16
+  public var close: UInt16
+
+  public init(_ open: Character, _ close: Character) {
+    self.open = open.utf16.first!
+    self.close = close.utf16.first!
+  }
+
+  /// Brackets and double quotes, as code has them.
+  public static let code = [
+    AutoClosingPair("(", ")"), AutoClosingPair("[", "]"), AutoClosingPair("{", "}"), AutoClosingPair("\"", "\""),
+  ]
+}
+
+/// How a language indents: what a styler adopts to indent a new line inside a block and outdent
+/// the line a block closes on. `SwiftStyler` does, for `{`, `(` and `[`.
+public protocol IndentationRules: AnyObject {
+  /// Whether a line ending in `text` (the line up to the caret, trailing spaces dropped) opens a
+  /// block, so that the next line goes one level in.
+  func opensBlock(_ text: [UInt16]) -> Bool
+  /// The unit that closes a block opened by `text`'s last unit, if it does: `}` for `{`.
+  func closer(forOpener unit: UInt16) -> UInt16?
+  /// Whether `unit`, typed first on a line, closes a block: the line then goes one level out.
+  func closesBlock(_ unit: UInt16) -> Bool
+}
+
 protocol EditorStateDelegate: AnyObject {
   func editorStateDidChangeSelection(_ state: EditorState)
   /// An edit was refused: read-only text, a filter.
@@ -40,6 +68,13 @@ public final class EditorState: TextDocumentObserver {
   public var lineComment: String? = nil
   /// Units, besides letters, digits and `_`, that belong to words.
   public var wordCharacters: Set<UInt16> = []
+  /// Typed with the opening half, the closing half goes in too, after the caret; typed before
+  /// its own closing half, it moves over it; Backspace between an empty pair deletes both; typed
+  /// over a selection, the pair goes around it. None by default.
+  public var autoClosingPairs: [AutoClosingPair] = []
+  /// Indents a new line inside a block and outdents a closing line; the styler's, when it has
+  /// rules. Without, a new line keeps the indentation of the one it breaks.
+  public var indentation: (any IndentationRules)? = nil
   /// Counts selection changes, so an observer can tell one happened.
   public private(set) var selectionGeneration: UInt64 = 0
 
@@ -168,7 +203,9 @@ public final class EditorState: TextDocumentObserver {
       let edits = self.selection.ranges.filter { !$0.isEmpty }.map { (range: $0.range, text: [UInt16](), caret: Int?.none) }
       self.replace(edits, kind: .other)
     case let .insertText(text):
-      self.insert(text, kind: self.selection.hasSelectedText ? .other : .typing)
+      if !self.typePair(text) && !self.typeCloser(text) {
+        self.insert(text, kind: self.selection.hasSelectedText ? .other : .typing)
+      }
     case let .paste(text):
       self.paste(text)
     case .insertNewline:
@@ -301,7 +338,93 @@ public final class EditorState: TextDocumentObserver {
     self.replace(ranges.map { (range: $0.range, text: units, caret: nil) }, kind: .other)
   }
 
+  // MARK: Pairs and blocks
+
+  /// The one unit `text` is, if it is one.
+  private func singleUnit(_ text: String) -> UInt16? {
+    let units = text.utf16
+    return units.count == 1 ? units.first : nil
+  }
+
+  /// Types a pair's half: over the closing half after each caret, around each selection, or both
+  /// halves with the caret between. Returns false to type `text` as it is.
+  private func typePair(_ text: String) -> Bool {
+    guard !self.autoClosingPairs.isEmpty, let unit = self.singleUnit(text), self.markedRange == nil else { return false }
+    let ranges = self.selection.ranges
+    let length = self.document.length
+    // Over the closing half already there.
+    if let pair = self.autoClosingPairs.first(where: { $0.close == unit }),
+       ranges.allSatisfy({ $0.isEmpty && $0.head < length && self.document.unit(at: $0.head) == pair.close }) {
+      self.history.breakCoalescing()
+      self.setSelection(self.selection.map { .caret($0.head + 1) })
+      return true
+    }
+    guard let pair = self.autoClosingPairs.first(where: { $0.open == unit }) else { return false }
+    if ranges.allSatisfy({ !$0.isEmpty }) {
+      // Around the selection, which stays selected inside.
+      let changes = ChangeSet(ranges.flatMap { range in
+        [TextChange(range: range.lowerBound ..< range.lowerBound, text: [pair.open]),
+         TextChange(range: range.upperBound ..< range.upperBound, text: [pair.close])]
+      })
+      let selection = self.selection.map { range in
+        SelectionRange(anchor: changes.map(range.lowerBound, .after), head: changes.map(range.upperBound, .before))
+      }
+      return self.apply(EditorTransaction(changes: changes, selection: selection, kind: .other))
+    }
+    // Both halves only where the closing one cannot be part of a word being typed: before a
+    // space, a closer or the end; and a quote not right after a word.
+    let closes = ranges.allSatisfy { range in
+      guard range.isEmpty else { return false }
+      if range.head < length {
+        let next = self.document.unit(at: range.head)
+        guard next == 0x20 || next == 0x09 || next == 0x0A || self.autoClosingPairs.contains(where: { $0.close == next })
+        else { return false }
+      }
+      if pair.open == pair.close && range.head > 0 {
+        let previous = self.document.unit(at: range.head - 1)
+        if TextBoundaries.characterClass(previous, wordCharacters: self.wordCharacters) == .word || previous == pair.open {
+          return false
+        }
+      }
+      return true
+    }
+    guard closes else { return false }
+    return self.replace(ranges.map { (range: $0.range, text: [pair.open, pair.close], caret: 1) }, kind: .typing)
+  }
+
+  /// Types a block's closer first on a line one level out, as the block it closes. Returns false
+  /// to type it as it is.
+  private func typeCloser(_ text: String) -> Bool {
+    guard let rules = self.indentation, let unit = self.singleUnit(text), rules.closesBlock(unit),
+          self.selection.isSingleCaret, self.markedRange == nil
+    else { return false }
+    let caret = self.selection.primary.head
+    let lineStart = TextBoundaries.lineStart(caret, in: self.document)
+    guard caret > lineStart else { return false }
+    let leading = self.document.withUTF16(in: lineStart ..< caret) { Array($0) }
+    guard leading.allSatisfy({ $0 == 0x20 || $0 == 0x09 }) else { return false }
+    let outdented = Array(leading.dropLast(min(leading.last == 0x09 ? 1 : self.indentWidth, leading.count)))
+    return self.replace([(range: lineStart ..< caret, text: outdented + [unit], caret: nil)], kind: .typing)
+  }
+
+  /// Backspace between the halves of an empty pair deletes both.
+  private func deletePair() -> Bool {
+    guard !self.autoClosingPairs.isEmpty, self.selection.ranges.allSatisfy(\.isEmpty) else { return false }
+    let length = self.document.length
+    let edits = self.selection.ranges.compactMap { range -> (range: Range<Int>, text: [UInt16], caret: Int?)? in
+      let head = range.head
+      guard head > 0, head < length else { return nil }
+      let before = self.document.unit(at: head - 1)
+      let after = self.document.unit(at: head)
+      guard self.autoClosingPairs.contains(where: { $0.open == before && $0.close == after }) else { return nil }
+      return (head - 1 ..< head + 1, [], nil)
+    }
+    guard edits.count == self.selection.ranges.count else { return false }
+    return self.replace(edits, kind: .deleting)
+  }
+
   private func delete(_ motion: TextMotion, forward: Bool, layout: (any TextLayoutQueries)?) {
+    if motion == .character && !forward && self.deletePair() { return }
     var killed: [String] = []
     let edits = self.selection.ranges.compactMap { range -> (range: Range<Int>, text: [UInt16], caret: Int?)? in
       if !range.isEmpty { return (range.range, [], nil) }
@@ -323,16 +446,32 @@ public final class EditorState: TextDocumentObserver {
   private func insertNewline(indenting: Bool) {
     let edits = self.selection.ranges.map { range -> (range: Range<Int>, text: [UInt16], caret: Int?) in
       var text: [UInt16] = [0x0A]
-      if indenting {
-        // The new line starts as indented as the line it breaks, up to the caret.
-        let lineStart = TextBoundaries.lineStart(range.lowerBound, in: self.document)
-        var i = lineStart
-        while i < range.lowerBound {
-          let unit = self.document.unit(at: i)
-          guard unit == 0x20 || unit == 0x09 else { break }
-          text.append(unit)
-          i += 1
-        }
+      guard indenting else { return (range.range, text, nil) }
+      // The new line starts as indented as the line it breaks, up to the caret.
+      let lineStart = TextBoundaries.lineStart(range.lowerBound, in: self.document)
+      var indent: [UInt16] = []
+      var i = lineStart
+      while i < range.lowerBound {
+        let unit = self.document.unit(at: i)
+        guard unit == 0x20 || unit == 0x09 else { break }
+        indent.append(unit)
+        i += 1
+      }
+      text += indent
+      guard let rules = self.indentation else { return (range.range, text, nil) }
+      var before = self.document.withUTF16(in: lineStart ..< range.lowerBound) { Array($0) }
+      while let last = before.last, last == 0x20 || last == 0x09 { before.removeLast() }
+      guard rules.opensBlock(before) else { return (range.range, text, nil) }
+      // Inside a block: one level in. Between `{` and its `}`, the `}` goes to a line of its own.
+      text += Array(self.indentUnit.utf16)
+      let caret = text.count
+      var after = range.upperBound
+      let lineEnd = TextBoundaries.lineEnd(range.upperBound, in: self.document)
+      while after < lineEnd, self.document.unit(at: after) == 0x20 { after += 1 }
+      if let opener = before.last, let closer = rules.closer(forOpener: opener), after < lineEnd,
+         self.document.unit(at: after) == closer {
+        text += [0x0A] + indent
+        return (range.lowerBound ..< after, text, caret)
       }
       return (range.range, text, nil)
     }

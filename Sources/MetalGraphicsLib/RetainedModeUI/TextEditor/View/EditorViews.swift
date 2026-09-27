@@ -304,6 +304,8 @@ final class EditorGutterView : UIRenderableElement {
   private var scratch = TextLayout()
 
   static let padding: Float = 10
+  static let dotRadius: Float = 3
+  static let dotInset: Float = 6
 
   override init() {
     super.init()
@@ -381,11 +383,27 @@ final class EditorGutterView : UIRenderableElement {
     let content = editor.content
     let originY = content.textOrigin.y
     let right = self.position.x + self.size.x - Self.padding
-    let caretLine = editor.document.line(containing: editor.state.selection.primary.head)
+    let document = editor.document
+    let caretLine = document.line(containing: editor.state.selection.primary.head)
+    let diagnostics = document.diagnostics
     for visible in content.visible {
       let layout = visible.layout
       let baseline = originY + Float(visible.top) + (layout.text.lines.first?.baseline ?? 0)
       guard baseline > self.position.y - 20, baseline < self.position.y + self.size.y + 20 else { continue }
+      if !diagnostics.isEmpty {
+        // A dot by the number of a line with problems, in the colour of the worst.
+        var worst: DiagnosticSeverity? = nil
+        let lineRange = document.lineRange(visible.line)
+        diagnostics.forEach(overlapping: lineRange.lowerBound ..< lineRange.upperBound + 1) { mark in
+          if worst.map({ mark.payload.severity.rawValue > $0.rawValue }) ?? true { worst = mark.payload.severity }
+        }
+        if let worst {
+          var color = theme.color(for: worst)
+          color.w *= opacity
+          let center = float2(self.position.x + Self.dotInset, baseline - editor.layout.baseFont.size * 0.35)
+          renderer.draw(circle: Circle2D(position: effect.apply(to: center) - half, radius: Self.dotRadius * scale, color: color))
+        }
+      }
       // The number's digits, right to left, into the scratch line.
       var number = visible.line + 1
       var x: Float = 0

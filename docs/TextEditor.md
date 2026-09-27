@@ -23,6 +23,10 @@ TextEditor(document: document)
   .onCommand { command in … }            // sees every command first; true takes it over
   .editFilter { transaction, state in … } // sees every user edit first; may rewrite or refuse it
   .onSelectionChange { selection in … }
+  .bracketMatching()                     // the bracket at the caret and its partner
+  .autoClosingPairs()                    // ( brings ), " brings ", typed over, deleted together
+  .searchOptions(TextSearchOptions(caseSensitive: true, wholeWord: false, regex: false))
+  .onSearchChange { current, count in … } // "3 of 12", for a find bar
   .controller(self.controller)           // select, reveal and focus from code, below
   .font(.system(size: 13, design: .monospaced))
 ```
@@ -38,7 +42,40 @@ A body builds the editor, so the component has no reference to it. It holds an
 - `goTo(line:column:)` places the caret and centres it.
 - `focus()` gives the editor the keyboard.
 
-All three do nothing while no editor has the controller. `TextEditor.select` and `focus` are the
+All three do nothing while no editor has the controller. It also finds and replaces:
+
+- `findNext(forward:)` selects the next match after the selection (or the one before it),
+  wrapping around, and draws it in the theme's `currentSearchMatch`.
+- `replaceCurrent(with:)` replaces the selected match and selects the next.
+- `replaceAll(with:)` replaces every match as one step to undo.
+- `matchPosition` is "3 of 12" as numbers.
+
+`.searchOptions(TextSearchOptions(caseSensitive:wholeWord:regex:))` sets how the query matches.
+A regular expression is matched within each line, and a replacement may use `$1`.
+`.onSearchChange { current, count in }` reports `matchPosition` at the end of a frame in which it
+may have changed: a new query or options, a find, or an edit or a move while searching.
+
+## Typing code
+
+- **`.bracketMatching()`** highlights the bracket beside the caret and its partner, in the
+  theme's `bracketMatch`. Brackets inside strings and comments are skipped, going by the
+  styler's tokens. The partner is looked for at most 20,000 units away, once per frame the caret
+  moved, and only the two lines of the old pair and the two of the new are reshaped.
+- **`.autoClosingPairs()`** (brackets and `"` by default):
+  - typing an opening half types the closing one, where the closing one cannot be the start of a
+    word being typed;
+  - typing a closing half before its twin moves over it;
+  - Backspace between an empty pair deletes both;
+  - typing an opening half over a selection wraps the selection.
+- **Indentation.** A styler that adopts `IndentationRules` (as `SwiftStyler` does) indents a new
+  line after `{`, `(` or `[` one level in, and splits `{}` into three lines on Return. A closer
+  typed first on a line moves that line one level out. Without rules, a new line keeps the
+  indentation of the one it breaks.
+- **Gutter dots.** With line numbers shown, a line with diagnostics gets a dot in the gutter, in
+  the colour of the worst.
+
+Each is O(1) or O(line) per keystroke. While a search is set and `onSearchChange` is armed, each
+edit and caret move counts the matches, O(document), once per frame. `TextEditor.select` and `focus` are the
 same calls, for code that holds the editor.
 
 `TextDocument.addListener(_:)` tells a `TextDocumentListener` of every change set: `willApply`

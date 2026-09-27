@@ -36,17 +36,35 @@ host would both take its drags. AppKit is told not to treat the folder argument 
 | Keys | Does | Where |
 |---|---|---|
 | ⌘O | Open a folder | `IDERoot` |
+| ⌘P | Open a file by name (`QuickOpenSheet`, `FuzzyMatcher`); Return opens the first, Escape closes | `IDERoot` |
 | ⌘S | Save the file | its `FileEditorPanel` |
 | ⌘⌥S | Save every file, in every window | `IDERoot`, `FileEditorPanel` |
+| ⌘F | Find in the file: the selection, if it is on one line, is what to look for | `FileEditorPanel` |
+| Return, ⌘G, ⇧⌘G | The next match, the next, the one before | the find field, `FileEditorPanel` |
+| Escape | Close the find bar | `FileEditorPanel` |
+| ⌘L | Go to a line, or `line:column` (`GoToLineSheet`) | `FileEditorPanel` |
 
 The keys are handled in the tree with `.onKeyPress`, not as menu key equivalents. A menu would
-take the key before the window saw it, and the headless tests cannot press a menu.
+take the key before the window saw it, and the headless tests cannot press a menu. For the same
+reason, SwiftUI's own File ▸ Print (⌘P) is removed.
+
+## Find, and typing Swift
+
+The find bar sits over the text while searching. It has:
+
+- the query, with the match count ("3 of 12", from `onSearchChange`);
+- ◀ ▶ for the previous and next match;
+- option buttons for case, whole words and regular expressions (`.*`);
+- a replacement, with Replace (the selected match, then the next) and All (one step to undo).
+
+Closing it clears the highlights. A Swift file's editor also matches brackets, types `()`, `[]`,
+`{}` and `""` in pairs, and indents inside blocks. See `docs/TextEditor.md`, *Typing code*.
 
 ## Files
 
 - **Opening a folder.** `IDE.openFolder` writes `WorkspaceModel.rootPath` and scans the folder in
   the background (`Services.background`). The scan leaves out names starting with a dot and
-  `WorkspaceScanner.ignoredNames`, and stops after 50,000 entries. It then writes
+  `WorkspaceScanner.ignoredNames` (`build`, `DerivedData` and others), and stops after 50,000 entries. It then writes
   `WorkspaceModel.root`, which reaches every window as a `@Model` write does.
 - **The navigator.** It subscribes to `root` by hand, because its rows are a `LazyVStack`'s
   `@State` array: a body cannot compute them from a model.
@@ -100,7 +118,6 @@ Everything here runs on a user action: a tap, a key, a scan finishing. Nothing r
 - **Changes on disk.** A file changed on disk is not reloaded, and the tree is not rescanned: open
   the folder again.
 - **Planned next:**
-  - find and replace, go to line, quick open, bracket matching and smart indent;
   - build and run with a console and compiler diagnostics;
   - an outline and folding from swift-syntax;
   - sourcekit-lsp: completion, hover, definitions, live diagnostics.

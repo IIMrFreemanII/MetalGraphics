@@ -22,6 +22,23 @@ public enum LineWrapping: Hashable, Sendable {
   case soft
 }
 
+/// How a search matches: `TextEditor.setSearchOptions`, `.searchOptions(_:)`.
+public struct TextSearchOptions: Hashable, Sendable {
+  /// "Name" does not match "name".
+  public var caseSensitive: Bool
+  /// "name" does not match inside "rename".
+  public var wholeWord: Bool
+  /// The query is an `NSRegularExpression` pattern, matched within each line. A replacement
+  /// may use `$1` and the rest.
+  public var regex: Bool
+
+  public init(caseSensitive: Bool = false, wholeWord: Bool = false, regex: Bool = false) {
+    self.caseSensitive = caseSensitive
+    self.wholeWord = wholeWord
+    self.regex = regex
+  }
+}
+
 /// How far a selection moved from code scrolls the editor.
 public enum TextReveal: Sendable {
   /// Not at all.
@@ -60,6 +77,31 @@ public final class EditorController {
   public func focus() {
     self.editor?.focus()
   }
+
+  /// Selects the next match of the search after the selection, or the one before it, wrapping
+  /// around. Returns whether there was one.
+  @discardableResult
+  public func findNext(forward: Bool = true) -> Bool {
+    self.editor?.findNext(forward: forward) ?? false
+  }
+
+  /// Replaces the selected match, then selects the next. Returns whether it replaced one.
+  @discardableResult
+  public func replaceCurrent(with template: String) -> Bool {
+    self.editor?.replaceCurrent(with: template) ?? false
+  }
+
+  /// Replaces every match as one step to undo. Returns how many.
+  @discardableResult
+  public func replaceAll(with template: String) -> Int {
+    self.editor?.replaceAll(with: template) ?? 0
+  }
+
+  /// "3 of 12" for a find bar: the selected match's index, from 1 (0 when no match is
+  /// selected), and how many there are.
+  public var matchPosition: (current: Int, count: Int) {
+    self.editor?.matchPosition ?? (0, 0)
+  }
 }
 
 /// Multi-line, styled, editable text: the base of a code editor, a console, a markdown editor.
@@ -97,6 +139,13 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   public var onTextChange: ((String) -> Void)?
   /// Called with the selection when it changed, once per frame.
   public var onSelectionChange: ((EditorSelection) -> Void)?
+  /// Called with `matchPosition` — the selected match's index from 1, or 0, and how many there
+  /// are — when it may have changed: a new query or options, a find, an edit or a move while
+  /// searching. At most once per frame, and only when the numbers differ; each call counts the
+  /// matches, O(document).
+  public var onSearchChange: ((_ current: Int, _ count: Int) -> Void)?
+  private var searchReportScheduled = false
+  private var lastSearchReport = (current: 0, count: 0)
   /// Sees every command first, from a key, the input method or the app; returns true to take it
   /// over. A console submits on Return this way.
   public var onCommand: ((EditorCommand) -> Bool)?
@@ -344,6 +393,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     }
     self.textChanged = true
     self.scheduleReport()
+    self.scheduleSearchReport()
     if !self.inCommand {
       // An app's edit, or an input method's: brought on screen at the end of the frame.
       self.scheduleRefresh()
@@ -353,6 +403,11 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
 
   func editorStateDidChangeSelection(_ state: EditorState) {
     self.selectionDirty = true
+    self.scheduleBracketMatch()
+    self.scheduleSearchReport()
+    if let current = self.styling.currentMatch, current != state.selection.primary.range {
+      self.showCurrentMatch(nil)
+    }
     self.scheduleReport()
     if !self.inCommand {
       self.context?.invalidate(.render)
@@ -468,6 +523,126 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   /// Gives the editor the keyboard.
   public func focus() {
     self.context?.focus(self.focusable)
+  }
+
+  // MARK: - Find and replace
+
+  /// Selects the next match of the search after the selection (before it, backward), wrapping
+  /// around, and scrolls it into view. Returns whether there was one.
+  @discardableResult
+  public func findNext(forward: Bool = true) -> Bool {
+    let matches = self.styling.searchMatches()
+    guard !matches.isEmpty else { return false }
+    let selection = self.state.selection.primary.range
+    let match: Range<Int>
+    if forward {
+      match = matches.first { $0.lowerBound >= selection.upperBound && $0 != selection } ?? matches[0]
+    } else {
+      match = matches.last { $0.upperBound <= selection.lowerBound && $0 != selection } ?? matches[matches.count - 1]
+    }
+    self.showCurrentMatch(match)
+    self.select(match, reveal: .minimal)
+    return true
+  }
+
+  /// Replaces the selection with `template` when the selection is a match, then selects the
+  /// next match. Returns whether it replaced one.
+  @discardableResult
+  public func replaceCurrent(with template: String) -> Bool {
+    let selection = self.state.selection.primary.range
+    guard !selection.isEmpty, self.styling.searchMatches().contains(selection) else {
+      self.findNext()
+      return false
+    }
+    let text = self.styling.replacement(for: selection, template: template)
+    self.inCommand = true
+    let replaced = self.state.apply(EditorTransaction(
+      changes: ChangeSet(TextChange(range: selection, with: text)),
+      selection: .caret(selection.lowerBound + text.utf16.count), kind: .other
+    ))
+    self.inCommand = false
+    self.refresh(revealCaret: false)
+    if replaced { self.findNext() }
+    return replaced
+  }
+
+  /// Replaces every match with `template`, as one step to undo. Returns how many it replaced.
+  @discardableResult
+  public func replaceAll(with template: String) -> Int {
+    let matches = self.styling.searchMatches(limit: .max)
+    guard !matches.isEmpty else { return 0 }
+    let changes = matches.map { TextChange(range: $0, with: self.styling.replacement(for: $0, template: template)) }
+    self.inCommand = true
+    let replaced = self.state.apply(EditorTransaction(changes: ChangeSet(changes), kind: .other))
+    self.inCommand = false
+    self.refresh(revealCaret: true)
+    return replaced ? matches.count : 0
+  }
+
+  /// The selected match's index, from 1, or 0 when the selection is not a match; and how many
+  /// matches there are. O(document) — for a find bar, after a search or a find, not per frame.
+  public var matchPosition: (current: Int, count: Int) {
+    let matches = self.styling.searchMatches()
+    let selection = self.state.selection.primary.range
+    let index = matches.firstIndex(of: selection).map { $0 + 1 } ?? 0
+    return (index, matches.count)
+  }
+
+  /// Reports the match position at the end of the frame, if anyone listens and a search is
+  /// set (or was, to report it gone).
+  private func scheduleSearchReport() {
+    guard self.onSearchChange != nil, !self.searchReportScheduled, let context = self.context,
+          self.styling.isSearching || self.lastSearchReport.count > 0
+    else { return }
+    self.searchReportScheduled = true
+    context.afterLayout { [weak self] in
+      guard let self else { return }
+      self.searchReportScheduled = false
+      let position = self.styling.isSearching ? self.matchPosition : (0, 0)
+      guard position != self.lastSearchReport else { return }
+      self.lastSearchReport = position
+      self.onSearchChange?(position.0, position.1)
+    }
+  }
+
+  /// Draws `match` in the current match's colour, and the one before in the others'.
+  private func showCurrentMatch(_ match: Range<Int>?) {
+    guard match != self.styling.currentMatch else { return }
+    for old in [self.styling.currentMatch, match].compactMap({ $0 }) {
+      self.layout.invalidate(lineID: self.document.lineID(self.document.line(containing: old.lowerBound)))
+    }
+    self.styling.currentMatch = match
+  }
+
+  // MARK: - Brackets
+
+  /// Whether the bracket beside the caret and its partner are highlighted.
+  public private(set) var matchesBrackets = false
+  private var bracketsScheduled = false
+
+  /// After the frame's edits and moves, once: finds the bracket pair at the caret, and reshapes
+  /// the lines of the pair that went and the one that came.
+  private func scheduleBracketMatch() {
+    guard self.matchesBrackets, !self.bracketsScheduled, let context = self.context else { return }
+    self.bracketsScheduled = true
+    context.afterLayout { [weak self] in
+      guard let self else { return }
+      self.bracketsScheduled = false
+      self.updateBracketMatch()
+    }
+  }
+
+  private func updateBracketMatch() {
+    let selection = self.state.selection
+    let pair = self.matchesBrackets && selection.isSingleCaret && self.isFocused
+      ? self.styling.matchingBracket(near: selection.primary.head) : nil
+    let old = self.styling.bracketPair
+    guard pair?.0 != old?.0 || pair?.1 != old?.1 else { return }
+    self.styling.bracketPair = pair
+    for offset in [old?.0, old?.1, pair?.0, pair?.1].compactMap({ $0 }) where offset < self.document.length {
+      self.layout.invalidate(lineID: self.document.lineID(self.document.line(containing: offset)))
+    }
+    self.refresh(revealCaret: false)
   }
 
   // MARK: - Keys
@@ -596,6 +771,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
 
   private func focusChanged(_ focused: Bool) {
     self.isFocused = focused
+    self.scheduleBracketMatch()
     if !focused {
       self.state.unmarkText()
     }
@@ -753,6 +929,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     self.document = value
     let editable = self.state.isEditable
     let filter = self.state.filter
+    let pairs = self.state.autoClosingPairs
     self.state.delegate = nil
     self.state = EditorState(document: value)
     self.state.isEditable = editable
@@ -764,6 +941,8 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     self.styling.setDocument(value)
     self.state.lineComment = self.styling.styler?.lineComment
     self.state.wordCharacters = self.styling.styler?.wordCharacters ?? []
+    self.state.indentation = self.styling.styler as? any IndentationRules
+    self.state.autoClosingPairs = pairs
     self.lastText = nil
     context.invalidate(.layout)
   }
@@ -797,6 +976,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
 
   private func applyStyler(_ value: (any TextStyler)?) {
     self.styling.setStyler(value)
+    self.state.indentation = value as? any IndentationRules
     self.state.lineComment = value?.lineComment
     self.state.wordCharacters = value?.wordCharacters ?? []
     self.layout.invalidateAll()
@@ -830,11 +1010,26 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     return inserted
   }
 
-  /// Highlights every match of `value`, ignoring case; nil or empty for none.
+  /// Highlights every match of `value`, by the search options; nil or empty for none.
   public func setSearchQuery(_ value: String?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
     guard self.styling.setSearch(value) else { return }
     self.layout.invalidateAll()
     self.refresh(revealCaret: false)
+    self.scheduleSearchReport()
+  }
+
+  /// How the search matches: case, whole words, a regular expression.
+  public func setSearchOptions(_ value: TextSearchOptions, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard self.styling.setSearch(self.styling.searchQuery, options: value) else { return }
+    self.layout.invalidateAll()
+    self.refresh(revealCaret: false)
+    self.scheduleSearchReport()
+  }
+
+  public func setMatchesBrackets(_ value: Bool, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.matchesBrackets else { return }
+    self.matchesBrackets = value
+    if value { self.scheduleBracketMatch() } else { self.updateBracketMatch() }
   }
 
   /// The ranges of the current search's matches.
@@ -893,10 +1088,33 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     return self
   }
 
-  /// Highlights every match of `value`, ignoring case.
+  /// Highlights every match of `value`, ignoring case unless the options say otherwise.
   public func searchQuery(_ value: String?) -> Self {
     self.styling.setSearch(value)
     return self
+  }
+
+  public func searchOptions(_ value: TextSearchOptions) -> Self {
+    self.styling.setSearch(self.styling.searchQuery, options: value)
+    return self
+  }
+
+  /// Highlights the bracket beside the caret and its partner, skipping those in strings and
+  /// comments.
+  public func bracketMatching(_ value: Bool = true) -> Self {
+    self.matchesBrackets = value
+    return self
+  }
+
+  /// Types the closing half of a pair with the opening one, types over it, and deletes both
+  /// halves of an empty pair together. Swift's brackets and quotes by default; `[]` for none.
+  public func autoClosingPairs(_ value: [AutoClosingPair] = AutoClosingPair.code) -> Self {
+    self.state.autoClosingPairs = value
+    return self
+  }
+
+  public func setAutoClosingPairs(_ value: [AutoClosingPair], _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.state.autoClosingPairs = value
   }
 
   /// Underlines problems in the text with squiggles.
@@ -916,6 +1134,11 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
 
   public func onCommand(_ action: @escaping (EditorCommand) -> Bool) -> Self {
     self.onCommand = action
+    return self
+  }
+
+  public func onSearchChange(_ action: @escaping (_ current: Int, _ count: Int) -> Void) -> Self {
+    self.onSearchChange = action
     return self
   }
 

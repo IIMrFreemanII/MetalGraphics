@@ -54,8 +54,9 @@ public struct FileNode: Sendable, Hashable, Identifiable {
 
 /// Reads a folder into a `FileNode` tree, leaving out what a developer never opens by hand.
 public enum WorkspaceScanner {
-  /// Left out wherever they are, besides every name starting with a dot.
-  public static let ignoredNames: Set<String> = ["DerivedData", "node_modules", "graphify-out"]
+  /// Left out wherever they are, besides every name starting with a dot: build products, which
+  /// can hold more files than the scan's limit, and are never edited by hand.
+  public static let ignoredNames: Set<String> = ["build", "DerivedData", "node_modules", "graphify-out"]
 
   /// The tree under `root`, at most `limit` entries deep and wide, so a folder picked by
   /// mistake (a home folder) does not hang the scan.
