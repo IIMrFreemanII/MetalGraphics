@@ -91,6 +91,30 @@ An `ElementRef` taps with real input at the centre of its hit rect. If something
 
 Windows sit on a virtual screen, in points from its top left. A host's `screenFrame` is in those coordinates.
 
+## Presentations
+
+A presentation in a window of its own (`docs/Modals.md`) opens a `HeadlessWindow` of scene id
+`"presentation"`. `HeadlessPresentedWindows`, which stands in for `PresentedWindows`, puts it
+where AppKit would put the window:
+
+- an attached sheet, alert or dialog hangs from the top of its window, centred;
+- a floating one is centred over its window;
+- a popover sits by its source;
+- a cover lies over its window, or fills the screen.
+
+Its tree runs on its window's thread, which here is the test's, and steps with the rest.
+
+- `app.presentation(over: window)` is the one shown last from a window.
+- A click or a right click on a window that has a presentation over it goes to the presentation,
+  as a click outside it, and the window gets nothing. A scroll there dismisses a popover.
+- Keys pressed on such a window go to the topmost presentation over it, as they would to AppKit's
+  key window.
+- `close()` on a presentation's window is its close button: it asks the binding.
+- When it closes, the keyboard goes back to the window it was shown from.
+
+`relaunch` and `close` close presentations' windows first, without asking their bindings; a
+relaunch reopens none.
+
 ## Storage and relaunch
 
 `UIStorage.defaults` points at a private, empty `UserDefaults` suite for the app's life. `DockSpace` saves its layouts through `UIStorage.defaults`, so dock layouts go there too. `close()` deletes the suite and puts back the globals the app swapped: `Windows`' opener, `MainQueue`, the executor and the defaults. Only one app can be live at a time, and a new one closes any that was left open.

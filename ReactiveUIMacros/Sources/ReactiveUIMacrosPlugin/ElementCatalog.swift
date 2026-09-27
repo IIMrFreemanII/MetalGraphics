@@ -183,6 +183,10 @@ struct ModifierSpec {
   /// The label `takesContent`'s closure may be written with instead of trailing: `.draggable(x,
   /// preview: { … })`.
   let contentLabel: String
+  /// The label of a binding argument whose `@State`, declared optional, specialises `produces`:
+  /// `item` on `.sheet(item: $selected)` with `@State var selected: Route?` gives a field typed
+  /// `ItemPresentationElement<Route>` (F22).
+  let genericOverBindingOf: String?
 
   init(
     name: String, labels: [String?], produces: String,
@@ -190,7 +194,8 @@ struct ModifierSpec {
     animatable: Bool = false, isScope: Bool = false, inPlaceOn: Set<String>? = nil,
     wrapsOtherwise: Bool = false, argSetters: [ArgSpec]? = nil, inPlaceOnAny: Bool = false,
     exactLabels: Bool = false, takesContent: Bool = false, genericOverTypeOf: String? = nil,
-    labeledHandlers: [HandlerSpec] = [], contentLabel: String = "content"
+    labeledHandlers: [HandlerSpec] = [], contentLabel: String = "content",
+    genericOverBindingOf: String? = nil
   ) {
     self.name = name
     self.labels = labels
@@ -209,6 +214,7 @@ struct ModifierSpec {
     self.genericOverTypeOf = genericOverTypeOf
     self.labeledHandlers = labeledHandlers
     self.contentLabel = contentLabel
+    self.genericOverBindingOf = genericOverBindingOf
   }
 
   /// Every closure label a handler of this modifier is written with, the main one's included.
@@ -626,7 +632,57 @@ enum ElementCatalog {
         produces: "FlexFrame", setter: nil, combine: .identity, argSetters: flexFrameArgs
       ),
     ],
+    "sheet": [presentation("sheet"), itemPresentation("sheet")],
+    "fullScreenCover": [presentation("fullScreenCover"), itemPresentation("fullScreenCover")],
   ]
+
+  // MARK: - Presentations
+
+  /// `isPresented: $shown`, lowered: the value bound to `setIsPresented`, and the write-back
+  /// armed into `onIsPresentedChange`.
+  static let isPresentedArg = ArgSpec(
+    "isPresented", "setIsPresented", binding: HandlerSpec(property: "onIsPresentedChange", placeholder: "")
+  )
+
+  /// `.sheet(isPresented:onDismiss:content:)` and its kind. The content builds what shows each
+  /// time it is presented, so it is a handler: armed on mount, and free to build a component.
+  /// `onDismiss:` is a handler too. `.popover` takes its constant anchor and edge instead of
+  /// `onDismiss:`; `.alert` and `.confirmationDialog` a reactive title first, their buttons as
+  /// `actions:` and a `message:`.
+  static func presentation(
+    _ name: String, main: String = "content", title: Bool = false, constants: [String] = [],
+    onDismiss: Bool = true
+  ) -> ModifierSpec {
+    var labels: [String?] = title ? [nil] : []
+    labels += ["isPresented"] + constants + (onDismiss ? ["onDismiss"] : []) + [main] + (title ? ["message"] : [])
+    var setters = title ? [ArgSpec(nil, "setTitle")] : []
+    setters += [isPresentedArg] + constants.map { ArgSpec($0, nil) }
+    var others: [HandlerSpec] = []
+    if onDismiss {
+      others.append(HandlerSpec(property: "onDismiss", placeholder: "", label: "onDismiss"))
+    }
+    if title {
+      others.append(HandlerSpec(property: "message", placeholder: "", adapter: "presentationContent", label: "message"))
+    }
+    return ModifierSpec(
+      name: name, labels: labels, produces: "PresentationElement", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "content", placeholder: "", adapter: "presentationContent", label: main),
+      argSetters: setters, labeledHandlers: others
+    )
+  }
+
+  /// `.sheet(item:onDismiss:content:)`: `item: $selected` is lowered like `isPresented:`, and the
+  /// state's type types the element, `ItemPresentationElement<Route>`.
+  static func itemPresentation(_ name: String) -> ModifierSpec {
+    ModifierSpec(
+      name: name, labels: ["item", "onDismiss", "content"], produces: "ItemPresentationElement",
+      setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "itemContent", placeholder: "", adapter: "presentationItemContent", label: "content"),
+      argSetters: [ArgSpec("item", "setItem", binding: HandlerSpec(property: "onItemChange", placeholder: ""))],
+      labeledHandlers: [HandlerSpec(property: "onDismiss", placeholder: "", label: "onDismiss")],
+      genericOverBindingOf: "item"
+    )
+  }
 
   /// `.overlay(alignment:) { … }` and `.background(alignment:) { … }`.
   static func contentModifier(_ name: String) -> ModifierSpec {
@@ -970,6 +1026,16 @@ enum ElementCatalog {
     "navigationTitle": ModifierSpec(
       name: "navigationTitle", labels: [nil],
       produces: "NavigationTitleElement", setter: "setTitle", combine: .identity
+    ),
+    "popover": presentation("popover", constants: ["attachmentAnchor", "arrowEdge"], onDismiss: false),
+    "alert": presentation("alert", main: "actions", title: true, onDismiss: false),
+    "confirmationDialog": presentation(
+      "confirmationDialog", main: "actions", title: true, constants: ["titleVisibility"], onDismiss: false
+    ),
+    // Applies to what is presented from then on.
+    "presentationWindow": ModifierSpec(
+      name: "presentationWindow", labels: [nil],
+      produces: "PresentationWindowStyleElement", setter: "setStyle", combine: .identity
     ),
     "datePickerStyle": ModifierSpec(
       name: "datePickerStyle", labels: [nil],

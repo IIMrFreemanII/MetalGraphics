@@ -60,8 +60,14 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
   /// Whether the left button went down in this window and is still down.
   public private(set) var isPressed = false
 
-  /// Called instead of closing when the user closes it: a dock window closes its host.
+  /// Called instead of closing when the user closes it: a dock window closes its host, a
+  /// presentation's asks its binding.
   var onUserClose: (() -> Void)?
+
+  /// Set for a presentation's window: what it shows, and the window it was presented from.
+  var presentation: HeadlessPresentation?
+  /// A press a presentation over this window took: its release only steps.
+  private var pressTaken = false
 
   private var target: MTLTexture
   private let state: HeadlessWindowState
@@ -98,6 +104,29 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
     handle.post { $0.resize(to: size, scale: scale) }
   }
 
+  /// A presentation's window, whose tree and renderer its presenter's thread already made
+  /// (`WindowPresentation.open`).
+  init(
+    app: HeadlessApp, adopting handle: WindowHandle, sceneID: String, title: String, size: float2, origin: float2
+  ) {
+    self.app = app
+    self.sceneID = sceneID
+    self.title = title
+    self.size = size
+    self.origin = origin
+    self.target = Graphics2D.makeOffscreenTarget(size: size, pixelsPerPoint: app.pixelsPerPoint)
+    self.state = HeadlessWindowState(persisted: "")
+    self.handle = handle
+    self.renderer = handle.currentRenderer!
+    let scale = app.pixelsPerPoint
+    handle.post { $0.resize(to: size, scale: scale) }
+  }
+
+  /// The cursor its tree asks for, as the main thread hears of it.
+  func setPointerStyle(_ style: PointerStyle) {
+    self.state.pointerStyle = style
+  }
+
   // MARK: - State
 
   /// The tree's root: the window-sized `Frame` its scene's root is the child of.
@@ -131,7 +160,8 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
     return try body()
   }
 
-  /// Every element of type `T` in the tree, in pre-order.
+  /// Every element of type `T` in the tree, in pre-order, then in what shows over it — popovers,
+  /// sheets, alerts — bottom first: everything the window shows.
   public func all<T: UIElement>(_ type: T.Type) -> [T] {
     var found: [T] = []
     func visit(_ element: UIElement) {
@@ -139,6 +169,7 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
       element.forEachChild(visit)
     }
     visit(self.root)
+    self.context.overlays.forEach(visit)
     return found
   }
 
@@ -183,6 +214,7 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
     self.target = Graphics2D.makeOffscreenTarget(size: size, pixelsPerPoint: self.app.pixelsPerPoint)
     let scale = self.app.pixelsPerPoint
     self.handle.post { $0.resize(to: size, scale: scale) }
+    self.app.presentedWindows?.parentResized(self)
   }
 
   /// Closes it, as its close button does: its tree unmounts, and a dock window's panels close.
@@ -242,6 +274,11 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
   }
 
   public func rightClick(at point: float2) {
+    if self.takeClick(at: point) {
+      self.pressTaken = false
+      self.app.step()
+      return
+    }
     self.activate()
     let (position, inView) = self.pin(point)
     self.pointer = inView ? position : nil
@@ -252,8 +289,10 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
     self.app.step()
   }
 
-  /// The left button going down at `point`, and staying down until `mouseUp`.
+  /// The left button going down at `point`, and staying down until `mouseUp`. With a
+  /// presentation shown from this window, the presentation takes it, as a click outside it.
   public func mouseDown(at point: float2, count: Int = 1) {
+    if self.takeClick(at: point) { return }
     self.activate()
     let (position, inView) = self.pin(point)
     self.pointer = inView ? position : nil
@@ -276,6 +315,11 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
 
   /// The left button coming up at `point`.
   public func mouseUp(at point: float2) {
+    if self.pressTaken {
+      self.pressTaken = false
+      self.app.step()
+      return
+    }
     self.app.dockReleased(at: self.origin + point)
     let (position, inView) = self.pin(point)
     self.pointer = inView ? position : nil
@@ -312,9 +356,24 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
 
   /// A scroll of `points` over `point`, as a trackpad sends it; positive y moves content down.
   public func scroll(by points: float2, at point: float2) {
+    // A popover shown from here goes; the scroll still goes on, to a tree that may be blocked.
+    if let top = self.app.presentation(over: self), top.presentation?.kind == .popover {
+      PresentedWindows.send(.clickedOutside, to: top.handle)
+    }
     self.move(to: point)
     self.send(.scroll(lines: points / 12, points: points))
     self.app.step()
+  }
+
+  /// A click on this window while a presentation shown from it is up: the presentation takes
+  /// it, as a click outside it, and the window gets nothing. Whether it did.
+  private func takeClick(at point: float2) -> Bool {
+    guard let top = self.app.presentation(over: self) else { return false }
+    self.app.screenPointer = self.origin + point
+    self.pressTaken = true
+    PresentedWindows.send(.clickedOutside, to: top.handle)
+    self.app.step()
+    return true
   }
 
   /// The pointer leaving the window, as the view's `mouseExited` reports it.
@@ -340,6 +399,9 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
 
   private func activate() {
     if !self.isVisible { self.show() }
+    // What a presentation over it shows keeps the keyboard, as AppKit's sheets and modal
+    // windows do.
+    guard self.app.presentation(over: self)?.presentation?.isModal != true else { return }
     self.app.makeKey(self)
   }
 
@@ -351,6 +413,11 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
   public func press(
     _ key: KeyEquivalent, characters: String? = nil, modifiers: NSEvent.ModifierFlags = []
   ) {
+    // To the key window: the presentation shown over this one, when there is one.
+    if let top = self.app.topPresentation(over: self) {
+      top.press(key, characters: characters, modifiers: modifiers)
+      return
+    }
     self.activate()
     self.sendPress(key, characters: characters, modifiers: modifiers, pasteboard: nil)
     self.app.step()
@@ -367,6 +434,10 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
 
   /// ⌘V with `text` on the pasteboard, as the view reads it with the key.
   public func paste(_ text: String) {
+    if let top = self.app.topPresentation(over: self) {
+      top.paste(text)
+      return
+    }
     self.activate()
     self.sendPress("v", characters: "v", modifiers: .command, pasteboard: text)
     self.app.step()

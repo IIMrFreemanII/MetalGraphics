@@ -128,10 +128,33 @@ public class UIContext {
   /// The element key presses go to first. See `dispatchKeys(_:)`.
   public private(set) var focused: FocusableElement? = nil
 
-  /// Popovers on screen, bottom first: roots of their own, laid out after the app's tree and
-  /// collected after it, so they draw and hit above everything, outside every clip. Empty almost
-  /// always, and then they cost nothing. See `presentPopover`.
-  var overlays: [PopoverLayer] = []
+  /// Popovers and modal presentations on screen, bottom first: roots of their own, laid out
+  /// after the app's tree and collected after it, so they draw and hit above everything, outside
+  /// every clip. Empty almost always, and then they cost nothing. See `present(_:parent:)`.
+  var overlays: [OverlayLayer] = []
+
+  /// Where the topmost modal overlay starts in `focusOrder`, `keyOrder`, `scrollOrder` and
+  /// `dropOrder`: what is before it is under the modal, and gets no clicks, keys, scrolls or
+  /// drops. 0 while no modal is up. Set by `rebuildTreeOrder`.
+  private var modalFocusStart = 0
+  private var modalKeyStart = 0
+  private var modalScrollStart = 0
+  private var modalDropStart = 0
+
+  /// The `.sheet`, `.alert` and other presentation modifiers mounted in this tree, so a
+  /// presentation going away can dismiss the ones shown from inside it.
+  var presentations: [PresentationElement] = []
+
+  /// How many modal presentations in windows of their own block this tree: while any does,
+  /// nothing in it is hovered, pressed, tapped, focused, scrolled or offered keys. See
+  /// `blockInput()`.
+  public private(set) var inputBlocks = 0
+  /// A pointer nowhere, which what is hovered is updated to while input is blocked.
+  private lazy var parkedInput: Input = {
+    let input = Input()
+    input.apply(.pointerExited)
+    return input
+  }()
 
   /// Mounted drop destinations, and those in the tree in pre-order with the clip above each,
   /// which is where a drag looks for its target. See `routeDrop`.
@@ -305,6 +328,54 @@ public class UIContext {
     self.invalidate(.treeOrder)
   }
 
+  func registerPresentation(_ presentation: PresentationElement) -> Void {
+    self.presentations.append(presentation)
+  }
+
+  func unregisterPresentation(_ presentation: PresentationElement) -> Void {
+    self.presentations.removeAll { $0 === presentation }
+  }
+
+  // MARK: - Overlays
+
+  /// The window's size, as the last `update` was given it.
+  var windowSize: float2 { self.lastSize }
+
+  /// Shows `layer` above everything: mounted in `parent` — a popover's anchor, so what is inside
+  /// finds what is around it — or in nothing. Focus is cleared, and given back when it goes.
+  func present(_ layer: OverlayLayer, parent: UIElement?) -> Void {
+    if layer.isModal, self.drag != nil {
+      self.cancelDrag()
+    }
+    layer.context = self
+    layer.restoreFocus = self.focused
+    self.overlays.append(layer)
+    self.focus(nil)
+    layer.handleMount(self, in: parent)
+    self.invalidate([.layout, .treeOrder])
+    layer.animateIn(self)
+  }
+
+  /// Blocks input to this tree until `unblockInput()`: a modal presentation shows in a window of
+  /// its own, over this one's. What is hovered is left at the end of this frame; a press begun
+  /// before still ends.
+  public func blockInput() -> Void {
+    self.inputBlocks += 1
+    self.invalidate(.render)
+  }
+
+  public func unblockInput() -> Void {
+    guard self.inputBlocks > 0 else { return }
+    self.inputBlocks -= 1
+    // What is under the pointer, once the frame comes that has one.
+    self.invalidate(.hitGrid)
+  }
+
+  /// The topmost modal overlay that is not on its way out, if any.
+  private var topModal: OverlayLayer? {
+    self.overlays.last { $0.isModal && !$0.isDismissing }
+  }
+
   // MARK: - Frame
 
   /// Hit-tests, advances animations, then lays out. Run before `render(root:_:)` each frame.
@@ -325,10 +396,13 @@ public class UIContext {
       self.invalidate(.layout)
     }
 
-    if input.scrollDelta != .zero {
-      // Scrolling under a popover would leave it pointing at nothing.
-      if let top = self.overlays.last, !top.cardContains(input.mousePosition) {
-        self.dismissAllPopovers()
+    let blocked = self.inputBlocks > 0
+    if input.scrollDelta != .zero, !blocked {
+      // Scrolling under a popover would leave it pointing at nothing. Not a sheet's: it stays,
+      // and the scroll goes nowhere.
+      for overlay in self.overlays.reversed() where !overlay.isDismissing {
+        guard overlay.dismissesOnOutsideScroll, !overlay.contains(input.mousePosition) else { break }
+        overlay.requestDismiss()
       }
       if self.pending.contains(.treeOrder) {
         self.rebuildTreeOrder(root)
@@ -342,7 +416,15 @@ public class UIContext {
     // Set when the grid below is built from a layout this frame then replaces: a window's first
     // frame, whose become-key event carries the pointer, builds it before anything is laid out.
     var gridPredatesLayout = false
-    if pointerEvent {
+    if pointerEvent, blocked {
+      // Under a presentation's window: nothing new is hovered, pressed or tapped, and a press
+      // begun before it opened still ends — the click that opened it, released.
+      self.hitGrid.updateHover(self.parkedInput)
+      if !input.leftMouseDown, !input.mouseDown {
+        self.hitGrid.handlePointer(input, time: time)
+      }
+      self.pointerStyleStale = false
+    } else if pointerEvent {
       if self.pending.contains(.treeOrder) {
         self.rebuildTreeOrder(root)
       }
@@ -360,7 +442,7 @@ public class UIContext {
     }
 
     // After the click, so a click and the typing after it that land in one frame go together.
-    if !input.keyPresses.isEmpty {
+    if !input.keyPresses.isEmpty, !blocked {
       // Escape cancels a drag, and still goes on to whatever handles it.
       if self.drag != nil || self.escapeTarget != nil,
          input.keyPresses.contains(where: { $0.key == .escape && $0.phase == .down }) {
@@ -433,7 +515,12 @@ public class UIContext {
     // it ends.
     let atRest = self.hitInvalidations == hitInvalidationsAtStart
       || (self.animator.isIdle && input.scrollDelta == .zero)
-    if !pointerEvent, input.isPointerInView, self.pending.contains(.hitGrid), atRest {
+    if blocked {
+      // Just blocked: what the pointer was over is left. Once, then nothing is hovered.
+      if self.hitGrid.isHovering {
+        self.hitGrid.updateHover(self.parkedInput)
+      }
+    } else if !pointerEvent, input.isPointerInView, self.pending.contains(.hitGrid), atRest {
       if self.pending.contains(.treeOrder) {
         self.rebuildTreeOrder(root)
       }
@@ -690,7 +777,7 @@ public class UIContext {
     let point = input.mousePosition
     var remaining = input.scrollDelta
     // Pre-order, so walking it backwards meets a scroll view before the ones it is inside.
-    for index in self.scrollOrder.indices.reversed() {
+    for index in self.scrollOrder.indices.reversed() where index >= self.modalScrollStart {
       let view = self.scrollOrder[index]
       guard view.mounted, ClipRect(position: view.position, size: view.size).contains(point) else { continue }
       let clip = self.scrollClips[index]
@@ -708,6 +795,8 @@ public class UIContext {
   public func focus(_ element: FocusableElement?) -> Void {
     let old = self.focused
     guard old !== element else { return }
+    // Nothing under a modal presentation takes focus. O(depth), only while one is up.
+    if let element, let modal = self.topModal, !self.isAbove(element, modal) { return }
     self.focused = element
     old?.onFocusChange?(false)
     // A handler of the old one may already have moved focus elsewhere.
@@ -721,7 +810,7 @@ public class UIContext {
     self.resolveClips(withEffects: false)
     let point = input.mousePosition
     // Pre-order, so walking it backwards meets an element before the ones it is inside.
-    for index in self.focusOrder.indices.reversed() {
+    for index in self.focusOrder.indices.reversed() where index >= self.modalFocusStart {
       let element = self.focusOrder[index]
       guard self.focusClickable[index], element.mounted, element.isFocusable,
             ClipRect(position: element.position, size: element.size).contains(point)
@@ -747,9 +836,12 @@ public class UIContext {
   }
 
   private func offer(_ press: KeyPress) -> KeyPress.Result {
-    if let focused = self.focused {
-      // Linear, but only once per key event.
-      guard let index = self.focusOrder.firstIndex(where: { $0 === focused }) else { return .ignored }
+    // Linear, but only once per key event.
+    let focusIndex = self.focused.flatMap { focused in self.focusOrder.firstIndex { $0 === focused } }
+    if self.focused != nil, focusIndex == nil { return .ignored }
+    if let index = focusIndex, index >= self.modalFocusStart {
+      // A modal's own handlers are collected with no handler above them, so this never walks out
+      // of it into what is underneath.
       var handler = self.focusKeys[index]
       while handler >= 0 {
         let element = self.keyOrder[handler]
@@ -757,7 +849,7 @@ public class UIContext {
         handler = self.keyParents[handler]
       }
     } else {
-      for index in self.keyOrder.indices.reversed() where !self.keyNeedsFocus[index] {
+      for index in self.keyOrder.indices.reversed() where index >= self.modalKeyStart && !self.keyNeedsFocus[index] {
         let element = self.keyOrder[index]
         if element.mounted, element.handle(press) == .handled { return .handled }
       }
@@ -768,14 +860,16 @@ public class UIContext {
   /// The next focusable element in tree order after the focused one, wrapping round; the first,
   /// or with `backwards` the last, when nothing is focused.
   private func moveFocus(backwards: Bool) -> Void {
-    let count = self.focusOrder.count
+    // Only among what is in the topmost modal, when one is up: focus stays in it.
+    let lower = self.modalFocusStart
+    let count = self.focusOrder.count - lower
     guard count > 0 else { return }
-    let start = self.focused.flatMap { focused in self.focusOrder.firstIndex { $0 === focused } }
+    let start = self.focused.flatMap { focused in self.focusOrder[lower...].firstIndex { $0 === focused } }
     let step = backwards ? count - 1 : 1
-    var index = start ?? (backwards ? 0 : count - 1)
+    var index = start.map { $0 - lower } ?? (backwards ? 0 : count - 1)
     for _ in 0..<count {
       index = (index + step) % count
-      let element = self.focusOrder[index]
+      let element = self.focusOrder[lower + index]
       if element.mounted, element.isFocusable {
         self.focus(element)
         return
@@ -904,7 +998,7 @@ public class UIContext {
       self.resolveClips(withEffects: false)
       let point = drag.pointer
       // Pre-order, so walking it backwards meets a destination before the ones it is inside.
-      for index in self.dropOrder.indices.reversed() {
+      for index in self.dropOrder.indices.reversed() where index >= self.modalDropStart {
         let target = self.dropOrder[index]
         guard target.mounted, ClipRect(position: target.position, size: target.size).contains(point) else { continue }
         let clip = self.dropClips[index]
@@ -961,8 +1055,20 @@ public class UIContext {
       drag.ghostStart = 0
       drag.ghostEnd = 0
     }
+    self.modalFocusStart = 0
+    self.modalKeyStart = 0
+    self.modalScrollStart = 0
+    self.modalDropStart = 0
     self.collect(root, effect: -1, clip: -1, shadow: -1, blur: -1, foreground: -1, key: -1, hit: -1, spine: -1, inFocusable: false, leaving: false, noHit: false)
     for overlay in self.overlays {
+      // Everything collected before a modal is under it. The last one wins; popovers above it
+      // stay live.
+      if overlay.isModal, !overlay.isLeaving {
+        self.modalFocusStart = self.focusOrder.count
+        self.modalKeyStart = self.keyOrder.count
+        self.modalScrollStart = self.scrollOrder.count
+        self.modalDropStart = self.dropOrder.count
+      }
       self.collect(overlay, effect: -1, clip: -1, shadow: -1, blur: -1, foreground: -1, key: -1, hit: -1, spine: -1, inFocusable: false, leaving: false, noHit: false)
     }
     // Last, so it draws over the popovers too; as if leaving, so it is drawn and never hit.
@@ -978,18 +1084,32 @@ public class UIContext {
     self.clipRounded = Array(repeating: -1, count: self.clipOrder.count)
     self.clipGPU = Array(repeating: -1, count: self.clipOrder.count)
 
-    // Hidden, or on its way out: it loses focus. Not here, which may be inside `render`, where a
-    // handler's invalidation would be dropped with the finished render's: at the end of `update`.
-    if let focused = self.focused, !self.focusOrder.contains(where: { $0 === focused }) {
+    // Hidden, on its way out, or under a modal: it loses focus. Not here, which may be inside
+    // `render`, where a handler's invalidation would be dropped with the finished render's: at the
+    // end of `update`.
+    if let focused = self.focused, !self.isFocusable(focused) {
       self.afterLayout { [weak self, weak focused] in
-        guard let self, let focused, self.focused === focused,
-              !self.focusOrder.contains(where: { $0 === focused })
-        else { return }
+        guard let self, let focused, self.focused === focused, !self.isFocusable(focused) else { return }
         self.focus(nil)
       }
     }
 
     self.pending.remove(.treeOrder)
+  }
+
+  /// Whether `element` is in the tree order, and not under a modal.
+  private func isFocusable(_ element: FocusableElement) -> Bool {
+    guard let index = self.focusOrder.firstIndex(where: { $0 === element }) else { return false }
+    return index >= self.modalFocusStart
+  }
+
+  /// Whether `element` is in `modal`, or in an overlay above it.
+  private func isAbove(_ element: UIElement, _ modal: OverlayLayer) -> Bool {
+    guard let layer = element.nearestAncestor(OverlayLayer.self),
+          let index = self.overlays.firstIndex(where: { $0 === layer }),
+          let modalIndex = self.overlays.firstIndex(where: { $0 === modal })
+    else { return false }
+    return index >= modalIndex
   }
 
   // Filtered through the registries rather than `mounted`, so only elements that chose to

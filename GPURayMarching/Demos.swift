@@ -20,6 +20,7 @@ enum Demo : String, Identifiable, CaseIterable {
   case dragDrop
   case pointer
   case navigation
+  case modals
   case redraw
   case windows
   case docking
@@ -46,6 +47,7 @@ enum Demo : String, Identifiable, CaseIterable {
     case .dragDrop: "Drag & Drop"
     case .pointer: "Pointer"
     case .navigation: "Navigation"
+    case .modals: "Modals"
     case .redraw: "Redraw"
     case .windows: "Windows"
     case .docking: "Docking"
@@ -72,6 +74,7 @@ enum Demo : String, Identifiable, CaseIterable {
     case .dragDrop: DragDropDemo()
     case .pointer: PointerDemo()
     case .navigation: NavigationDemo()
+    case .modals: ModalDemo()
     case .redraw: RedrawDemo()
     case .windows: WindowsDemo()
     case .docking: DockingDemo()

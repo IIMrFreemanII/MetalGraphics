@@ -202,6 +202,18 @@ component. `for: Route.self` types the destination's field `NavigationDestinatio
 giving the armed closure its parameter type. A link with `value:` reads its trailing closure as
 its label, one without as its destination. See `docs/Navigation.md`.
 
+### Presentations
+
+`.sheet(isPresented: $editing) { EditSheet() }` lowers its binding as a constructor's would, on
+a modifier: `.sheet(isPresented: self._editing)` in the chain, `setIsPresented(self._editing, …)`
+in `__update_editing`, and `onIsPresentedChange = { self.editing = $0 }` armed on mount
+(`ArgSpec.binding` inside `argSetters`). The content, an alert's `actions:` and `message:`, and
+`onDismiss:` are handlers: armed on mount through `presentationContent`, which applies the
+builder, and built each time the presentation shows, so they may build components.
+`.sheet(item: $selected)` binds `setItem` and `onItemChange`, and the `@State`'s optional type
+types the field, `ItemPresentationElement<Route>` (`ModifierSpec.genericOverBindingOf`, F22).
+An alert's title is an argument, bound to `setTitle`. See `docs/Modals.md`.
+
 ### Shared models
 
 `@State` belongs to one component. State several components read, in any number of windows, lives
@@ -311,7 +323,7 @@ From the outside `RowView(item:onRemove:)` is an ordinary constructor call, opaq
 | F11 | a generated mutation method colliding with one the component declares |
 | F12 | `.animation(_:value:)` whose `value:` reads no `@State` or model property, or written without `value:` |
 | F13 | an in-place-only modifier (`.resizable`, `.fill`, `.trim`, `.buttonStyle`, …) called on something other than the element it styles. The text modifiers wrap anything else instead |
-| F14 | a binding argument (`isOn:`, `text:`, `selection:`, …) that is neither `$state[.member…]`, `$model.property[.member…]` nor `.constant(v)` |
+| F14 | a binding argument (`isOn:`, `text:`, `selection:`, a presentation's `isPresented:`, …) that is neither `$state[.member…]`, `$model.property[.member…]` nor `.constant(v)` |
 | F15 | an operator other than `+` between texts, or a `+` operand that is not `Text(string)` / `Text(verbatim:)` with run modifiers |
 | F16 | a paragraph modifier (`.lineLimit`, `.multilineTextAlignment`, …) on an operand of `+` |
 | F17 | a literal a text modifier cannot take: `.lineLimit` below 1, `.minimumScaleFactor` outside (0, 1] |
@@ -319,6 +331,7 @@ From the outside `RowView(item:onRemove:)` is an ordinary constructor call, opaq
 | F19 | a `for:` argument that types an element (`.navigationDestination`, `.onGeometryChange`, `.dropDestination`) not written `<Type>.self` |
 | F20 | `@Model` on a non-class or a `@MainActor` class; a tracked property without a type annotation, with `willSet`/`didSet`, or declaring several properties at once |
 | F21 | `@Bindable` on a `var`, a `static`, or without a type annotation |
+| F22 | `.sheet(item:)` or `.fullScreenCover(item:)` whose `item:` is not `$<state>` of a `@State` declared optional, whose type types the element |
 
 F9 is retired, not missing: it warned that a handler capturing `self` strongly leaks, which stopped
 being true once the macro started clearing handlers on unmount. The numbers are not reused.

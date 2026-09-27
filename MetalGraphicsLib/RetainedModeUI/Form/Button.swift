@@ -33,6 +33,8 @@ public enum ButtonStyle : Sendable {
 public class Button : FormControl {
   /// What a tap runs. `@Component` arms it on mount and clears it on unmount, like `onTap`.
   public var action: (() -> Void)?
+  /// Runs after `action`: set by the alert or dialog the button is in, which it dismisses.
+  var presentationAction: (() -> Void)?
   public let role: ButtonRole?
   public private(set) var style: ButtonStyle = .automatic
 
@@ -78,10 +80,7 @@ public class Button : FormControl {
     self.hit = hit
     super.init(content: hit)
     self.label.applyContent(label())
-    hit.onTap = { [unowned self] _ in
-      guard !self.isDisabled else { return }
-      self.action?()
-    }
+    hit.onTap = { [unowned self] _ in self.performTap() }
     hit.onPress = { [unowned self] pressed, _ in
       guard let context = self.context else { return }
       let pressed = pressed && !self.isDisabled
@@ -91,6 +90,14 @@ public class Button : FormControl {
         self.press.setOpacity(pressed ? 0.45 : 1, context)
       }
     }
+  }
+
+  /// What a tap does: runs the action, unless disabled. Return and Escape in an alert run its
+  /// buttons this way too.
+  func performTap() -> Void {
+    guard !self.isDisabled else { return }
+    self.action?()
+    self.presentationAction?()
   }
 
   public func setTitle(_ value: String, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
@@ -154,6 +161,9 @@ final class ButtonFace : UIRenderableElement {
   private(set) var isSelected = false
   /// Takes the whole width it is offered, as a sidebar link does, with the bordered inset.
   var fillsWidth = false
+  /// With `fillsWidth`, centers the label in that width, as an alert's buttons do.
+  var centersContent = false
+  private var contentSize: float2 = .zero
   private(set) var position: float2 = .zero
   private(set) var size: float2 = .zero
 
@@ -214,14 +224,19 @@ final class ButtonFace : UIRenderableElement {
 
   override func calcSize(_ proposal: ProposedSize) -> float2 {
     let inset = self.inset
-    self.size = self.filled(inset.inflate(size: self.child?.calcSize(inset.deflate(proposal)) ?? .zero), proposal)
+    self.contentSize = self.child?.calcSize(inset.deflate(proposal)) ?? .zero
+    self.size = self.filled(inset.inflate(size: self.contentSize), proposal)
     return self.size
   }
 
   override func calcPosition(_ position: float2) {
     self.position = position
     let inset = self.inset
-    self.child?.calcPosition(position + float2(inset.left, inset.top))
+    var offset = float2(inset.left, inset.top)
+    if self.centersContent {
+      offset.x = max(((self.size.x - self.contentSize.x) * 0.5).rounded(), inset.left)
+    }
+    self.child?.calcPosition(position + offset)
   }
 
   override func render(_ renderer: Graphics2D, _ effect: EffectState) {

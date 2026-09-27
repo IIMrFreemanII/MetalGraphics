@@ -207,10 +207,13 @@ struct BodyParser {
     }
     for handler in spec.labeledHandlers {
       guard let label = handler.label else { continue }
-      let closure = call.arguments.first(where: { $0.label?.text == label })?.expression.as(ClosureExprSyntax.self)
-        ?? call.additionalTrailingClosures.first(where: { $0.label.text == label })?.closure
-      if let closure {
-        bound.append(BoundHandler(property: handler.property, closure: ExprSyntax(closure), adapter: handler.adapter))
+      // A closure, or a reference, `onDismiss: self.cleanup`: either would hold `self` if left
+      // in the chain.
+      var expression = call.arguments.first(where: { $0.label?.text == label })?.expression
+        ?? call.additionalTrailingClosures.first(where: { $0.label.text == label }).map { ExprSyntax($0.closure) }
+      if expression?.is(NilLiteralExprSyntax.self) == true { expression = nil }
+      if let expression {
+        bound.append(BoundHandler(property: handler.property, closure: expression.trimmed, adapter: handler.adapter))
       }
     }
     return bound
@@ -369,13 +372,22 @@ struct BodyParser {
         )
         return nil
       }
+      // `isPresented: $shown` comes out of the call first, as a constructor's bindings do, so
+      // what is left binds as usual.
+      guard let (loweredCall, bindingHandlers) = lowerModifierBindings(call, spec) else { return nil }
+      var type = inPlace ? chain.last?.type ?? spec.produces : self.linkType(call, spec)
+      if let label = spec.genericOverBindingOf {
+        guard let wrapped = self.optionalStateType(call, label: label, spec: spec) else { return nil }
+        type = "\(spec.produces)<\(wrapped)>"
+      }
       // Named by position among the links, so a scope marker leaves no gap in the lettering.
       chain.append(
         ChainLink(
           field: Naming.node(path, chain.count), local: Naming.local(path, chain.count),
-          type: inPlace ? chain.last?.type ?? spec.produces : self.linkType(call, spec),
-          kind: .modifier(call: call, spec: spec),
-          bound: parseModifierArgs(call, spec), handlers: handlerClosures(call, spec)
+          type: type,
+          kind: .modifier(call: loweredCall, spec: spec),
+          bound: parseModifierArgs(loweredCall, spec),
+          handlers: handlerClosures(loweredCall, spec) + bindingHandlers
         )
       )
     }
@@ -606,6 +618,87 @@ struct BodyParser {
       copy.rightParen = .rightParenToken()
     }
     return (copy, handlers, named)
+  }
+
+  /// The modifier call with its binding arguments lowered to values, plus their write-backs:
+  /// `.sheet(isPresented: $shown)` becomes `.sheet(isPresented: self.shown)`, bound to
+  /// `setIsPresented`, and the handler `onIsPresentedChange = { self.shown = $0 }`. Nil when a
+  /// binding could not be lowered (F14).
+  private func lowerModifierBindings(
+    _ call: FunctionCallExprSyntax, _ spec: ModifierSpec
+  ) -> (call: FunctionCallExprSyntax, handlers: [BoundHandler])? {
+    guard let argSetters = spec.argSetters, argSetters.contains(where: { $0.binding != nil }) else {
+      return (call, [])
+    }
+    var handlers: [BoundHandler] = []
+    var arguments: [LabeledExprSyntax] = []
+    for argument in call.arguments {
+      guard let binding = argSetters.first(where: { $0.label == argument.label?.text })?.binding else {
+        arguments.append(argument)
+        continue
+      }
+      guard let (value, handler) = lowerBinding(argument.expression, binding, label: argument.label?.text)
+      else { return nil }
+      var lowered = argument
+      lowered.expression = value.with(\.leadingTrivia, argument.expression.leadingTrivia)
+        .with(\.trailingTrivia, argument.expression.trailingTrivia)
+      arguments.append(lowered)
+      if let handler { handlers.append(handler) }
+    }
+    var copy = call
+    copy.arguments = LabeledExprListSyntax(arguments)
+    return (copy, handlers)
+  }
+
+  /// F22: resolves `item: $selected` to the `Route` in `@State var selected: Route?`, which types
+  /// the element the modifier makes.
+  private func optionalStateType(_ call: FunctionCallExprSyntax, label: String, spec: ModifierSpec) -> String? {
+    func reject(_ reason: String, at node: some SyntaxProtocol) -> String? {
+      context.error(
+        "F22",
+        "'.\(spec.name)(\(label):)' needs '$<state>' of a @State property declared optional, "
+          + "'@State var <name>: <Type>?' \u{2014} \(reason). Its type is the type of the item.",
+        at: node
+      )
+      return nil
+    }
+    guard let argument = call.arguments.first(where: { $0.label?.text == label }) else {
+      return reject("no '\(label):' argument was given", at: call)
+    }
+    let expr = argument.expression
+    var name: String? = nil
+    if let reference = expr.as(DeclReferenceExprSyntax.self), reference.baseName.text.hasPrefix("$") {
+      name = String(reference.baseName.text.dropFirst())
+    } else if let member = expr.as(MemberAccessExprSyntax.self),
+              member.base?.as(DeclReferenceExprSyntax.self)?.baseName.tokenKind == .keyword(.self),
+              member.declName.baseName.text.hasPrefix("$")
+    {
+      name = String(member.declName.baseName.text.dropFirst())
+    }
+    guard let name else {
+      return reject("'\(expr.trimmedDescription)' is not a @State property's binding", at: expr)
+    }
+    guard let property = stateProperties.first(where: { $0.name == name }) else {
+      return reject("'\(name)' is not a @State property of this component", at: expr)
+    }
+    guard let wrapped = Self.optionalWrappedType(property.type) else {
+      return reject("'\(name)' is annotated '\(property.type.trimmedDescription)', which is not optional", at: expr)
+    }
+    return wrapped
+  }
+
+  /// `Route?` or `Optional<Route>` -> `Route`.
+  static func optionalWrappedType(_ type: TypeSyntax) -> String? {
+    if let optional = type.as(OptionalTypeSyntax.self) {
+      return optional.wrappedType.trimmedDescription
+    }
+    if let identifier = type.as(IdentifierTypeSyntax.self), identifier.name.text == "Optional",
+       let arguments = identifier.genericArgumentClause?.arguments, arguments.count == 1,
+       let only = arguments.first
+    {
+      return only.trimmedDescription
+    }
+    return nil
   }
 
   /// `$wifi` -> (`self.wifi`, `{ self.wifi = $0 }`); `$settings.volume` and `self.$settings.volume`

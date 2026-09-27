@@ -14,6 +14,8 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
   /// The view's layer. Released on the main thread when the window closes.
   private var layer: CAMetalLayer?
   private var displayLink: CAMetalDisplayLink?
+  /// The view's scale, as its last resize sent it: what a layer attached later is sized with.
+  private var scale: Float = 0
   private weak var handle: WindowHandle?
   /// Where the handle's events are swapped out to at the start of a frame; reused.
   private var events: [InputEvent] = []
@@ -49,15 +51,36 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
     self.resizeRenderGrid(for: self.windowSize)
 
     if let layer = self.layer {
-      let link = CAMetalDisplayLink(metalLayer: layer)
-      // As MTKView drew: 60 frames a second.
-      link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 60, preferred: 60)
-      link.delegate = self
-      link.add(to: .current, forMode: .common)
-      self.displayLink = link
+      self.startDisplayLink(layer)
     }
-    handle.executor.didDrain = { [weak self] in self?.resume() }
+    // Every window on the thread resumes when work arrives: the root's handle holds them all.
+    let root = handle.root
+    root.surfaces.append(self)
+    if handle.parent == nil {
+      handle.executor.didDrain = { [weak root] in root?.resumeSurfaces() }
+    }
     self.start()
+  }
+
+  private func startDisplayLink(_ layer: CAMetalLayer) {
+    let link = CAMetalDisplayLink(metalLayer: layer)
+    // As MTKView drew: 60 frames a second.
+    link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 60, preferred: 60)
+    link.delegate = self
+    link.add(to: .current, forMode: .common)
+    self.displayLink = link
+  }
+
+  /// Draws into `layer` from now on: a view made after the renderer, as a presentation's window
+  /// is, once the main thread has made it.
+  func attach(layer: CAMetalLayer) {
+    guard self.displayLink == nil, self.graphics2D != nil else { return }
+    self.layer = layer
+    if self.scale > 0 {
+      self.setDrawableSize(layer)
+    }
+    self.startDisplayLink(layer)
+    self.resume()
   }
 
   // New code only runs in a fresh tree; the root reopens what it stored in the scene.
@@ -83,14 +106,21 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
   /// The view is `size` points, `scale` pixels each.
   func resize(to size: float2, scale: Float) {
     self.resize(to: size)
+    self.scale = scale
     if let layer = self.layer {
-      // Off the main thread a layer's changes need a transaction of their own.
-      CATransaction.begin()
-      CATransaction.setDisableActions(true)
-      layer.drawableSize = CGSize(width: CGFloat(size.x * scale), height: CGFloat(size.y * scale))
-      CATransaction.commit()
+      self.setDrawableSize(layer)
     }
     self.resume()
+  }
+
+  private func setDrawableSize(_ layer: CAMetalLayer) {
+    // Off the main thread a layer's changes need a transaction of their own.
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    layer.drawableSize = CGSize(
+      width: CGFloat(self.windowSize.x * self.scale), height: CGFloat(self.windowSize.y * self.scale)
+    )
+    CATransaction.commit()
   }
 
   /// A hidden window (minimized, fully covered, on another Space) stops drawing. Invalidations
@@ -105,9 +135,19 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
     }
   }
 
-  private func resume() {
+  func resume() {
     guard !self.isOccluded else { return }
     self.displayLink?.isPaused = false
+  }
+
+  /// Whether its frames are paused, idle or hidden.
+  var isPaused: Bool {
+    self.displayLink?.isPaused ?? false
+  }
+
+  /// Whether a frame would find something to do.
+  var hasWork: Bool {
+    !self.uiContext.isIdle || self.handle?.hasEvents == true
   }
 
   /// The window closed. Unmounting the tree unsubscribes it from shared models and frees the
@@ -115,6 +155,9 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
   func teardown() {
     self.displayLink?.invalidate()
     self.displayLink = nil
+    if let root = self.handle?.root {
+      root.surfaces.removeAll { $0 === self }
+    }
     self.root.handleUnmount(self.uiContext)
     self.graphics2D = nil
     nonisolated(unsafe) let layer = self.layer
@@ -134,6 +177,11 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
 
     if self.uiContext.isIdle, self.graphics2D?.needsDamageFrames != true, self.handle?.hasEvents != true {
       self.displayLink?.isPaused = true
+    }
+    // Another window on the thread whose tree this frame changed — a presentation and its
+    // presenter — may be paused with nothing posted to wake it.
+    if let root = self.handle?.root, root.surfaces.count > 1 {
+      root.wakeSurfaces(except: self)
     }
   }
 

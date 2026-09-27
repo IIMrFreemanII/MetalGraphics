@@ -11,7 +11,9 @@ import simd
 /// which is one animator entry and one completion for the whole transition. A removal
 /// interrupted by a re-insertion simply starts a new progress from wherever the element is.
 public final class TransitionElement : EffectElement {
-  public let transition: UITransition
+  /// Settable for one whose insertion depends on where it shows, like a cover rising from below
+  /// the window. Read when it animates.
+  public internal(set) var transition: UITransition
 
   private var fromState = TransitionState.identity
   private var toState = TransitionState.identity

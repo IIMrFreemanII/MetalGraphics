@@ -84,8 +84,9 @@ import simd
   }
 
   private static func reconcileAll(closing: NSWindow?) {
-    // A panel window of its own closing is handled by its delegate.
-    guard !(closing is DockWindow) else { return }
+    // A panel window of its own closing is handled by its delegate; a presentation's is no
+    // window an area was placed in.
+    guard !(closing is DockWindow || closing is PresentedWindow) else { return }
     for entry in managed.values {
       reconcile(entry.space, closing: closing)
     }

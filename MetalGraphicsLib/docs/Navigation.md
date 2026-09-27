@@ -32,8 +32,8 @@ NavigationStack(path: $path) {
 
 Links are `Button`s, so `.buttonStyle`, `.disabled` and `.pointerStyle` work on them.
 
-Not supported yet: toolbar items, `navigationBarBackButtonHidden`, a `dismiss` environment,
-three columns.
+Not supported yet: toolbar items, `navigationBarBackButtonHidden`, three columns. `dismiss`
+is for presentations: see `docs/Modals.md`.
 
 ## How it works
 

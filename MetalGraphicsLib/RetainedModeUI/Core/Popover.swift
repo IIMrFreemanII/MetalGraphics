@@ -31,15 +31,13 @@ extension UIContext {
       let wrapped = content
       content = TextStyleElement(overrides: textStyle ?? TextEnvironment(), defaults: textDefaults) { wrapped }
     }
-    let layer = PopoverLayer(content, anchor: anchor, alignment: alignment, onDismiss: onDismiss)
-    layer.handle = handle
+    let layer = PopoverLayer(content, anchor: anchor, alignment: alignment, modal: false)
     handle.layer = layer
-    layer.context = self
-    self.overlays.append(layer)
-    self.focus(nil)
-    layer.handleMount(self, in: anchor as? UIElement)
-    self.invalidate([.layout, .treeOrder])
-    layer.transition.animateIn(PopoverLayer.animation, self)
+    layer.onRemoved = { [weak handle] in
+      handle?.layer = nil
+      onDismiss?()
+    }
+    self.present(layer, parent: anchor as? UIElement)
     return handle
   }
 
@@ -47,45 +45,54 @@ extension UIContext {
     handle.layer?.dismiss(animated: animated)
   }
 
+  /// Dismisses the popovers controls opened above the topmost modal presentation: a menu, a
+  /// date picker's calendar. A sheet, and what is under it, stay.
   public func dismissAllPopovers() {
-    for overlay in self.overlays {
-      overlay.dismiss(animated: true)
+    for overlay in self.overlays.reversed() {
+      if overlay.isModal && !overlay.isDismissing { break }
+      if overlay.presenter == nil {
+        overlay.dismiss(animated: true)
+      }
     }
   }
 }
 
 /// The root of one popover: a see-through scrim over the whole window that dismisses on a click,
 /// and the card placed by its anchor. Held by `UIContext.overlays`, never in the app's tree.
-final class PopoverLayer : MultiChildElement {
+///
+/// A control's popover is transient: the scrim takes a click, and a press under it still
+/// reaches what is there. A `.popover` presentation's is modal: the scrim takes presses too.
+final class PopoverLayer : OverlayLayer {
   static let animation = UIAnimation.easeOut(0.12)
   static let gap: Float = 4
   static let margin: Float = 8
   static let cornerRadius: Float = 8
 
   weak var anchor: (any Hittable)?
-  weak var context: UIContext?
-  weak var handle: PopoverHandle?
   let alignment: HorizontalAlignment
-  let onDismiss: (() -> Void)?
+  /// Above the anchor when it fits there, rather than below: `.popover(arrowEdge: .bottom)`.
+  let prefersAbove: Bool
   let transition: TransitionElement
 
-  private let scrim = HittableView(onTap: nil) {}
+  private let scrim: HittableView
   private let card: UIElement
-  private var dismissing = false
-  private var windowSize: float2 = .zero
   private var cardSize: float2 = .zero
   private var cardOrigin: float2 = .zero
   private var below = true
 
-  init(_ content: UIElement, anchor: any Hittable, alignment: HorizontalAlignment, onDismiss: (() -> Void)?) {
+  init(
+    _ content: UIElement, anchor: any Hittable, alignment: HorizontalAlignment, modal: Bool,
+    prefersAbove: Bool = false
+  ) {
     self.anchor = anchor
     self.alignment = alignment
-    self.onDismiss = onDismiss
+    self.prefersAbove = prefersAbove
+    self.scrim = HittableView(onTap: nil, onPress: modal ? { _, _ in } : nil) {}
     let radius = Self.cornerRadius
     let card = ScrollView(.vertical) { content }
       .clipShape(.rect(cornerRadius: radius))
       .background {
-        PopoverFill().shadow(color: float4(0, 0, 0, 0.22), radius: 10, y: 4)
+        CardFill(cornerRadius: radius).shadow(color: float4(0, 0, 0, 0.22), radius: 10, y: 4)
       }
       .border(float4(0, 0, 0, 0.12), width: 0.5, in: .rect(cornerRadius: radius))
     // A tap goes to the topmost view that takes taps, and a press to the topmost that takes
@@ -96,76 +103,52 @@ final class PopoverLayer : MultiChildElement {
     self.transition = transition
     let escape = KeyPressElement(keys: [.escape], phases: [.down], action: nil) { transition }
     self.card = escape
-    super.init()
+    super.init(isModal: modal, dismissesOnOutsideScroll: true)
     self.applyContent([self.scrim, escape])
-    self.scrim.onTap = { [unowned self] _ in self.dismiss(animated: true) }
+    self.scrim.onTap = { [unowned self] _ in self.requestDismiss() }
     escape.action = { [unowned self] _ in
-      self.dismiss(animated: true)
+      self.cancel()
       return .handled
     }
   }
 
-  /// Whether `point`, window top left origin, lands on the card.
-  func cardContains(_ point: float2) -> Bool {
+  override func contains(_ point: float2) -> Bool {
     ClipRect(position: self.cardOrigin, size: self.cardSize).contains(point)
   }
 
-  func dismiss(animated: Bool) {
-    guard !self.dismissing, let context = self.context else { return }
-    self.dismissing = true
-    // Still drawn while it fades, but no longer hit: the app underneath is live again.
-    self.isLeaving = true
-    context.invalidate(.treeOrder)
-    guard animated else {
-      self.remove(context)
-      return
-    }
-    self.transition.animateOut(Self.animation, context) { [weak self, weak context] in
-      guard let self, let context else { return }
-      self.remove(context)
-    }
+  override func animateIn(_ context: UIContext) {
+    self.transition.animateIn(Self.animation, context)
   }
 
-  private func remove(_ context: UIContext) {
-    context.overlays.removeAll { $0 === self }
-    self.isLeaving = false
-    self.handleUnmount(context)
-    context.invalidate([.layout, .treeOrder])
-    self.handle?.layer = nil
-    self.onDismiss?()
+  override func animateOut(_ context: UIContext, completion: @escaping () -> Void) {
+    self.transition.animateOut(Self.animation, context, completion: completion)
   }
 
   // MARK: - Layout
 
-  override func getSize() -> float2 {
-    self.windowSize
-  }
-
-  override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
-    proposal.replacingUnspecified(with: .zero)
-  }
-
-  override func calcSize(_ proposal: ProposedSize) -> float2 {
-    self.windowSize = proposal.replacingUnspecified(with: .zero)
-    _ = self.scrim.calcSize(ProposedSize(self.windowSize))
+  override func layout(in windowSize: float2) {
+    _ = self.scrim.calcSize(ProposedSize(windowSize))
 
     guard let anchor = self.anchor, anchor.mounted else {
       // The anchor went away under it: nothing left to point at.
       if let context = self.context {
         context.afterLayout { [weak self] in self?.dismiss(animated: false) }
       }
-      return self.windowSize
+      return
     }
     let top = anchor.hitPosition.y
     let bottom = top + anchor.hitSize.y
     let ideal = self.card.measure(.unspecified)
-    let spaceBelow = self.windowSize.y - bottom - Self.gap - Self.margin
+    let spaceBelow = windowSize.y - bottom - Self.gap - Self.margin
     let spaceAbove = top - Self.gap - Self.margin
-    self.below = ideal.y <= spaceBelow || spaceBelow >= spaceAbove
+    if self.prefersAbove {
+      self.below = !(ideal.y <= spaceAbove || spaceAbove >= spaceBelow)
+    } else {
+      self.below = ideal.y <= spaceBelow || spaceBelow >= spaceAbove
+    }
     let height = min(ideal.y, max(self.below ? spaceBelow : spaceAbove, 40))
-    let width = min(ideal.x, self.windowSize.x - Self.margin * 2)
+    let width = min(ideal.x, windowSize.x - Self.margin * 2)
     self.cardSize = self.card.calcSize(ProposedSize(width: width, height: height))
-    return self.windowSize
   }
 
   override func calcPosition(_ position: float2) {
@@ -186,17 +169,25 @@ final class PopoverLayer : MultiChildElement {
   }
 }
 
-/// A popover card's white rounded fill, as large as it is offered. Under its own shadow, apart
-/// from the content, so the text on the card casts none.
-final class PopoverFill : FormGraphic {
+/// A card's rounded fill, as large as it is offered: a popover's, a sheet's, an alert's. Under
+/// its own shadow, apart from the content, so the text on the card casts none.
+final class CardFill : FormGraphic {
+  let cornerRadius: Float
+  let color: float4
+
+  init(cornerRadius: Float, color: float4 = float4(1, 1, 1, 1)) {
+    self.cornerRadius = cornerRadius
+    self.color = color
+    super.init()
+  }
+
   override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
     proposal.replacingUnspecified(with: .zero)
   }
 
   override func draw(_ renderer: Graphics2D, origin: float2, size: float2, scale: Float, opacity: Float) {
-    renderer.draw(
-      roundedRect: origin, size: size, radii: float4(repeating: PopoverLayer.cornerRadius * scale),
-      color: float4(1, 1, 1, opacity)
-    )
+    var color = self.color
+    color.w *= opacity
+    renderer.draw(roundedRect: origin, size: size, radii: float4(repeating: self.cornerRadius * scale), color: color)
   }
 }

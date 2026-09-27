@@ -26,7 +26,7 @@ struct GPURayMarchingApp: App {
 }
 
 private struct OpenSharedStateWindow: View {
-  @Environment(\.openWindow) private var openWindow
+  @SwiftUI.Environment(\.openWindow) private var openWindow
 
   var body: some View {
     Button("Open Shared State Window") { self.openWindow(id: SharedStateWindow.id) }
@@ -35,7 +35,7 @@ private struct OpenSharedStateWindow: View {
 }
 
 private struct OpenWorkspaceWindow: View {
-  @Environment(\.openWindow) private var openWindow
+  @SwiftUI.Environment(\.openWindow) private var openWindow
 
   var body: some View {
     Button("Open Workspace Window") { self.openWindow(id: Workspace.windowID) }

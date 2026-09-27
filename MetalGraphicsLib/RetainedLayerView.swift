@@ -14,7 +14,8 @@ public final class RetainedLayerView: NSView {
   private var sentSize = float2(-1, -1)
   private var sentScale: Float = 0
 
-  public init(handle: WindowHandle) {
+  /// `background` is what shows before the first frame is drawn: what the content is drawn on.
+  public init(handle: WindowHandle, background: CGColor? = nil) {
     self.handle = handle
     super.init(frame: .zero)
     self.metalLayer.device = GPUDevice.main
@@ -24,7 +25,7 @@ public final class RetainedLayerView: NSView {
     // A resize shows at once, before the window's thread draws the new size: the last frame
     // stays pinned to the top left rather than stretching, over the colour frames clear to.
     self.metalLayer.contentsGravity = .topLeft
-    self.metalLayer.backgroundColor = CGColor(srgbRed: 0.93, green: 0.97, blue: 1, alpha: 1)
+    self.metalLayer.backgroundColor = background ?? CGColor(srgbRed: 0.93, green: 0.97, blue: 1, alpha: 1)
     self.wantsLayer = true
     self.layerContentsPlacement = .topLeft
   }
