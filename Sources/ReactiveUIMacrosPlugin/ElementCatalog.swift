@@ -1084,6 +1084,10 @@ enum ElementCatalog {
       name: "attachmentProvider", labels: [nil],
       produces: "TextEditor", setter: "setAttachmentProvider", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
     ),
+    "controller": ModifierSpec(
+      name: "controller", labels: [nil],
+      produces: "TextEditor", setter: "setController", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
     "followsTail": ModifierSpec(
       name: "followsTail", labels: [nil],
       produces: "TextEditor", setter: "setFollowsTail", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]

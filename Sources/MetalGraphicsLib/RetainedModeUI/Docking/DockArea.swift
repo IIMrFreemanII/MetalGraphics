@@ -439,6 +439,7 @@ public final class DockArea : MultiChildElement {
   }
 
   func closePanel(_ panel: String) {
+    if let shouldClose = self.panelViews[panel]?.panel.shouldClose, !shouldClose() { return }
     withAnimation(DockMetrics.animation) {
       self.space.close(panel: panel)
     }

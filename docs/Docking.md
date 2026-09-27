@@ -63,6 +63,25 @@ DockWindows.manage(space)   // once, at launch: opens the panels' own windows
     and across relaunches.
   - Unlike a window's scene storage, it does not share values with other panels of its kind.
 
+## Changing the layout from code
+
+`DockSpace` has a method for each everyday change (`move`, `close`, `select`, `open`, …). For
+anything else, `update { layout in … }` edits the layout as one commit, then normalizes it.
+`DockLayout.place(_:at:)` puts new panels at any target, as a drop there would. The Editor app
+opens a file this way, as a tab in the group holding the other files:
+
+```swift
+space.update { layout in
+  let id = layout.addPanel(kind: "file", title: "main.swift")
+  layout.panels[id]?.storage = encoded          // UISceneStorage(...).encoded, with the path
+  layout.place(.group([id]), at: .node(filesGroup, .center))
+}
+```
+
+A panel can refuse to close from its tab: `panel.shouldClose` is asked first, on the panel's
+window thread, and returning false keeps it open while the panel asks the user itself (an
+unsaved document's alert). `panel.close()` from code, and closing a detached window, do not ask.
+
 ## What survives a move
 
 - **Within a window**, a panel keeps its element: the area's reconcile finds it by id and moves it,

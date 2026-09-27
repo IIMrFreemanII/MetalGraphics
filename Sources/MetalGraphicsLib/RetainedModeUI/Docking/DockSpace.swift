@@ -48,6 +48,11 @@ public final class DockPanel {
   public func close() {
     self.space.close(panel: self.id)
   }
+
+  /// Asked, on the panel's window thread, when the user closes the panel by its tab: false keeps
+  /// it open, and the panel asks the user itself (an unsaved document's alert). Closing its
+  /// detached window, or `close()`, does not ask.
+  public var shouldClose: (() -> Bool)?
 }
 
 /// What a dock area asks of the main thread, which owns the windows. See `DockWindows`.
@@ -143,6 +148,17 @@ public final class DockSpace: @unchecked Sendable {
     }
     self.save()
     return result
+  }
+
+  /// Applies `edit` to the layout, then normalizes it: for what the other changes do not cover,
+  /// such as placing new panels with `DockLayout.place`. Returns what `edit` did.
+  @discardableResult
+  public func update<R>(_ edit: (inout DockLayout) -> R) -> R {
+    self.commit { layout in
+      let result = edit(&layout)
+      layout.normalize()
+      return result
+    }
   }
 
   /// See `DockLayout.move`.

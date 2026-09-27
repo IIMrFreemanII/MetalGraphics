@@ -23,6 +23,57 @@ final class TextEditorTests: XCTestCase {
     h.click(at: self.point(of: offset, editor), count: count)
   }
 
+  func testAControllerSelectsRevealsAndFocusesFromCode() {
+    let text = (0 ..< 300).map { "line \($0)" }.joined(separator: "\n")
+    let controller = EditorController()
+    let (h, editor) = self.harness(text) { _ = $0.controller(controller) }
+    XCTAssertTrue(controller.editor === editor)
+
+    controller.goTo(line: 200, column: 2)
+    h.step()
+    let head = editor.state.selection.primary.head
+    XCTAssertEqual(editor.document.position(of: head).line, 200)
+    XCTAssertEqual(editor.document.position(of: head).column, 2)
+    // Centred: lines on both sides of it show.
+    let lines = editor.content.visible.map(\.line)
+    XCTAssertLessThan(try XCTUnwrap(lines.first), 197)
+    XCTAssertGreaterThan(try XCTUnwrap(lines.last), 203)
+
+    let range = editor.document.lineRange(3)
+    controller.select(range)
+    h.step()
+    XCTAssertEqual(editor.state.selectedText, "line 3")
+    XCTAssertTrue(editor.content.visible.contains { $0.line == 3 })
+
+    XCTAssertFalse(editor.isFocused)
+    controller.focus()
+    h.step()
+    XCTAssertTrue(editor.isFocused)
+    // Past the end, clamped.
+    controller.select(0 ..< 1_000_000, reveal: .none)
+    XCTAssertEqual(editor.state.selection.primary.range, 0 ..< editor.document.length)
+  }
+
+  func testListenersHearEachChangeSetBeforeAndAfter() {
+    final class Recorder: TextDocumentListener {
+      var events: [String] = []
+      func document(_ document: TextDocument, willApply changes: ChangeSet, origin: EditOrigin) {
+        self.events.append("will \(document.revision) \(document.string) \(changes.changes.count)")
+      }
+      func document(_ document: TextDocument, didApply changes: ChangeSet, origin: EditOrigin) {
+        self.events.append("did \(document.revision) \(document.string)")
+      }
+    }
+    let document = TextDocument("abc")
+    let recorder = Recorder()
+    document.addListener(recorder)
+    document.apply(ChangeSet([TextChange(range: 0 ..< 1, with: "X"), TextChange(range: 2 ..< 3, with: "Z")]), origin: .user)
+    XCTAssertEqual(recorder.events, ["will 0 abc 2", "did 1 XbZ"])
+    document.removeListener(recorder)
+    document.replace(0 ..< 1, with: "Y")
+    XCTAssertEqual(recorder.events.count, 2)
+  }
+
   func testClickFocusesAndTypingEdits() {
     let (h, editor) = self.harness("hello world")
     self.click(h, editor, at: 5)

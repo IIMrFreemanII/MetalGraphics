@@ -10,7 +10,7 @@ Rules:
 
 ## Build
 
-One SwiftPM package (`Package.swift`), no Xcode project: `swift build`, `swift run Demo` (the demo app, a bare executable), `swift test`. Targets live in `Sources/` (`MetalGraphicsLib`, `Demo`, `ReactiveUI`, `ReactiveUIMacrosPlugin`) and `Tests/`; `Tools/` holds `uidrive` and `layoutchecks`. The `MetalShaders` plugin (`Plugins/`) compiles `Sources/MetalGraphicsLib/Shaders/*.metal` into the library's `Bundle.module`; the demo's images are plain files in `Sources/Demo/Resources/`, loaded with `Image(name, bundle: .module)`. Opening `Package.swift` in Xcode works too.
+One SwiftPM package (`Package.swift`), no Xcode project: `swift build`, `swift run Demo` (the demo app, a bare executable), `swift run Editor` (the Swift editor), `swift test`. Targets live in `Sources/` (`MetalGraphicsLib`, `Demo`, `Editor`, `EditorCore`, `ReactiveUI`, `ReactiveUIMacrosPlugin`) and `Tests/`; `Tools/` holds `uidrive` and `layoutchecks`. The `MetalShaders` plugin (`Plugins/`) compiles `Sources/MetalGraphicsLib/Shaders/*.metal` into the library's `Bundle.module`; the demo's images are plain files in `Sources/Demo/Resources/`, loaded with `Image(name, bundle: .module)`. Opening `Package.swift` in Xcode works too.
 
 ## Performance
 
@@ -31,6 +31,10 @@ Panels dock, split, tab and float in a `DockArea`, and become windows of their o
 ## UI tests
 
 Check UI changes with the headless tests (the `ui-tests` skill, `.claude/skills/ui-tests/SKILL.md`): no window, synthetic input, fake clock, golden PNGs, seconds per run. `MetalGraphicsLibTests` tests trees with `UIHarness`. `DemoTests` runs the whole app in memory with `HeadlessApp`: its real scenes, several windows, `openWindow`, dock windows and relaunch, driven by label (`tap("Form")`). See `docs/HeadlessApp.md`. Give a feature an end-to-end test there. Launch the app with `drive-app` only for what neither covers (real `NSEvent`s, AppKit windowing, real threads, hot reload, frame pacing) and for a final check.
+
+## Editor app
+
+`Editor` (`swift run Editor [folder]`) is a Swift code editor on the library: a navigator, a tab per file (dock panels), open and save. `EditorCore` holds its UI-free model (Foundation only, `EditorCoreTests`); `EditorTests` drives the app headlessly over a temporary package. `uidrive --app Editor` drives the real one. Structure, keys, limits: `docs/Editor.md`.
 
 ## Text editor
 

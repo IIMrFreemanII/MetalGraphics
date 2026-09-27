@@ -175,3 +175,13 @@ public func openWindow(id: String) {
     MainActor.assumeIsolated { Windows.open(id: id) }
   }
 }
+
+/// Runs `work` on the main thread, from any retained handler: AppKit panels (`NSOpenPanel`),
+/// anything that must not run on a window's thread. It runs after the handler returns; post
+/// what it finds back to the window (`ThreadState.current.executor`, captured beforehand) or
+/// write it to a `@Model`. In a `HeadlessApp` it runs with the app's next step.
+public func performOnMain(_ work: @escaping @MainActor @Sendable () -> Void) {
+  MainQueue.post {
+    MainActor.assumeIsolated { work() }
+  }
+}

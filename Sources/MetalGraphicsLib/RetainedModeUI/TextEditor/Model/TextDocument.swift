@@ -53,6 +53,20 @@ extension TextDocumentObserver {
   func document(_ document: TextDocument, didApply changes: ChangeSet, origin: EditOrigin) {}
 }
 
+/// Told of a document's edits from outside the editor: saving state, a language server kept in
+/// sync. Called on the document's thread, once per change set.
+public protocol TextDocumentListener: AnyObject {
+  /// `changes` are about to be applied: the text is still as their ranges describe it.
+  func document(_ document: TextDocument, willApply changes: ChangeSet, origin: EditOrigin)
+  /// `changes` were applied; `document.revision` has moved on.
+  func document(_ document: TextDocument, didApply changes: ChangeSet, origin: EditOrigin)
+}
+
+extension TextDocumentListener {
+  public func document(_ document: TextDocument, willApply changes: ChangeSet, origin: EditOrigin) {}
+  public func document(_ document: TextDocument, didApply changes: ChangeSet, origin: EditOrigin) {}
+}
+
 /// Editable text for a `TextEditor`, sized for large documents: UTF-16 in a gap buffer, lines and
 /// their heights in a `LineTree`, and ranges that move with edits (`readOnly`, `diagnostics`).
 ///
@@ -87,6 +101,12 @@ public final class TextDocument {
 
   private struct WeakObserver {
     weak var observer: (any TextDocumentObserver)?
+  }
+
+  private var listeners: [WeakListener] = []
+
+  private struct WeakListener {
+    weak var listener: (any TextDocumentListener)?
   }
 
   public init(_ text: String = "") {
@@ -208,6 +228,16 @@ public final class TextDocument {
     self.observers.removeAll { $0.observer == nil || $0.observer === observer }
   }
 
+  /// Tells `listener` of every edit from now on. Held weakly.
+  public func addListener(_ listener: any TextDocumentListener) {
+    self.listeners.removeAll { $0.listener == nil || $0.listener === listener }
+    self.listeners.append(WeakListener(listener: listener))
+  }
+
+  public func removeListener(_ listener: any TextDocumentListener) {
+    self.listeners.removeAll { $0.listener == nil || $0.listener === listener }
+  }
+
   // MARK: - Editing
 
   /// Replaces `range` with `text`: an app's edit, not recorded for undo in an editor.
@@ -279,6 +309,9 @@ public final class TextDocument {
     if changes.changes.contains(where: { $0.text.contains(0x0D) }) {
       changes = ChangeSet(changes.changes.map { TextChange(range: $0.range, text: Self.normalizeLineEndings($0.text)) })
     }
+    for listener in self.listeners {
+      listener.listener?.document(self, willApply: changes, origin: origin)
+    }
     var removed = Array(repeating: [UInt16](), count: changes.changes.count)
     // Last first, so the ranges before each are still as the change set gives them.
     for index in changes.changes.indices.reversed() {
@@ -298,6 +331,9 @@ public final class TextDocument {
     }
     for observer in self.observers {
       observer.observer?.document(self, didApply: changes, origin: origin)
+    }
+    for listener in self.listeners {
+      listener.listener?.document(self, didApply: changes, origin: origin)
     }
     return (changes, changes.inverted(removed: removed))
   }

@@ -23,8 +23,28 @@ TextEditor(document: document)
   .onCommand { command in … }            // sees every command first; true takes it over
   .editFilter { transaction, state in … } // sees every user edit first; may rewrite or refuse it
   .onSelectionChange { selection in … }
+  .controller(self.controller)           // select, reveal and focus from code, below
   .font(.system(size: 13, design: .monospaced))
 ```
+
+## From code
+
+A body builds the editor, so the component has no reference to it. It holds an
+`EditorController` instead and passes it to `.controller(_:)`:
+
+- `select(_ range:reveal:)` selects a range (a caret when it is empty) and scrolls it into view
+  once the editor is laid out: `.minimal` just enough to show it, `.center` with its line in the
+  middle, or `.none`.
+- `goTo(line:column:)` places the caret and centres it.
+- `focus()` gives the editor the keyboard.
+
+All three do nothing while no editor has the controller. `TextEditor.select` and `focus` are the
+same calls, for code that holds the editor.
+
+`TextDocument.addListener(_:)` tells a `TextDocumentListener` of every change set: `willApply`
+while the text is still as the ranges describe it (what a language server's incremental sync
+needs), `didApply` after. The listener is held weakly and called on the document's thread. The
+Editor app tracks unsaved changes this way (`Sources/Editor/OpenFiles.swift`).
 
 ## Layers
 

@@ -22,6 +22,46 @@ public enum LineWrapping: Hashable, Sendable {
   case soft
 }
 
+/// How far a selection moved from code scrolls the editor.
+public enum TextReveal: Sendable {
+  /// Not at all.
+  case none
+  /// Just enough to show it.
+  case minimal
+  /// Its line to the middle of the view: a jump to a line, a definition, a problem.
+  case center
+}
+
+/// A handle on a `TextEditor` for the code around it, which builds the editor in a body and has
+/// no reference to it: hold one, pass it to `.controller(_:)`, then select and reveal through
+/// it. Does nothing while no editor has it.
+public final class EditorController {
+  public fileprivate(set) weak var editor: TextEditor?
+
+  public init() {}
+
+  /// Selects `range` (a caret when empty), and scrolls it into view by `reveal`, once the
+  /// editor is laid out.
+  public func select(_ range: Range<Int>, reveal: TextReveal = .minimal) {
+    self.editor?.select(range, reveal: reveal)
+  }
+
+  /// A caret at `line`, `column` (zero-based, UTF-16), centred.
+  public func goTo(line: Int, column: Int = 0) {
+    guard let editor = self.editor else { return }
+    let document = editor.document
+    let line = line.clamped(to: 0 ... max(document.lineCount - 1, 0))
+    let column = column.clamped(to: 0 ... document.lineRange(line).count)
+    let offset = document.offset(line: line, column: column)
+    editor.select(offset ..< offset, reveal: .center)
+  }
+
+  /// Gives the editor the keyboard.
+  public func focus() {
+    self.editor?.focus()
+  }
+}
+
 /// Multi-line, styled, editable text: the base of a code editor, a console, a markdown editor.
 ///
 /// `TextEditor(text: $source)` edits a string, as SwiftUI's does. For a long document, give it a
@@ -405,6 +445,29 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     let text = self.state.selectedText
     guard !text.isEmpty else { return }
     Pasteboard.write(text)
+  }
+
+  // MARK: - From code
+
+  /// Selects `range` (a caret when empty), clamped to the text, and scrolls it into view by
+  /// `reveal` once the editor is laid out.
+  public func select(_ range: Range<Int>, reveal: TextReveal = .minimal) {
+    let length = self.document.length
+    let low = range.lowerBound.clamped(to: 0 ... length)
+    let high = range.upperBound.clamped(to: low ... length)
+    self.state.setSelection(EditorSelection(SelectionRange(anchor: low, head: high)))
+    self.restartBlink()
+    guard reveal != .none, let context = self.context else { return }
+    context.afterLayout { [weak self] in
+      guard let self, self.mounted else { return }
+      self.refresh(revealCaret: reveal == .minimal)
+      if reveal == .center { self.centerCaret() }
+    }
+  }
+
+  /// Gives the editor the keyboard.
+  public func focus() {
+    self.context?.focus(self.focusable)
   }
 
   // MARK: - Keys
@@ -859,6 +922,17 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   public func onSelectionChange(_ action: @escaping (EditorSelection) -> Void) -> Self {
     self.onSelectionChange = action
     return self
+  }
+
+  /// Lets `controller` select and reveal in this editor from code.
+  public func controller(_ value: EditorController?) -> Self {
+    value?.editor = self
+    return self
+  }
+
+  public func setController(_ value: EditorController?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard let value, value.editor !== self else { return }
+    value.editor = self
   }
 
   /// Keeps the view at the end as text is added there, when it was at the end.
