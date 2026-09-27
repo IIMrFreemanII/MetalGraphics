@@ -16,28 +16,34 @@ import simd
 enum Workspace {
   static let windowID = "workspace"
 
-  static let space = DockSpace(
-    name: "workspace",
-    kinds: [
-      DockPanelKind("outline", title: "Outline") { panel in OutlinePanel(panel: panel) },
-      DockPanelKind("inspector", title: "Inspector") { _ in InspectorPanel() },
-      DockPanelKind("console", title: "Console") { _ in ConsolePanel() },
-      DockPanelKind("notes", title: "Notes") { panel in NotesPanel(panel: panel) },
-    ]
-  ) {
-    var layout = DockLayout()
-    let outline = layout.addPanel(kind: "outline", title: "Outline")
-    let inspector = layout.addPanel(kind: "inspector", title: "Inspector")
-    let console = layout.addPanel(kind: "console", title: "Console")
-    let notes = layout.addPanel(kind: "notes", title: "Notes")
-    layout.hosts = [
-      DockHost(id: "main", root: .row([
-        .group([outline]),
-        .column([.group([notes]), .group([console])], fractions: [0.6, 0.4]),
-        .group([inspector]),
-      ], fractions: [0.22, 0.46, 0.32])),
-    ]
-    return layout
+  /// A `var` so a test can start from a fresh one, loaded from its own storage, as a new
+  /// process would (`AppScenes.resetForTesting`). Set only at launch.
+  nonisolated(unsafe) static var space = Workspace.makeSpace()
+
+  static func makeSpace() -> DockSpace {
+    DockSpace(
+      name: "workspace",
+      kinds: [
+        DockPanelKind("outline", title: "Outline") { panel in OutlinePanel(panel: panel) },
+        DockPanelKind("inspector", title: "Inspector") { _ in InspectorPanel() },
+        DockPanelKind("console", title: "Console") { _ in ConsolePanel() },
+        DockPanelKind("notes", title: "Notes") { panel in NotesPanel(panel: panel) },
+      ]
+    ) {
+      var layout = DockLayout()
+      let outline = layout.addPanel(kind: "outline", title: "Outline")
+      let inspector = layout.addPanel(kind: "inspector", title: "Inspector")
+      let console = layout.addPanel(kind: "console", title: "Console")
+      let notes = layout.addPanel(kind: "notes", title: "Notes")
+      layout.hosts = [
+        DockHost(id: "main", root: .row([
+          .group([outline]),
+          .column([.group([notes]), .group([console])], fractions: [0.6, 0.4]),
+          .group([inspector]),
+        ], fractions: [0.22, 0.46, 0.32])),
+      ]
+      return layout
+    }
   }
 
   /// Opens a new panel of `kind`, floating over the workspace, each a little below the last.

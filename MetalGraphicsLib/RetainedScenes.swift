@@ -10,18 +10,29 @@ import SwiftUI
 public struct RetainedWindowGroup: Scene {
   let title: String
   let id: String
+  let defaultSize: CGSize
   let root: @Sendable (WindowScene) -> UIElement
 
-  public init(_ title: String, id: String, root: @escaping @Sendable (WindowScene) -> UIElement) {
+  public init(
+    _ title: String, id: String, defaultSize: CGSize = RetainedScene.standardSize,
+    root: @escaping @Sendable (WindowScene) -> UIElement
+  ) {
     self.title = title
     self.id = id
+    self.defaultSize = defaultSize
     self.root = root
+  }
+
+  /// The window group `scene` declares, as `HeadlessApp` also opens it.
+  public init(_ scene: RetainedScene) {
+    self.init(scene.title, id: scene.id, defaultSize: scene.defaultSize, root: scene.root)
   }
 
   public var body: some Scene {
     WindowGroup(self.title, id: self.id) {
       RetainedView(sceneID: self.id, root: self.root)
     }
+    .defaultSize(self.defaultSize)
   }
 }
 
@@ -30,18 +41,66 @@ public struct RetainedWindowGroup: Scene {
 public struct RetainedWindow: Scene {
   let title: String
   let id: String
+  let defaultSize: CGSize
   let root: @Sendable (WindowScene) -> UIElement
 
-  public init(_ title: String, id: String, root: @escaping @Sendable (WindowScene) -> UIElement) {
+  public init(
+    _ title: String, id: String, defaultSize: CGSize = RetainedScene.standardSize,
+    root: @escaping @Sendable (WindowScene) -> UIElement
+  ) {
     self.title = title
     self.id = id
+    self.defaultSize = defaultSize
     self.root = root
+  }
+
+  /// The single window `scene` declares, as `HeadlessApp` also opens it.
+  public init(_ scene: RetainedScene) {
+    self.init(scene.title, id: scene.id, defaultSize: scene.defaultSize, root: scene.root)
   }
 
   public var body: some Scene {
     Window(self.title, id: self.id) {
       RetainedView(sceneID: self.id, root: self.root)
     }
+    .defaultSize(self.defaultSize)
+  }
+}
+
+/// A kind of window the app declares, apart from SwiftUI: what `RetainedWindowGroup` and
+/// `RetainedWindow` show, and what `HeadlessApp` opens in memory. Declaring the app's windows
+/// once, as a list of these, runs the same trees in both:
+///
+///     static let demos = RetainedScene("Demos", id: "main") { scene in Demos(scene: scene) }
+///     // App.body:     RetainedWindowGroup(AppScenes.demos)
+///     // A test:       HeadlessApp(scenes: [AppScenes.demos]).launch()
+public struct RetainedScene: Sendable {
+  public enum Kind: Sendable {
+    /// Any number open, as `WindowGroup`.
+    case group
+    /// At most one open, as `Window`: opening it again brings it to the front.
+    case single
+  }
+
+  /// A new window's size when nothing says otherwise.
+  public static let standardSize = CGSize(width: 900, height: 600)
+
+  public let title: String
+  public let id: String
+  public let kind: Kind
+  /// Points.
+  public let defaultSize: CGSize
+  public let root: @Sendable (WindowScene) -> UIElement
+
+  public init(
+    _ title: String, id: String, kind: Kind = .group, defaultSize: CGSize = RetainedScene.standardSize,
+    root: @escaping @Sendable (WindowScene) -> UIElement
+  ) {
+    self.title = title
+    self.id = id
+    self.kind = kind
+    self.defaultSize = defaultSize
+    self.root = root
   }
 }
 
@@ -69,22 +128,39 @@ public final class WindowScene {
 /// `\.openWindow` from. Every `RetainedView` registers the environment's action; it is the
 /// same app-wide action whichever window it came from.
 @MainActor public enum Windows {
-  private static var openAction: OpenWindowAction?
+  /// SwiftUI's open-window action, or `HeadlessApp`'s own while one runs.
+  private static var opener: (@MainActor (String) -> Void)?
 
   static func register(_ action: OpenWindowAction) {
-    self.openAction = action
+    self.opener = { action(id: $0) }
+  }
+
+  /// Replaces how windows open, returning what it was: for `HeadlessApp`, which opens them in
+  /// memory, and puts back what it found when it closes.
+  @discardableResult
+  static func setOpener(_ opener: (@MainActor (String) -> Void)?) -> (@MainActor (String) -> Void)? {
+    defer { self.opener = opener }
+    return self.opener
   }
 
   /// Opens a window of the scene declared with `id`, or brings a single `RetainedWindow` that
   /// is already open to the front.
   public static func open(id: String) {
-    guard let openAction else {
+    guard let opener else {
 #if DEBUG
       print("Windows.open(id: \"\(id)\"): no window has appeared yet to open it from")
 #endif
       return
     }
-    openAction(id: id)
+    opener(id)
+  }
+}
+
+/// How retained code reaches the main thread: the main queue in the app, `HeadlessApp`'s own
+/// mailbox while one runs, so what a handler asks of the main thread is stepped with the rest.
+enum MainQueue {
+  nonisolated(unsafe) static var post: @Sendable (@escaping @Sendable () -> Void) -> Void = { work in
+    DispatchQueue.main.async(execute: work)
   }
 }
 
@@ -95,7 +171,7 @@ public final class WindowScene {
 /// Windows are opened on the main thread, and each window's handlers run on its own: the
 /// window opens once the main thread gets to it, after the handler returns.
 public func openWindow(id: String) {
-  DispatchQueue.main.async {
-    Windows.open(id: id)
+  MainQueue.post {
+    MainActor.assumeIsolated { Windows.open(id: id) }
   }
 }

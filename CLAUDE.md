@@ -26,4 +26,4 @@ Panels dock, split, tab and float in a `DockArea`, and become windows of their o
 
 ## UI tests
 
-Check UI changes with the headless tests in `MetalGraphicsLibTests` (the `ui-tests` skill, `.claude/skills/ui-tests/SKILL.md`): no window, synthetic input, fake clock, golden PNGs, seconds per run. Launch the app with `drive-app` only for what the harness does not cover (real `NSEvent`s, windowing, hot reload, frame pacing) and for a final end-to-end check.
+Check UI changes with the headless tests (the `ui-tests` skill, `.claude/skills/ui-tests/SKILL.md`): no window, synthetic input, fake clock, golden PNGs, seconds per run. `MetalGraphicsLibTests` tests trees with `UIHarness`. `GPURayMarchingTests` runs the whole app in memory with `HeadlessApp`: its real scenes, several windows, `openWindow`, dock windows and relaunch, driven by label (`tap("Form")`). See `MetalGraphicsLib/docs/HeadlessApp.md`. Give a feature an end-to-end test there. Launch the app with `drive-app` only for what neither covers (real `NSEvent`s, AppKit windowing, real threads, hot reload, frame pacing) and for a final check.

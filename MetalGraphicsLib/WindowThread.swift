@@ -100,6 +100,21 @@ public final class WindowExecutor: ThreadExecutor, @unchecked Sendable {
     CFRunLoopWakeUp(runLoop)
   }
 
+  /// Runs what is queued now, on the calling thread, for an executor no thread's run loop
+  /// drains: a headless window's. Returns whether there was anything. Work posted meanwhile
+  /// waits for the next call.
+  @discardableResult
+  func runPending() -> Bool {
+    guard self.hasPending else { return false }
+    self.drain()
+    return true
+  }
+
+  /// Whether work is queued and has not run yet.
+  var hasPending: Bool {
+    self.lock.withLock { !self.mailbox.isEmpty }
+  }
+
   private func drain() {
     self.lock.withLock {
       swap(&self.mailbox, &self.draining)
@@ -127,7 +142,12 @@ public final class WindowExecutor: ThreadExecutor, @unchecked Sendable {
 /// it input and to post work to its renderer. The renderer, its tree and its `Graphics2D` are
 /// made, used and released on the window's thread; the main thread never touches them.
 public final class WindowHandle: @unchecked Sendable {
-  public let thread: WindowThread
+  /// The window's thread; nil for a headless window, whose frames and posted work run on the
+  /// thread that steps it (see `HeadlessApp`).
+  public let thread: WindowThread?
+  /// Where work for the window is posted: its thread's mailbox, or one that a headless window
+  /// drains itself.
+  public let executor: WindowExecutor
   private let lock = NSLock()
   private var events: [InputEvent] = []
   private var isClosed = false
@@ -138,17 +158,38 @@ public final class WindowHandle: @unchecked Sendable {
   private static let wake: @Sendable () -> Void = {}
 
   public init(name: String) {
-    self.thread = WindowThread(name: name)
+    let thread = WindowThread(name: name)
+    self.thread = thread
+    self.executor = thread.executor
   }
 
-  /// Starts the thread and makes the renderer on it.
+  /// A window with no thread of its own: `start` makes its renderer at once, on the calling
+  /// thread, and what is posted to it waits for `executor.runPending()`. For `HeadlessApp`.
+  init(threadlessNamed name: String) {
+    self.thread = nil
+    self.executor = WindowExecutor()
+  }
+
+  /// Starts the thread and makes the renderer on it; without a thread, makes it now.
   public func start(_ makeRenderer: @escaping @Sendable () -> RootViewRenderer) {
-    self.thread.start()
-    self.thread.executor.post { [self] in
-      let renderer = makeRenderer()
-      self.renderer = renderer
-      renderer.start(handle: self)
+    guard let thread = self.thread else {
+      self.startRenderer(makeRenderer())
+      return
     }
+    thread.start()
+    self.executor.post { [self] in
+      self.startRenderer(makeRenderer())
+    }
+  }
+
+  private func startRenderer(_ renderer: RootViewRenderer) {
+    self.renderer = renderer
+    renderer.start(handle: self)
+  }
+
+  /// The window's renderer, on its thread. For a headless window, which runs its frames itself.
+  var currentRenderer: RootViewRenderer? {
+    self.renderer
   }
 
   /// Queues `event` for the window's next frame.
@@ -159,7 +200,7 @@ public final class WindowHandle: @unchecked Sendable {
       return true
     }
     if isOpen {
-      self.thread.executor.post(Self.wake)
+      self.executor.post(Self.wake)
     }
   }
 
@@ -177,7 +218,7 @@ public final class WindowHandle: @unchecked Sendable {
 
   /// Runs `work` with the window's renderer, on its thread. Dropped once the window closed.
   public func post(_ work: @escaping @Sendable (RootViewRenderer) -> Void) {
-    self.thread.executor.post { [self] in
+    self.executor.post { [self] in
       guard let renderer = self.renderer else { return }
       work(renderer)
     }
@@ -190,7 +231,15 @@ public final class WindowHandle: @unchecked Sendable {
       return !self.isClosed
     }
     guard wasOpen else { return }
-    self.thread.stop { [self] in
+    guard let thread = self.thread else {
+      // Headless: on the thread that steps it, now. What was posted and has not run is dropped,
+      // as a window thread drops what arrives after it stops.
+      self.renderer?.teardown()
+      self.renderer = nil
+      self.executor.close()
+      return
+    }
+    thread.stop { [self] in
       self.renderer?.teardown()
       self.renderer = nil
     }
