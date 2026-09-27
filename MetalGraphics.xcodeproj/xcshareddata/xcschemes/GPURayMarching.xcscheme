@@ -42,6 +42,17 @@
                ReferencedContainer = "container:MetalGraphics.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E2E000000000000000000001"
+               BuildableName = "GPURayMarchingTests.xctest"
+               BlueprintName = "GPURayMarchingTests"
+               ReferencedContainer = "container:MetalGraphics.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

@@ -1,6 +1,6 @@
 ---
 name: ui-tests
-description: Headless UI tests for MetalGraphicsLib's retained-mode UI. The tree runs in an XCTest bundle with no window, synthetic mouse/key/scroll input, a fake clock, and offscreen Metal rendering compared against golden PNGs. The whole suite takes seconds. This is the default way to check or test any change to layout, hover/tap, focus, keys, text fields, scrolling, animation or rendering. Also use when asked to write, run or fix UI tests, snapshot tests or golden images. Use the drive-app skill instead only for the things listed under "When to launch the app instead".
+description: Headless UI tests for MetalGraphicsLib's retained-mode UI and for the whole app. A tree (UIHarness) or the app's real scenes and windows (HeadlessApp, GPURayMarchingTests) run in an XCTest bundle with no window, synthetic mouse/key/scroll input, a fake clock, and offscreen Metal rendering compared against golden PNGs. The whole suite takes seconds. This is the default way to check or test any change to layout, hover/tap, focus, keys, text fields, scrolling, animation or rendering. Also use when asked to write, run or fix UI tests, snapshot tests or golden images. Use the drive-app skill instead only for the things listed under "When to launch the app instead".
 ---
 
 # Headless UI tests
@@ -85,14 +85,48 @@ Goldens are stored at `MetalGraphicsLibTests/__Snapshots__/<TestClass>/<name>.pn
 - A change to UI behaviour or rendering comes with a test next to the existing ones: `InteractionTests`, `AnimationTests`, `LayoutTests` or `SnapshotTests`.
 - Guard idleness where it matters: after `settle()`, `h.step(frames: 30)` must not change `h.renders` (see `AnimationTests.testIdleTreeStopsDrawing`).
 
+## The whole app (`HeadlessApp`, `GPURayMarchingTests`)
+
+`GPURayMarchingTests` is a second test bundle. It compiles the app's own sources, except `GPURayMarchingApp.swift`, and runs them in a `HeadlessApp` (`MetalGraphicsLib/docs/HeadlessApp.md`):
+- the app's real scenes (`AppScenes.all`);
+- every window stepped in turn on the test's thread;
+- `openWindow(id:)`, dock windows, and storage kept across a relaunch.
+
+Use it for a feature that crosses windows, opens them, uses the demos, or has to survive a relaunch. It is also where a finished feature gets its end-to-end test.
+
+```bash
+xcodebuild test -project MetalGraphics.xcodeproj -scheme GPURayMarching \
+  -destination 'platform=macOS' -only-testing:GPURayMarchingTests 2>&1 \
+  | grep -E "error:|Test Case.*failed|Executed .* tests|\*\* "
+```
+
+```swift
+final class SharedStateE2ETests: AppTestCase {        // launches the app; `main` is its Demos window
+  func testCountingInOneWindowShowsInTheOther() throws {
+    try self.main.tap("Windows")                      // a sidebar link, by its text
+    try self.main.tap("Open Shared State window")     // its handler calls openWindow(id:)
+    let shared = try XCTUnwrap(self.app.window(SharedStateWindow.id))
+    try shared.tap("+")
+    XCTAssertTrue(self.main.shows("Count: 1"))        // the other window, same step
+  }
+}
+```
+
+- New files go in `GPURayMarchingTests/`, which is a synchronized folder. A new app source file must also be added to the test target's Sources phase in the project file, next to the other app files.
+- Every action on a `HeadlessWindow` steps the whole app. Use `app.step()`, `app.settle()` or `app.advance(_:)` to move time without input.
+- Find by what the user reads: `tap("Form")`, `type("Ada", into: "Name")`, `toggle("Highlight")`, `control(labelled:)`, `panel(id)`, `shows("…")`. When a query finds nothing, it throws with every text the window shows. `window.describeTree()` prints the whole tree.
+- `self.relaunch()` quits and relaunches: each window reopens from its scene storage, and dock layouts are kept.
+- Docking: `panel(id).drag(toScreen:)` tears a tab out into a `"dock"` window, and dragging it over a group docks it back. Windows sit on a virtual screen; `window.origin` is the top left of the window's content.
+- Snapshots work as above; `assertSnapshot` is shared by a symlink.
+- Library tests of `HeadlessApp` itself are in `MetalGraphicsLibTests/HeadlessAppTests.swift`.
+
 ## When to launch the app instead (drive-app skill)
 
-These are outside the harness:
+These are outside both harnesses:
 - `NSEvent` → `InputEvent` translation in `RetainedLayerView`: real mouse and trackpad events, modifier edge cases, key repeat. What `Input.apply` makes of an `InputEvent` is testable here (`WindowInputTests`).
-- Windowing: resizing, Retina scale changes, key-window hover tracking.
+- Windowing: resizing by the edge, Retina scale changes, AppKit's key-window and first-click rules, SwiftUI's own window restoration and menu commands.
 - Hot reload, and real frame pacing or idle CPU (with `top`, or Instruments).
-- The `@Component` demos in the `GPURayMarching` app target. The tests link `MetalGraphicsLib` and `ReactiveUI`, so a test can declare its own `@Component` and `@Model` (see `ModelSyncTests`). Most tests still build trees by hand.
-- Several real windows: opening them, key status and focus between them. For shared state across windows, the headless form is two `UIHarness` instances over one `@Model`, as in `ModelSyncTests`.
+- Real threads: `HeadlessApp` runs every window on one thread. Races between windows are tested with `WindowThread`s under TSan (`WindowThreadTests`, `DockWindowsTests`).
 
 Do one final `drive-app` check when a feature is finished. Iterate with the tests.
 

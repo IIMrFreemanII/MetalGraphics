@@ -8,27 +8,20 @@ struct GPURayMarchingApp: App {
     DockWindows.manage(Workspace.space)
   }
 
+  // The scenes are declared in `AppScenes`, which the end-to-end tests open too.
   var body: some Scene {
     // First, so File ▸ New Window (⌘N) opens another of these.
-    RetainedWindowGroup("Demos", id: "main") { scene in
-      Demos(scene: scene)
-    }
-    .commands {
-      CommandGroup(after: .newItem) {
-        OpenSharedStateWindow()
-        OpenWorkspaceWindow()
+    RetainedWindowGroup(AppScenes.demos)
+      .commands {
+        CommandGroup(after: .newItem) {
+          OpenSharedStateWindow()
+          OpenWorkspaceWindow()
+        }
       }
-    }
 
-    RetainedWindow("Shared State", id: SharedStateWindow.id) { _ in
-      SharedStateWindow()
-    }
-    .defaultSize(width: 420, height: 320)
+    RetainedWindow(AppScenes.sharedState)
 
-    RetainedWindow("Workspace", id: Workspace.windowID) { _ in
-      DockArea(Workspace.space, host: "main")
-    }
-    .defaultSize(width: 1000, height: 640)
+    RetainedWindow(AppScenes.workspace)
   }
 }
 

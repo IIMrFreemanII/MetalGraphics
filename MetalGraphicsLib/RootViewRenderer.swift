@@ -23,7 +23,7 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
   private let showPointerStyle: @Sendable (PointerStyle) -> Void
 
   public init(
-    scene: WindowScene, layer: CAMetalLayer,
+    scene: WindowScene, layer: CAMetalLayer?,
     root: @escaping @Sendable (WindowScene) -> UIElement,
     showPointerStyle: @escaping @Sendable (PointerStyle) -> Void
   ) {
@@ -34,7 +34,8 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
     super.init()
   }
 
-  /// Builds the tree and starts the frames. On the window's thread, once.
+  /// Builds the tree and starts the frames. On the window's thread, once. Without a layer, as
+  /// in a headless window, nothing drives the frames: whoever made it calls `runFrame`.
   func start(handle: WindowHandle) {
     self.handle = handle
     let graphics = Graphics2D()
@@ -55,7 +56,7 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
       link.add(to: .current, forMode: .common)
       self.displayLink = link
     }
-    handle.thread.executor.didDrain = { [weak self] in self?.resume() }
+    handle.executor.didDrain = { [weak self] in self?.resume() }
     self.start()
   }
 
@@ -125,12 +126,27 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
     self.frame(drawable: update.drawable)
   }
 
-  /// One frame: the input that arrived since the last, update, then draw if anything changed.
+  /// One frame, drawn into the view's drawable; paused once there is nothing left to do.
   func frame(drawable: CAMetalDrawable?) {
+    guard self.runFrame(draw: { graphics, body in
+      graphics.context(in: FrameTarget(drawable: drawable)) { _ in body() }
+    }) else { return }
+
+    if self.uiContext.isIdle, self.graphics2D?.needsDamageFrames != true, self.handle?.hasEvents != true {
+      self.displayLink?.isPaused = true
+    }
+  }
+
+  /// One frame: the input that arrived since the last, update, then — if anything changed —
+  /// `draw`, which runs the body it is given inside a frame of `Graphics2D`: into the view's
+  /// drawable, or an offscreen texture in a headless window. Returns false when the window has
+  /// no size yet, and nothing ran.
+  @discardableResult
+  func runFrame(draw: (Graphics2D, () -> Void) -> Void) -> Bool {
     // Nothing is laid out before the view's size arrives: at no size, a scroll view would
     // clamp its offset to content it cannot show, and keep it once the window has its size.
     guard let graphics = self.graphics2D, self.windowSize.x > 0, self.windowSize.y > 0 else {
-      return
+      return false
     }
     self.updateTime()
     self.handle?.takeEvents(into: &self.events)
@@ -159,16 +175,13 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
     // those frames are presented even though nothing changed.
     if self.uiContext.needsRender || graphics.needsDamageFrames {
       graphics.time = self.time
-      graphics.context(in: FrameTarget(drawable: drawable)) { _ in
+      draw(graphics) {
         let renderStart = profiler.start()
         self.uiContext.render(root: self.root, graphics)
         profiler.add(.uiRender, since: renderStart)
       }
     }
     self.input.endFrame()
-
-    if self.uiContext.isIdle, !graphics.needsDamageFrames, self.handle?.hasEvents != true {
-      self.displayLink?.isPaused = true
-    }
+    return true
   }
 }

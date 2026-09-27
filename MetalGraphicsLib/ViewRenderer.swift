@@ -9,13 +9,15 @@ open class ViewRenderer: NSObject {
   /// The view's size in points: what the next frame lays out in.
   public private(set) var windowSize = float2()
 
-  private var lastTime: Double = CFAbsoluteTimeGetCurrent()
+  /// Where `time` comes from: the wall clock, or a fake one a headless window steps by hand.
+  public var clock: () -> Double = CFAbsoluteTimeGetCurrent
+  private var lastTime: Double?
   public var deltaTime: Float = 0
   public var time: Float = 0
 
   public func updateTime() {
-    let currentTime = CFAbsoluteTimeGetCurrent()
-    self.deltaTime = Float(currentTime - self.lastTime)
+    let currentTime = self.clock()
+    self.deltaTime = Float(currentTime - (self.lastTime ?? currentTime))
     self.time += self.deltaTime
     self.lastTime = currentTime
   }
@@ -94,7 +96,7 @@ open class ViewRenderer: NSObject {
           let handles = WindowRegistry.live
           handles.forEach { $0.close() }
           for handle in handles {
-            handle.thread.waitUntilFinished(timeout: 0.5)
+            handle.thread?.waitUntilFinished(timeout: 0.5)
           }
           // After the trees unmounted: panels save their last values as they go.
           DockSpace.saveAllNow()

@@ -132,13 +132,33 @@ struct RetainedMetalView: NSViewRepresentable {
     let showPointerStyle: @Sendable (PointerStyle) -> Void = { [weak view] style in
       DispatchQueue.main.async { MainActor.assumeIsolated { view?.pointerStyle = style } }
     }
-    handle.start {
-      let scene = WindowScene(sceneID: sceneID, storage: UISceneStorage(restoring: restoring, persist: persist), handle: handle)
-      return RootViewRenderer(scene: scene, layer: layer, root: root, showPointerStyle: showPointerStyle)
-    }
+    handle.start(sceneID: sceneID, root: root, restoring: restoring, persist: persist, layer: layer, showPointerStyle: showPointerStyle)
 #if DEBUG
     HotReload.startIfNeeded()
 #endif
     return (view, handle)
+  }
+}
+
+extension WindowHandle {
+  /// Makes the window's scene, its storage and its renderer, on its thread, and builds its tree:
+  /// what every window does, with a view (`RetainedWindowContent`) or without (`HeadlessApp`).
+  func start(
+    sceneID: String, root: @escaping @Sendable (WindowScene) -> UIElement,
+    restoring: String, persist: (@Sendable (String) -> Void)?,
+    layer: CAMetalLayer?, showPointerStyle: @escaping @Sendable (PointerStyle) -> Void,
+    clock: (@Sendable () -> Double)? = nil
+  ) {
+    nonisolated(unsafe) let layer = layer
+    self.start { [self] in
+      let scene = WindowScene(sceneID: sceneID, storage: UISceneStorage(restoring: restoring, persist: persist), handle: self)
+      let renderer = RootViewRenderer(scene: scene, layer: layer, root: root, showPointerStyle: showPointerStyle)
+      // A fake one, from before the tree is built: what it starts animates on it too.
+      if let clock {
+        renderer.clock = clock
+        renderer.uiContext.clock = clock
+      }
+      return renderer
+    }
   }
 }

@@ -71,7 +71,8 @@ public enum DockWindowRequest: Sendable {
 /// (the writer's own at once), as a `@Model` write does. Nothing here is touched per frame: a
 /// drag moves elements in its own window, and commits once, when it ends.
 ///
-/// The layout is saved to `UserDefaults` after each commit, and loaded when the space is made.
+/// The layout is saved to `UserDefaults` (`UIStorage.defaults`) after each commit, and loaded
+/// when the space is made.
 public final class DockSpace: @unchecked Sendable {
   public let name: String
   private let kinds: [String: DockPanelKind]
@@ -225,7 +226,7 @@ public final class DockSpace: @unchecked Sendable {
   private var defaultsKey: String { "Dock.\(self.name)" }
 
   private static func load(_ name: String) -> DockLayout? {
-    guard let data = UserDefaults.standard.data(forKey: "Dock.\(name)") else { return nil }
+    guard let data = UIStorage.defaults.data(forKey: "Dock.\(name)") else { return nil }
     return try? JSONDecoder().decode(DockLayout.self, from: data)
   }
 
@@ -237,20 +238,24 @@ public final class DockSpace: @unchecked Sendable {
   static func saveAllNow() {
     let spaces = registryLock.withLock { saved.compactMap(\.space) }
     saveQueue.sync {}
+    let defaults = UIStorage.defaults
     for space in spaces {
       guard let data = try? JSONEncoder().encode(space.layout) else { continue }
-      UserDefaults.standard.set(data, forKey: space.defaultsKey)
+      defaults.set(data, forKey: space.defaultsKey)
     }
   }
 
   /// Writes the layout soon, once for a burst of changes.
   private func save() {
     guard self.persists, !self.isSavePending.exchange(true, ordering: .acquiringAndReleasing) else { return }
+    // Read now: a test swaps the store, and a write landing after it put the old one back must
+    // not reach the real one.
+    nonisolated(unsafe) let defaults = UIStorage.defaults
     Self.saveQueue.async { [self] in
       // Cleared before reading, so a change racing the write saves again.
       self.isSavePending.store(false, ordering: .releasing)
       guard let data = try? JSONEncoder().encode(self.layout) else { return }
-      UserDefaults.standard.set(data, forKey: self.defaultsKey)
+      defaults.set(data, forKey: self.defaultsKey)
     }
   }
 
