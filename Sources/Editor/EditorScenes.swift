@@ -16,7 +16,10 @@ enum EditorScenes {
   /// For tests, before a `HeadlessApp` launches or relaunches.
   static func resetForTesting() {
     WorkspaceModel.shared.reset()
+    BuildModel.shared.reset()
+    BuildController.shared.log.reset()
     OpenFiles.shared.reset()
+    IDE.stopWatching()
     IDE.space = IDE.makeSpace()
   }
 }

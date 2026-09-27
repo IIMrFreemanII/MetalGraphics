@@ -36,6 +36,8 @@ final class FileEditorPanel : SingleChildElement {
   @State var regex: Bool = false
   @State var matches: String = ""
   @State var goingToLine: Bool = false
+  /// The build's problems in this file.
+  @State var diagnostics: [TextDiagnostic] = []
   @State var confirmingClose: Bool = false
   @State var status: String = "Ln 1, Col 1"
   /// What went wrong reading or saving the file; "" when nothing did.
@@ -56,6 +58,9 @@ final class FileEditorPanel : SingleChildElement {
     file.onDirtyChange = { [unowned self] dirty in
       self.dirty = dirty
       self.showTitle()
+    }
+    file.onDiskChange = { [unowned self] reason in
+      self.problem = reason ?? ""
     }
     panel.shouldClose = { [weak self] in
       guard let self, self.file.isDirty else { return true }
@@ -100,6 +105,7 @@ final class FileEditorPanel : SingleChildElement {
         .autoClosingPairs(self.pairs)
         .searchQuery(self.finding ? self.query : "")
         .searchOptions(TextSearchOptions(caseSensitive: self.caseSensitive, wholeWord: self.wholeWord, regex: self.regex))
+        .diagnostics(self.diagnostics)
         .editable(self.file.loadError == nil)
         .controller(self.controller)
         .onSelectionChange { selection in self.showStatus(selection) }
@@ -142,13 +148,33 @@ final class FileEditorPanel : SingleChildElement {
   override func onMount(_ context: UIContext) {
     WorkspaceModel.shared.activeFile = self.file.path
     self.showTitle()
+    // The build's problems and the places asked for are the shared models': subscribed by hand,
+    // as they are turned into this document's ranges, which a body cannot do.
+    BuildModel.shared.__observers(named: "problems").add(self, token: Self.problemsToken)
+    WorkspaceModel.shared.__observers(named: "reveal").add(self, token: Self.revealToken)
+    self.showProblems()
     // Shown, so it takes the keyboard: a file just opened, a tab picked.
-    context.afterLayout { [weak self] in self?.controller.focus() }
+    context.afterLayout { [weak self] in
+      self?.controller.focus()
+      self?.revealIfAsked()
+    }
+  }
+
+  private static let problemsToken = 0
+  private static let revealToken = 1
+
+  override func __modelDidChange(_ token: Int, _ animated: Bool) {
+    switch token {
+    case Self.problemsToken: self.showProblems()
+    default: self.revealIfAsked()
+    }
   }
 
   // Leaving the window — another tab picked, the panel moved or closed, the app quitting. A
   // move makes the panel anew elsewhere, from the text kept here.
   override func onUnmount(_ context: UIContext) {
+    BuildModel.shared.__observers(named: "problems").remove(self)
+    WorkspaceModel.shared.__observers(named: "reveal").remove(self)
     // Still in the layout: moving, or another tab picked. Not when it was closed.
     if self.file.isDirty && self.panel.space.layout.panels[self.panel.id] != nil {
       OpenFiles.shared.keepUnsaved(self.file.document.stringWithOriginalLineEndings, panel: self.panel.id)
@@ -249,6 +275,50 @@ final class FileEditorPanel : SingleChildElement {
     self.status = selected > 0
       ? "Ln \(line + 1), Col \(column + 1) (\(selected) selected)"
       : "Ln \(line + 1), Col \(column + 1)"
+  }
+
+  /// The build's problems in this file, as ranges of its text: each underlines the word at its
+  /// column, or the character.
+  private func showProblems() {
+    let document = self.file.document
+    let problems = BuildModel.shared.problems.filter { $0.path == self.file.path }
+    guard !problems.isEmpty || !self.diagnostics.isEmpty else { return }
+    self.diagnostics = problems.map { problem in
+      let offset = Self.offset(of: problem.line, problem.column, in: document)
+      let line = document.line(containing: offset)
+      let lineEnd = document.lineRange(line).upperBound
+      var end = offset
+      while end < lineEnd, Self.isWordUnit(document.unit(at: end)) { end += 1 }
+      if end == offset { end = min(offset + 1, lineEnd) }
+      let severity: DiagnosticSeverity = switch problem.severity {
+      case .error: .error
+      case .warning: .warning
+      case .note, .remark: .info
+      }
+      return TextDiagnostic(offset ..< max(end, offset), severity, problem.message)
+    }
+  }
+
+  /// Where `line` and `column`, from 1 and in UTF-8 bytes as compilers count, are in the text.
+  static func offset(of line: Int, _ column: Int, in document: TextDocument) -> Int {
+    let line = min(max(line - 1, 0), document.lineCount - 1)
+    let text = document.lineText(line)
+    let utf16 = TextPositions.utf16Column(fromUTF8: max(column - 1, 0), in: text)
+    return document.lineStart(line) + min(utf16, text.utf16.count)
+  }
+
+  private static func isWordUnit(_ unit: UInt16) -> Bool {
+    (unit >= 0x30 && unit <= 0x39) || (unit >= 0x41 && unit <= 0x5A) || (unit >= 0x61 && unit <= 0x7A) || unit == 0x5F
+  }
+
+  /// Takes a request to show a place in this file: selects it, centred, and takes the keyboard.
+  private func revealIfAsked() {
+    let model = WorkspaceModel.shared
+    guard let request = model.reveal, request.path == self.file.path, self.mounted else { return }
+    model.reveal = nil
+    let offset = Self.offset(of: request.line, request.column, in: self.file.document)
+    self.controller.select(offset ..< offset, reveal: .center)
+    self.controller.focus()
   }
 
   static func styler(for path: String) -> (any TextStyler)? {

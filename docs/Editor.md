@@ -11,7 +11,7 @@ It opens the folder named on the command line, else `EDITOR_OPEN`, else the one 
 
 | Target | What it holds |
 |---|---|
-| `EditorCore` (`Sources/EditorCore/`) | Foundation only, no UI: scanning a folder (`WorkspaceScanner`, `FileNode`), the navigator's rows (`FileNode.rows`), reading and writing text files (`TextFileIO`), column conversions (`TextPositions`). Tested by `EditorCoreTests`. |
+| `EditorCore` (`Sources/EditorCore/`) | Foundation only, no UI: scanning and watching a folder (`WorkspaceScanner`, `FileNode`, `DirectoryWatcher`), the navigator's rows (`FileNode.rows`), reading and writing text files (`TextFileIO`), column conversions (`TextPositions`), fuzzy matching (`FuzzyMatcher`), and builds: running `swift build`/`run`/`test` (`SwiftPMBuildService`, `ProcessRunner`), their output (`BuildLog`), compiler diagnostics in it (`CompilerDiagnosticParser`), a package's executables (`PackageInfo`). Tested by `EditorCoreTests`. |
 | `Editor` (`Sources/Editor/`) | The app: its scene, dock space, panels and the glue between them. Tested end to end by `EditorTests`, in a `HeadlessApp` (`docs/HeadlessApp.md`). |
 
 ## The window
@@ -22,6 +22,7 @@ panels are:
 - **Files** (`NavigatorPanel`): the folder's tree.
 - **A tab per open file** (`FileEditorPanel`).
 - **Welcome**: there until the first file opens.
+- **Console** and **Problems** (`BuildPanels.swift`): docked along the bottom by the first build.
 
 Tabs are dock panels, so they split, float, and move to windows of their own like any other
 (`docs/Docking.md`). The layout is saved, and open tabs come back after a relaunch.
@@ -43,6 +44,8 @@ host would both take its drags. AppKit is told not to treat the folder argument 
 | Return, ⌘G, ⇧⌘G | The next match, the next, the one before | the find field, `FileEditorPanel` |
 | Escape | Close the find bar | `FileEditorPanel` |
 | ⌘L | Go to a line, or `line:column` (`GoToLineSheet`) | `FileEditorPanel` |
+| ⌘B, ⌘R, ⌘U | Build, run the chosen executable, test | `IDERoot` |
+| ⌘. | Stop the build or run | `IDERoot` |
 
 The keys are handled in the tree with `.onKeyPress`, not as menu key equivalents. A menu would
 take the key before the window saw it, and the headless tests cannot press a menu. For the same
@@ -92,11 +95,46 @@ Closing it clears the highlights. A Swift file's editor also matches brackets, t
 - **Across windows.** A tab dragged to another window is made anew there. Its unsaved text goes
   with it through `OpenFiles`; its undo history does not.
 
+## Building and running
+
+`BuildController` (`Sources/Editor/Build.swift`) runs one task at a time in the open folder:
+`xcrun swift build`, `swift run <product>` or `swift test`.
+
+1. **Save.** It saves every file first, each on its window's thread
+   (`OpenFiles.saveAll(then:)`), and starts the process once the last is on disk.
+2. **Stream.** What the process prints goes into the shared `BuildLog`, from the pipes' queues:
+   - terminal escape codes are taken out: the compiler colours its output whatever `TERM` says;
+   - each finished line is parsed for `path:line:column: error|warning|note: message`.
+3. **Update.** At most every 50 ms (`Services.outputDelay`), `BuildModel.logVersion` moves on and
+   `BuildModel.problems` is updated. Each window's console appends the chunks it has not shown to
+   its own document, so a long build costs what it adds, not what the console holds.
+4. **Stop.** ⌘. terminates the process, and kills it two seconds later if it is still running.
+
+The package's executables come from `swift package describe`, read in the background when the
+folder opens; Product ▾ in the console picks which one ⌘R runs.
+
+- **Problems.** The list shows errors first, then warnings. A click opens the file with the
+  caret at the problem, through `WorkspaceModel.reveal`, which the file's tab takes.
+- **In the text.** Each open file underlines its problems (the word at the column), with a dot by
+  the line number. Compilers count columns in UTF-8 bytes; they become UTF-16 offsets
+  (`TextPositions`). A new build clears them.
+- **Changes on disk.** `DirectoryWatcher` (FSEvents, 0.3 s latency) reports changes outside
+  ignored folders. The tree is scanned again, and every open file checks its modification date:
+  - a file without edits is read again (an app edit: not dirty, and the undo history moves
+    over it);
+  - one with edits keeps them, and its status line says it changed on disk.
+
+  Saving here records the new date, so it does not read its own save back.
+- **Another folder.** Opening one closes the tabs of files outside it (saving them first), and
+  starts the console and problems over.
+
 ## Tests
 
 `EditorTests/Support/EditorAppTestCase.swift` launches the app over a small package it writes to
 a temporary folder. The folder picker returns that folder, and scans run at once.
-`NavigatorE2ETests` and `SaveE2ETests` drive it by label, as the user would: ⌘O, a tap on
+Builds are a `FakeBuildService` printing canned compiler output, and the folder is not watched:
+`IDE.filesChanged` is called instead. `NavigatorE2ETests`, `SaveE2ETests`, `EditingE2ETests`,
+`KeysE2ETests` and `BuildE2ETests` drive it by label, as the user would: ⌘O, a tap on
 `Sources`, typing, ⌘S. They then check the layout, the editor's text and the files on disk.
 
 `drive-app` launches the real app (`uidrive --app Editor`) for what those cannot see.
@@ -106,6 +144,8 @@ a temporary folder. The folder picker returns that folder, and scans run at once
 Everything here runs on a user action: a tap, a key, a scan finishing. Nothing runs per frame.
 
 - A keystroke adds one listener call, and at most one title change: the first edit after a save.
+- Build output reaches the windows at most 20 times a second, and each console appends only what
+  is new. Parsing a line for a diagnostic is a prefix check for most lines.
 - The navigator's rows are made in O(rows shown) when the tree or a folder changes, and only the
   rows in view are built.
 - An idle window draws nothing. The real app measured 0.2% CPU idle with a file open.
@@ -115,9 +155,9 @@ Everything here runs on a user action: a tap, a key, a scan finishing. Nothing r
 - **Dirty tracking.** Any edit marks a file unsaved, even one undone back to the saved text.
 - **Quitting.** The app quits without asking about unsaved files. The tabs reopen from disk.
 - **Detached windows.** Closing one closes its tabs without asking.
-- **Changes on disk.** A file changed on disk is not reloaded, and the tree is not rescanned: open
-  the folder again.
+- **Build output.** Problems are placed by line and column when the build reports them: edits
+  made while it runs can shift them.
+- **Run.** A program that reads standard input gets none; there is no terminal.
 - **Planned next:**
-  - build and run with a console and compiler diagnostics;
   - an outline and folding from swift-syntax;
   - sourcekit-lsp: completion, hover, definitions, live diagnostics.

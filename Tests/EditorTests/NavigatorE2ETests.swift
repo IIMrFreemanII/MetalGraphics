@@ -79,6 +79,16 @@ final class NavigatorE2ETests: EditorAppTestCase {
     XCTAssertEqual(split.fractions, [0.24, 0.76])
   }
 
+  func testAnotherFolderClosesTheTabsOfTheLastOne() throws {
+    self.openPackage()
+    try self.openInNavigator("README.md")
+    let other = self.root.appendingPathComponent("Sources").path
+    IDE.openFolder(other)
+    self.app.step()
+    XCTAssertEqual(self.filePanels.count, 0)
+    XCTAssertTrue(self.window.shows("App"))
+  }
+
   func testTheFolderAndItsOpenFoldersComeBackAfterARelaunch() throws {
     self.openPackage()
     try self.openInNavigator("Sources/App/main.swift")

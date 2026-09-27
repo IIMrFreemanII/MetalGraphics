@@ -12,9 +12,13 @@ final class FileBinding: TextDocumentListener {
   private(set) var isDirty = false
   /// Told when `isDirty` flips.
   var onDirtyChange: ((Bool) -> Void)?
+  /// Told when the file on disk changed: nil when the text was read again, else why it was not.
+  var onDiskChange: ((String?) -> Void)?
 
   private var encoding: String.Encoding = .utf8
   private var hasBOM = false
+  /// When the file on disk was last written, as read or saved here.
+  private var modified: Date?
 
   /// Reads `path`, or starts from `unsaved`: the edits its panel carried from another window.
   init(path: String, unsaved: String? = nil) {
@@ -34,7 +38,37 @@ final class FileBinding: TextDocumentListener {
     self.loadError = problem
     self.document = TextDocument(unsaved ?? text)
     self.isDirty = unsaved != nil
+    self.modified = Self.modificationDate(path)
     self.document.addListener(self)
+  }
+
+  static func modificationDate(_ path: String) -> Date? {
+    (try? FileManager.default.attributesOfItem(atPath: path))?[.modificationDate] as? Date
+  }
+
+  /// Reads the file again if it changed on disk since it was read or saved here, unless it has
+  /// edits of its own, which stay: the panel says so instead.
+  func reloadIfChanged() {
+    guard self.loadError == nil else { return }
+    let modified = Self.modificationDate(self.path)
+    guard modified != self.modified else { return }
+    guard let modified else {
+      self.onDiskChange?("Deleted on disk")
+      return
+    }
+    guard !self.isDirty else {
+      self.onDiskChange?("Changed on disk; saving will replace it")
+      return
+    }
+    guard let contents = try? TextFileIO.read(URL(fileURLWithPath: self.path)) else { return }
+    self.modified = modified
+    self.encoding = contents.encoding
+    self.hasBOM = contents.hasBOM
+    // The app's edit: not dirty, and the undo history moves over it.
+    if contents.text != self.document.stringWithOriginalLineEndings {
+      self.document.setText(contents.text)
+    }
+    self.onDiskChange?(nil)
   }
 
   var name: String { (self.path as NSString).lastPathComponent }
@@ -53,6 +87,7 @@ final class FileBinding: TextDocumentListener {
       text: self.document.stringWithOriginalLineEndings, encoding: self.encoding, hasBOM: self.hasBOM
     )
     try TextFileIO.write(contents, to: URL(fileURLWithPath: self.path))
+    self.modified = Self.modificationDate(self.path)
     guard self.isDirty else { return }
     self.isDirty = false
     self.onDirtyChange?(false)
@@ -83,14 +118,36 @@ final class OpenFiles: @unchecked Sendable {
     }
   }
 
-  /// Saves every dirty file, each on its window's thread.
-  func saveAll() {
-    let entries = self.lock.withLock { self.entries }
+  /// Saves every dirty file, each on its window's thread, then runs `then` once all are saved,
+  /// on the thread of the last.
+  func saveAll(then: (@Sendable () -> Void)? = nil) {
+    self.forEachFile(then: then) { binding in
+      guard binding.isDirty else { return }
+      try? binding.save()
+    }
+  }
+
+  /// Has every open file read its file again if it changed on disk.
+  func reloadChangedFiles() {
+    self.forEachFile { binding in binding.reloadIfChanged() }
+  }
+
+  /// Runs `body` with each open file on its window's thread, then `then`.
+  private func forEachFile(then: (@Sendable () -> Void)? = nil, _ body: @escaping @Sendable (FileBinding) -> Void) {
+    let entries = self.lock.withLock {
+      self.entries.removeAll { $0.binding == nil }
+      return self.entries
+    }
+    guard !entries.isEmpty else {
+      then?()
+      return
+    }
+    let remaining = Countdown(entries.count)
     for entry in entries {
       let box = WeakBinding(entry.binding)
       entry.executor.post {
-        guard let binding = box.binding, binding.isDirty else { return }
-        try? binding.save()
+        if let binding = box.binding { body(binding) }
+        if remaining.finishOne() { then?() }
       }
     }
   }
@@ -113,6 +170,21 @@ final class OpenFiles: @unchecked Sendable {
     self.lock.withLock {
       self.entries = []
       self.unsaved = [:]
+    }
+  }
+}
+
+/// Counts down from any thread; true for the one that reaches zero.
+private final class Countdown: @unchecked Sendable {
+  private let lock = NSLock()
+  private var count: Int
+
+  init(_ count: Int) { self.count = count }
+
+  func finishOne() -> Bool {
+    self.lock.withLock {
+      self.count -= 1
+      return self.count == 0
     }
   }
 }

@@ -1,5 +1,6 @@
 @testable import Editor
 @testable import MetalGraphicsLib
+import EditorCore
 import Foundation
 import XCTest
 
@@ -11,6 +12,8 @@ class EditorAppTestCase: XCTestCase {
   private(set) var app: HeadlessApp!
   /// The package's folder, standardized.
   private(set) var root: URL!
+  /// What ⌘B, ⌘R and ⌘U run: canned output, no toolchain.
+  let builds = FakeBuildService()
 
   static let files: [String: String] = [
     "Package.swift": """
@@ -107,6 +110,52 @@ class EditorAppTestCase: XCTestCase {
     let path = self.root.path
     Services.background = { $0() }
     Services.chooseFolder = { done in done(path) }
+    let builds = self.builds
+    Services.makeBuildService = { builds }
+    Services.describePackage = { _ in nil }
+    Services.watchFolder = { _, _ in nil }
+    Services.outputDelay = 0
     self.app.manageDocking(IDE.space)
+  }
+}
+
+/// Builds that print what a test gives them, at once, on the thread that started them.
+final class FakeBuildService: BuildService, @unchecked Sendable {
+  /// What each start prints, standard error or not.
+  var output: [(String, Bool)] = []
+  var status: Int32 = 0
+  /// False to leave it running until `stop` or `finish`.
+  var finishesAtOnce = true
+  /// What was started, and the files as they were on disk then.
+  private(set) var started: [(task: BuildTask, folder: String)] = []
+  var onStart: (() -> Void)?
+  private var pending: (@Sendable (Int32) -> Void)?
+
+  var isRunning: Bool { self.pending != nil }
+
+  func start(
+    _ task: BuildTask, in folder: String,
+    output: @escaping @Sendable (String, Bool) -> Void, finished: @escaping @Sendable (Int32) -> Void
+  ) {
+    self.started.append((task, folder))
+    self.onStart?()
+    for (text, isError) in self.output {
+      output(text, isError)
+    }
+    if self.finishesAtOnce {
+      finished(self.status)
+    } else {
+      self.pending = finished
+    }
+  }
+
+  func finish(_ status: Int32) {
+    let pending = self.pending
+    self.pending = nil
+    pending?(status)
+  }
+
+  func stop() {
+    self.finish(15)
   }
 }

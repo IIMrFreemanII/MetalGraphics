@@ -3,7 +3,8 @@ import ReactiveUI
 import simd
 
 /// The editor window's tree: the dock area, and the keys that act on the whole window. ⌘O opens
-/// a folder, ⌘P a file by name, ⌘⌥S saves every file; a file's own keys are its panel's.
+/// a folder, ⌘P a file by name, ⌘⌥S saves every file; ⌘B builds, ⌘R runs, ⌘U tests, ⌘. stops.
+/// A file's own keys are its panel's.
 @Component
 final class IDERoot : SingleChildElement {
   @State var quickOpen: Bool = false
@@ -27,6 +28,18 @@ final class IDERoot : SingleChildElement {
       return .handled
     case "s" where press.modifiers.contains(.option):
       OpenFiles.shared.saveAll()
+      return .handled
+    case "b":
+      BuildController.shared.start(.build)
+      return .handled
+    case "r":
+      BuildController.shared.start(.run(product: nil))
+      return .handled
+    case "u":
+      BuildController.shared.start(.test)
+      return .handled
+    case ".":
+      BuildController.shared.stop()
       return .handled
     default:
       return .ignored

@@ -15,12 +15,26 @@ final class WorkspaceModel {
   var root: FileNode? = nil
   /// The file in the tab picked last, in any window: the navigator marks its row.
   var activeFile: String = ""
+  /// A place to show, for the tab of its file to take: a problem picked in the list.
+  var reveal: RevealRequest? = nil
 
   func reset() {
     self.rootPath = ""
     self.root = nil
     self.activeFile = ""
+    self.reveal = nil
   }
+}
+
+/// A place in a file to select and scroll to. `serial` tells two requests for the same place
+/// apart.
+struct RevealRequest: Equatable, Sendable {
+  let path: String
+  /// From 1.
+  let line: Int
+  /// From 1, in UTF-8 bytes, as compilers count.
+  let column: Int
+  let serial: Int
 }
 
 /// What the app does outside the window threads, swapped by tests for what runs at once and
@@ -48,10 +62,20 @@ enum Services {
     }
   }
 
-  static func resetForTesting() {
-    self.background = { $0() }
-    self.chooseFolder = { _ in }
+  /// What runs builds: `swift build` and `swift run` in the app.
+  nonisolated(unsafe) static var makeBuildService: @Sendable () -> any BuildService = { SwiftPMBuildService() }
+
+  /// What a package declares, for its executables. Slow: run in the background.
+  nonisolated(unsafe) static var describePackage: @Sendable (String) -> PackageInfo? = { PackageInfo.describe($0) }
+
+  /// Watches the open folder, calling back with the paths that changed; nil for no watching.
+  nonisolated(unsafe) static var watchFolder: @Sendable (String, @escaping @Sendable ([String]) -> Void) -> AnyObject? = {
+    root, changed in DirectoryWatcher(root, onChange: changed)
   }
+
+  /// How long build output waits to reach the windows, so a burst of lines is one update. 0
+  /// delivers each piece at once, as tests want.
+  nonisolated(unsafe) static var outputDelay: Double = 0.05
 }
 
 /// A string kept in panel or app storage.
