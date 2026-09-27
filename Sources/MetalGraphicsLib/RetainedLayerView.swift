@@ -287,6 +287,20 @@ public final class RetainedLayerView: NSView {
       self.send(.resignKey)
     }
     self.sendSize()
+    // After SwiftUI has set the window up: it would otherwise keep the keyboard until a click.
+    DispatchQueue.main.async { [weak self] in self?.claimKeyboard() }
+  }
+
+  /// Becomes the window's first responder when nothing else in it is: the window itself or a
+  /// view around this one (SwiftUI's hosting view) has the keyboard. Without, a tree whose
+  /// element took focus as it was built — a document's editor — gets no keys until the first
+  /// click. A text view or control of the window's own keeps it.
+  private func claimKeyboard() {
+    guard let window = self.window, let responder = window.firstResponder, responder !== self else { return }
+    let isAround = (responder as? NSView).map { self.isDescendant(of: $0) } ?? false
+    if responder === window || isAround {
+      window.makeFirstResponder(self)
+    }
   }
 
   /// Another window took the keyboard and the pointer; `input` releases what is held. Not the
@@ -299,6 +313,7 @@ public final class RetainedLayerView: NSView {
   /// A window made key under a still pointer gets no `mouseEntered`, so the pointer is read here.
   func windowDidBecomeKey() {
     guard let window = self.window else { return }
+    self.claimKeyboard()
     let location = window.mouseLocationOutsideOfEventStream
     let (position, inView) = self.pointer(at: location)
     self.send(.becomeKey(pointer: inView ? position : nil))

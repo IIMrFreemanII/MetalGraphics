@@ -118,6 +118,43 @@ final class DockingTests: XCTestCase {
     XCTAssertEqual(madePanels.withLock { $0["a"] }, 1)
   }
 
+  func testAPanelCanRefuseToClose() {
+    let space = makeSpace()
+    let h = UIHarness(size: float2(400, 300)) { DockArea(space, host: "main") }
+    let panel = try! XCTUnwrap(h.all(DockPanelHost.self).first { $0.panel.id == "a" }).panel
+    let area = try! XCTUnwrap(h.all(DockArea.self).first)
+    var asked = 0
+    panel.shouldClose = { asked += 1; return false }
+    area.closePanel("a")
+    h.step()
+    XCTAssertEqual(asked, 1)
+    XCTAssertNotNil(space.layout.panels["a"])
+
+    panel.shouldClose = { true }
+    area.closePanel("a")
+    XCTAssertNotNil(h.settle())
+    XCTAssertNil(space.layout.panels["a"])
+    // Code closing a panel does not ask.
+    let c = try! XCTUnwrap(h.all(DockPanelHost.self).first { $0.panel.id == "c" }).panel
+    c.shouldClose = { XCTFail("asked"); return false }
+    c.close()
+    XCTAssertNil(space.layout.panels["c"])
+  }
+
+  func testUpdatePlacesAPanelAndTheAreaShowsIt() {
+    let space = makeSpace()
+    let h = UIHarness(size: float2(400, 300)) { DockArea(space, host: "main") }
+    let group = try! XCTUnwrap(space.layout.tabs(holding: "c")).id
+    space.update { layout in
+      let id = layout.addPanel(kind: "b", title: "E", id: "e")
+      layout.place(.group([id]), at: .node(group, .center))
+    }
+    h.step()
+    XCTAssertEqual(space.layout.tabs(holding: "e")?.panels, ["c", "e"])
+    XCTAssertTrue(h.all(DockTabItem.self).contains { $0.mounted && $0.panel == "e" })
+    XCTAssertEqual(madePanels.withLock { $0["b"] }, 1, "e, a panel of kind b, is shown")
+  }
+
   // MARK: - Floating and docking
 
   func testDraggingATabOutFloatsItThere() {

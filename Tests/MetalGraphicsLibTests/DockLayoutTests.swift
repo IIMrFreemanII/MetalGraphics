@@ -25,6 +25,24 @@ final class DockLayoutTests: XCTestCase {
     }
   }
 
+  func testPlacePutsNewPanelsAtATarget() {
+    var (layout, left, c, _) = self.makeLayout()
+    let e = layout.addPanel(kind: "k", title: "E", id: "e")
+    XCTAssertTrue(layout.place(.group([e]), at: .node(left, .center)))
+    XCTAssertEqual(self.groups(layout.host("main")?.root), [["a", "b", "e"], ["c"], ["d"]])
+    XCTAssertEqual(layout.tabs(holding: "e")?.selected, "e")
+
+    let f = layout.addPanel(kind: "k", title: "F", id: "f")
+    XCTAssertTrue(layout.place(.group([f]), at: .node(c, .right)))
+    XCTAssertEqual(self.groups(layout.host("main")?.root), [["a", "b", "e"], ["c"], ["f"], ["d"]])
+
+    // Nowhere to go: nothing changes, and a panel placed nowhere is forgotten.
+    let g = layout.addPanel(kind: "k", title: "G", id: "g")
+    XCTAssertFalse(layout.place(.group([g]), at: .node("missing", .center)))
+    layout.normalize()
+    XCTAssertNil(layout.panels["g"])
+  }
+
   func testCenterDropAddsTabsAndShowsThem() {
     var (layout, left, _, _) = self.makeLayout()
     XCTAssertNotNil(layout.move(.panel("d"), to: .node(left, .center)))

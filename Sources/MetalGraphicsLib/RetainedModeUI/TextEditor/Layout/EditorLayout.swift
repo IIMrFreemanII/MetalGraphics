@@ -138,7 +138,7 @@ final class EditorLayout: TextLayoutQueries {
     let lines = self.document.lines
     var longest = 0
     lines.forEach(in: 0 ..< lines.lineCount) { _, record, height, length in
-      height = self.estimatedHeight(length: Int(length))
+      height = record.flags.contains(.hidden) ? 0 : self.estimatedHeight(length: Int(length))
       record.flags.remove(.measured)
       longest = max(longest, Int(length))
     }
@@ -164,6 +164,11 @@ final class EditorLayout: TextLayoutQueries {
     self.document.lines.line(atY: y)
   }
 
+  /// Whether `line` is folded away.
+  func isHidden(_ line: Int) -> Bool {
+    self.document.lines.record(of: line).flags.contains(.hidden)
+  }
+
   /// Marks the start of a frame's use of the cache.
   func beginPass() {
     self.use &+= 1
@@ -180,7 +185,7 @@ final class EditorLayout: TextLayoutQueries {
     let layout = self.shape(line, spans: record.spans)
     self.cache[record.id] = Entry(layout: layout, lastUse: self.use)
     if self.cache.count > Self.cacheLimit { self.evict() }
-    self.document.lines.setHeight(layout.height, of: line)
+    self.document.lines.setHeight(record.flags.contains(.hidden) ? 0 : layout.height, of: line)
     self.document.lines.updateRecord(of: line) { $0.flags.insert(.measured) }
     if self.wrapWidth == nil {
       self.widestMeasured = max(self.widestMeasured, layout.width)
@@ -344,10 +349,12 @@ final class EditorLayout: TextLayoutQueries {
     let goal = goalX ?? x
     var remaining = lines
     while remaining > 0 {
+      var next = line + 1
+      while next < self.lineCount && self.isHidden(next) { next += 1 }
       if fragment + 1 < layout.fragmentCount {
         fragment += 1
-      } else if line + 1 < self.lineCount {
-        line += 1
+      } else if next < self.lineCount {
+        line = next
         layout = self.layout(line)
         fragment = 0
       } else {
@@ -356,10 +363,12 @@ final class EditorLayout: TextLayoutQueries {
       remaining -= 1
     }
     while remaining < 0 {
+      var previous = line - 1
+      while previous >= 0 && self.isHidden(previous) { previous -= 1 }
       if fragment > 0 {
         fragment -= 1
-      } else if line > 0 {
-        line -= 1
+      } else if previous >= 0 {
+        line = previous
         layout = self.layout(line)
         fragment = layout.fragmentCount - 1
       } else {

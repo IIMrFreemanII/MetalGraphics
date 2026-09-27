@@ -503,6 +503,15 @@ public struct DockLayout: Codable, Sendable, Equatable {
 
   // MARK: - Edits
 
+  /// Puts `node` — new panels from `addPanel`, as a group — at `target`, as a drop there would.
+  /// Returns whether the target exists.
+  @discardableResult
+  public mutating func place(_ node: DockNode, at target: DockTarget) -> Bool {
+    guard self.targetExists(target), self.insert(node, at: target) else { return false }
+    self.normalize()
+    return true
+  }
+
   /// Takes `panel` out of the layout for good.
   public mutating func close(panel: String) {
     self.editTabs { tabs in

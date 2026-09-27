@@ -12,7 +12,8 @@ import simd
 ///   the selection with ⇧; ⌘A selects all;
 /// - ⌘C ⌘X ⌘V copy, cut and paste — a `SecureField` does not copy or cut;
 /// - ⌘Z undoes and ⇧⌘Z redoes, typing coalesced into one step until the caret jumps;
-/// - Return runs `onSubmit`, Escape gives up focus.
+/// - Return runs `onSubmit`; Escape gives up focus and goes on to the handlers around the field,
+///   so it also closes a sheet the field is in.
 ///
 /// Input methods compose in it: marked text shows underlined at the caret until committed. The
 /// caret does not blink: a blinking one would redraw twice a second for as long as the field has
@@ -24,6 +25,9 @@ public class TextField : FormControl, TextInputClient {
   public var onTextChange: ((String) -> Void)?
   /// Run by Return. Set by `.onSubmit { }`, which `@Component` arms like a handler.
   public var onSubmit: (() -> Void)?
+  /// Told of each edit the user makes, with the new text, after the binding has it: a list
+  /// filtered as a query is typed. Set by `.onEdit { text in }`.
+  public var onEdit: ((String) -> Void)?
 
   let isSecure: Bool
   /// Characters before the caret.
@@ -126,6 +130,11 @@ public class TextField : FormControl, TextInputClient {
       if actions.count == 1, case let .command(name) = actions[0], name == "insertTab:" || name == "insertBacktab:" {
         return .ignored
       }
+      // Escape, as the input method names it: see `.escape` below.
+      if actions.count == 1, case let .command(name) = actions[0], name == "cancelOperation:", self.marked == nil {
+        self.context?.focus(nil)
+        return .ignored
+      }
       self.applyTextInput(actions, revision: press.textRevision)
       return .handled
     }
@@ -141,7 +150,9 @@ public class TextField : FormControl, TextInputClient {
     case .return:
       self.onSubmit?()
     case .escape:
+      // Gives up focus, and goes on out: a sheet the field is in closes, a find bar hides.
       self.context?.focus(nil)
+      return .ignored
     case .delete:
       if !selection.isEmpty {
         self.replace(selection, with: "", kind: .other)
@@ -271,6 +282,7 @@ public class TextField : FormControl, TextInputClient {
     self.pendingCaret = caret
     self.pendingAnchor = anchor
     self.commit { report(text) }
+    self.onEdit?(text)
   }
 
   private func copySelection() {
@@ -537,6 +549,25 @@ public class TextField : FormControl, TextInputClient {
   }
 
   /// What Return runs. Sets this field's own handler and returns it.
+  /// True gives it the keyboard, selecting its text; false takes the keyboard away, if it has
+  /// it. Set again to the same value, it acts again: a find field focused on every ⌘F.
+  public func setFocused(_ value: Bool, _ context: UIContext) -> Void {
+    if value && context.focused !== self.focusable && !self.text.isEmpty {
+      self.setCaret(self.text.count, anchor: 0)
+    }
+    self.focusable.setFocused(value, context)
+  }
+
+  public func focused(_ value: Bool) -> Self {
+    _ = self.focusable.focused(value)
+    return self
+  }
+
+  public func onEdit(_ action: @escaping (String) -> Void) -> Self {
+    self.onEdit = action
+    return self
+  }
+
   public func onSubmit(_ action: @escaping () -> Void) -> Self {
     self.onSubmit = action
     return self

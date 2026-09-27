@@ -23,8 +23,108 @@ TextEditor(document: document)
   .onCommand { command in … }            // sees every command first; true takes it over
   .editFilter { transaction, state in … } // sees every user edit first; may rewrite or refuse it
   .onSelectionChange { selection in … }
+  .bracketMatching()                     // the bracket at the caret and its partner
+  .autoClosingPairs()                    // ( brings ), " brings ", typed over, deleted together
+  .searchOptions(TextSearchOptions(caseSensitive: true, wholeWord: false, regex: false))
+  .onSearchChange { current, count in … } // "3 of 12", for a find bar
+  .foldingRanges(self.foldable)          // chevrons in the gutter; ⌥⌘← ⌥⌘→ fold and unfold
+  .controller(self.controller)           // select, reveal and focus from code, below
   .font(.system(size: 13, design: .monospaced))
 ```
+
+## From code
+
+A body builds the editor, so the component has no reference to it. It holds an
+`EditorController` instead and passes it to `.controller(_:)`:
+
+- `select(_ range:reveal:)` selects a range (a caret when it is empty) and scrolls it into view
+  once the editor is laid out: `.minimal` just enough to show it, `.center` with its line in the
+  middle, or `.none`.
+- `goTo(line:column:)` places the caret and centres it.
+- `focus()` gives the editor the keyboard.
+
+All three do nothing while no editor has the controller. It also finds and replaces:
+
+- `findNext(forward:)` selects the next match after the selection (or the one before it),
+  wrapping around, and draws it in the theme's `currentSearchMatch`.
+- `replaceCurrent(with:)` replaces the selected match and selects the next.
+- `replaceAll(with:)` replaces every match as one step to undo.
+- `matchPosition` is "3 of 12" as numbers.
+
+`.searchOptions(TextSearchOptions(caseSensitive:wholeWord:regex:))` sets how the query matches.
+A regular expression is matched within each line, and a replacement may use `$1`.
+`.onSearchChange { current, count in }` reports `matchPosition` at the end of a frame in which it
+may have changed: a new query or options, a find, or an edit or a move while searching.
+
+## For a language's features
+
+What an app draws over the editor, and what it asks a language about:
+
+- **Geometry.** `caretRect(for:)` (also on `EditorController`) gives where the caret at an
+  offset is, in the editor's own coordinates: its top left is the origin (`origin` and `bounds`
+  say where the editor is and how big). `offset(atLocal:)` goes back. A completion list is
+  placed this way, in a `ZStack` over the editor.
+- **Hover.** `.onTextHover { offset, point in }` is called once the pointer has rested on text for
+  half a second: a wake, not a timer per frame. It is called again with nil when the pointer
+  moves on or leaves. Past a line's end nothing is reported.
+- **⌘-click.** `.onCommandClick { offset in }` takes a click made with ⌘ instead of placing the
+  caret: go to a definition.
+- **Commands.** `EditorController.perform(_:)` runs a command as a key would: typing a completion
+  over what was typed of it, as one step to undo. `onCommand` sees ↑ ↓ Return Tab Escape first,
+  which is how a list by the caret takes them while it shows.
+
+## Typing code
+
+- **`.bracketMatching()`** highlights the bracket beside the caret and its partner, in the
+  theme's `bracketMatch`. Brackets inside strings and comments are skipped, going by the
+  styler's tokens. The partner is looked for at most 20,000 units away, once per frame the caret
+  moved, and only the two lines of the old pair and the two of the new are reshaped.
+- **`.autoClosingPairs()`** (brackets and `"` by default):
+  - typing an opening half types the closing one, where the closing one cannot be the start of a
+    word being typed;
+  - typing a closing half before its twin moves over it;
+  - Backspace between an empty pair deletes both;
+  - typing an opening half over a selection wraps the selection.
+- **Indentation.** A styler that adopts `IndentationRules` (as `SwiftStyler` does) indents a new
+  line after `{`, `(` or `[` one level in, and splits `{}` into three lines on Return. A closer
+  typed first on a line moves that line one level out. Without rules, a new line keeps the
+  indentation of the one it breaks.
+- **Gutter dots.** With line numbers shown, a line with diagnostics gets a dot in the gutter, in
+  the colour of the worst.
+
+## Folding
+
+`.foldingRanges(ranges)` offers ranges to fold: sorted by start, each from its first line
+through its last, as a parser finds them (braces spanning lines). They move with edits until set
+again. The gutter shows a chevron by each first line.
+
+- **Folding.** A click on the chevron, ⌥⌘← (`EditorCommand.fold`, the innermost range around the
+  caret) or `fold(_:)` hides the lines after the first. The first line then ends in a "⋯".
+- **Unfolding.** A click on the "⋯" or the chevron, ⌥⌘→, `unfold(at:)` or `unfoldAll()`. Also:
+  - an edit reaching into a fold;
+  - a caret or selection landing in one (a find, a jump, → past the first line's end).
+
+  A caret inside a range being folded moves to the end of its first line.
+
+How it works:
+- **Hidden lines** have height 0 in the `LineTree` (`LineFlags.hidden`), so y↔line lookups,
+  scrolling and the content's size need nothing else.
+- **Skipped** by the visible lines (so by drawing and hit testing) and by ↑ ↓.
+- **Nested folds.** Unfolding one leaves the folds inside it folded.
+- **Folds are editor-owned `TextMarks`,** moved with edits.
+
+Folding and unfolding are O(lines in the fold). An edit is O(folds), to see whether it reached
+into one. With nothing folded, nothing runs; with nothing offered, the gutter has no chevron
+column.
+
+Each is O(1) or O(line) per keystroke. While a search is set and `onSearchChange` is armed, each
+edit and caret move counts the matches, O(document), once per frame. `TextEditor.select` and `focus` are the
+same calls, for code that holds the editor.
+
+`TextDocument.addListener(_:)` tells a `TextDocumentListener` of every change set: `willApply`
+while the text is still as the ranges describe it (what a language server's incremental sync
+needs), `didApply` after. The listener is held weakly and called on the document's thread. The
+Editor app tracks unsaved changes this way (`Sources/Editor/OpenFiles.swift`).
 
 ## Layers
 

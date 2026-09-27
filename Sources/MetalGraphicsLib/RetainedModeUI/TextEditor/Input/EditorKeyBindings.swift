@@ -10,6 +10,10 @@ enum EditorKeyBindings {
     let shift = modifiers.contains(.shift)
 
     switch press.key {
+    case .leftArrow where command && option && !shift && !control:
+      return .fold
+    case .rightArrow where command && option && !shift && !control:
+      return .unfold
     case .leftArrow, .rightArrow:
       let forward = press.key == .rightArrow
       let motion: TextMotion = command ? .lineBoundary : option ? (control ? .subword : .word) : .character

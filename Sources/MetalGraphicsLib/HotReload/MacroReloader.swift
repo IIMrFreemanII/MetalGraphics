@@ -25,7 +25,7 @@ enum MacroReloader {
       print("🔥 HotReload: no macro plugin in \(executableDirectory.path); macro reload is off")
       return nil
     }
-    let componentDirectories = ["Sources/Demo", "Sources/MetalGraphicsLib"].map { repoRoot.appending(path: $0) }
+    let componentDirectories = ["Sources/Demo", "Sources/Editor", "Sources/MetalGraphicsLib"].map { repoRoot.appending(path: $0) }
     let scratch = repoRoot.appending(path: ".build/hotreload-macros")
     let swiftBuild = ["/usr/bin/xcrun", "swift", "build", "--package-path", repoRoot.path, "--scratch-path", scratch.path]
     let queue = DispatchQueue(label: "HotReload.macros", qos: .userInitiated)

@@ -1,3 +1,4 @@
+import Foundation
 import simd
 
 /// An editor's styling: runs its `TextStyler` over the lines as far as they are needed, keeps
@@ -37,6 +38,15 @@ final class EditorStyling: LineSpanSource, TextDocumentObserver {
   /// What the search matches, as UTF-16, lowercased when it ignores case.
   private var search: [UInt16] = []
   private var searchIgnoresCase = true
+  private(set) var searchOptions = TextSearchOptions()
+  /// The query as typed, for a regular expression and replacement templates.
+  private(set) var searchQuery = ""
+  /// The query compiled, with `.regex`; nil when it is not one, or does not compile.
+  private(set) var searchRegex: NSRegularExpression? = nil
+  /// The match found last by find next, drawn in the current match's colour.
+  var currentMatch: Range<Int>? = nil
+  /// The bracket beside the caret and its partner, highlighted.
+  var bracketPair: (Int, Int)? = nil
 
   private var scratch: [TextSpan] = []
 
@@ -84,23 +94,39 @@ final class EditorStyling: LineSpanSource, TextDocumentObserver {
 
   /// Highlights every match of `query`; nil or empty for none. Returns whether it changed.
   @discardableResult
-  func setSearch(_ query: String?, ignoresCase: Bool = true) -> Bool {
-    let units = Array((ignoresCase ? query?.lowercased() : query)?.utf16 ?? "".utf16)
-    guard units != self.search || ignoresCase != self.searchIgnoresCase else { return false }
-    self.search = units
-    self.searchIgnoresCase = ignoresCase
+  func setSearch(_ query: String?, options: TextSearchOptions? = nil) -> Bool {
+    let options = options ?? self.searchOptions
+    let query = query ?? ""
+    guard query != self.searchQuery || options != self.searchOptions else { return false }
+    self.searchQuery = query
+    self.searchOptions = options
+    self.searchIgnoresCase = !options.caseSensitive
+    self.search = Array((self.searchIgnoresCase ? query.lowercased() : query).utf16)
+    self.searchRegex = nil
+    if options.regex && !query.isEmpty {
+      var flags: NSRegularExpression.Options = [.anchorsMatchLines]
+      if self.searchIgnoresCase { flags.insert(.caseInsensitive) }
+      let pattern = options.wholeWord ? "\\b(?:\(query))\\b" : query
+      self.searchRegex = try? NSRegularExpression(pattern: pattern, options: flags)
+      // A pattern that does not compile matches nothing.
+      if self.searchRegex == nil { self.search = [] }
+    }
+    self.currentMatch = nil
     return true
   }
 
-  /// The matches of the search, in the document, from `start` on, at most `limit`.
+  /// Whether a search is set.
+  var isSearching: Bool { !self.search.isEmpty }
+
+  /// The matches of the search, in the document, at most `limit`. A match never spans lines.
   func searchMatches(limit: Int = 10_000) -> [Range<Int>] {
     guard !self.search.isEmpty else { return [] }
     var matches: [Range<Int>] = []
     for line in 0 ..< self.document.lineCount {
       let range = self.document.lineRange(line)
       self.document.withUTF16(in: range) { units in
-        self.forEachMatch(in: units) { column in
-          matches.append(range.lowerBound + column ..< range.lowerBound + column + self.search.count)
+        self.forEachMatch(in: units) { column, length in
+          matches.append(range.lowerBound + column ..< range.lowerBound + column + length)
         }
       }
       if matches.count >= limit { break }
@@ -108,23 +134,122 @@ final class EditorStyling: LineSpanSource, TextDocumentObserver {
     return matches
   }
 
-  private func forEachMatch(in units: UnsafeBufferPointer<UInt16>, _ body: (Int) -> Void) {
+  /// Every match in one line's `units`, as its column and length.
+  private func forEachMatch(in units: UnsafeBufferPointer<UInt16>, _ body: (Int, Int) -> Void) {
+    if let regex = self.searchRegex {
+      // Only while searching by pattern, and only for the lines shaped or searched.
+      let line = String(decoding: units, as: UTF16.self)
+      regex.enumerateMatches(in: line, range: NSRange(location: 0, length: units.count)) { result, _, _ in
+        guard let range = result?.range, range.length > 0 else { return }
+        body(range.location, range.length)
+      }
+      return
+    }
     let needle = self.search
     let count = needle.count
     guard count > 0, units.count >= count else { return }
     let first = needle[0]
+    let wholeWord = self.searchOptions.wholeWord
     var i = 0
     while i <= units.count - count {
       if self.fold(units[i]) == first {
         var j = 1
         while j < count && self.fold(units[i + j]) == needle[j] { j += 1 }
-        if j == count {
-          body(i)
+        if j == count && (!wholeWord || Self.isWordBoundary(units, i, i + count)) {
+          body(i, count)
           i += count
           continue
         }
       }
       i += 1
+    }
+  }
+
+  /// Whether `start ..< end` has no letter, digit or `_` right before or after it.
+  private static func isWordBoundary(_ units: UnsafeBufferPointer<UInt16>, _ start: Int, _ end: Int) -> Bool {
+    func isWord(_ unit: UInt16) -> Bool {
+      (unit >= 0x30 && unit <= 0x39) || (unit >= 0x41 && unit <= 0x5A) || (unit >= 0x61 && unit <= 0x7A) || unit == 0x5F
+        || unit >= 0x80
+    }
+    return (start == 0 || !isWord(units[start - 1])) && (end == units.count || !isWord(units[end]))
+  }
+
+  /// What `match` is replaced by: `template` itself, or with `.regex` the template with `$1`
+  /// and the rest filled in from the match.
+  func replacement(for match: Range<Int>, template: String) -> String {
+    guard let regex = self.searchRegex else { return template }
+    let line = self.document.line(containing: match.lowerBound)
+    let lineRange = self.document.lineRange(line)
+    let text = self.document.substring(lineRange)
+    let local = NSRange(location: match.lowerBound - lineRange.lowerBound, length: match.count)
+    guard let result = regex.firstMatch(in: text, range: local), result.range == local else { return template }
+    return regex.replacementString(for: result, in: text, offset: 0, template: template)
+  }
+
+  // MARK: - Brackets
+
+  static let openers: [UInt16] = [0x28, 0x5B, 0x7B]  // ( [ {
+  static let closers: [UInt16] = [0x29, 0x5D, 0x7D]  // ) ] }
+  /// How far a partner is looked for, in units each way: a caret move never scans a whole file.
+  static let bracketScanLimit = 20_000
+
+  /// The bracket just before or at `offset` and its partner, skipping brackets in strings and
+  /// comments; nil when there is none, or none within reach.
+  func matchingBracket(near offset: Int) -> (Int, Int)? {
+    let length = self.document.length
+    for candidate in [offset - 1, offset] where candidate >= 0 && candidate < length {
+      let unit = self.document.unit(at: candidate)
+      guard Self.openers.contains(unit) || Self.closers.contains(unit), !self.isInStringOrComment(candidate) else {
+        continue
+      }
+      if let partner = self.partner(of: candidate, unit) { return (candidate, partner) }
+    }
+    return nil
+  }
+
+  private func partner(of offset: Int, _ unit: UInt16) -> Int? {
+    let forward = Self.openers.contains(unit)
+    let index = forward ? Self.openers.firstIndex(of: unit)! : Self.closers.firstIndex(of: unit)!
+    let same = unit
+    let other = forward ? Self.closers[index] : Self.openers[index]
+    var depth = 0
+    var position = offset
+    let limit = forward ? min(self.document.length, offset + Self.bracketScanLimit) : max(0, offset - Self.bracketScanLimit)
+    var skipLine = -1
+    var skipped: [Range<Int>] = []
+    while forward ? position < limit : position >= limit {
+      let line = self.document.line(containing: position)
+      if line != skipLine {
+        skipLine = line
+        skipped = self.stringAndCommentRanges(ofLine: line)
+      }
+      let unit = self.document.unit(at: position)
+      if (unit == same || unit == other) && !skipped.contains(where: { $0.contains(position) }) {
+        depth += unit == same ? 1 : -1
+        if depth == 0 { return position }
+      }
+      position += forward ? 1 : -1
+    }
+    return nil
+  }
+
+  private func isInStringOrComment(_ offset: Int) -> Bool {
+    self.stringAndCommentRanges(ofLine: self.document.line(containing: offset)).contains { $0.contains(offset) }
+  }
+
+  /// Where the styler finds strings and comments on `line`, in the document.
+  private func stringAndCommentRanges(ofLine line: Int) -> [Range<Int>] {
+    guard let styler = self.styler else { return [] }
+    let range = self.document.lineRange(line)
+    let record = self.document.lines.record(of: line)
+    let state = record.flags.contains(.styleValid) ? StyleState(record.styleState) : .initial
+    var spans: [TextSpan] = []
+    self.document.withUTF16(in: range) { units in
+      _ = styler.styleLine(units, state: state, into: &spans)
+    }
+    return spans.compactMap { span in
+      span.token == .string || span.token == .comment
+        ? range.lowerBound + Int(span.start) ..< range.lowerBound + Int(span.end) : nil
     }
   }
 
@@ -136,6 +261,8 @@ final class EditorStyling: LineSpanSource, TextDocumentObserver {
   // MARK: - Edits
 
   func document(_ document: TextDocument, didChange change: DocumentChange) {
+    self.currentMatch = nil
+    self.bracketPair = nil
     guard self.styler != nil else { return }
     let first = change.firstLine
     let oldEnd = first + change.removedLines
@@ -237,11 +364,19 @@ final class EditorStyling: LineSpanSource, TextDocumentObserver {
   func decorations(forLine line: Int, lineStart: Int, length: Int, into runs: inout [LineDecoration]) {
     if !self.search.isEmpty {
       let color = self.theme.searchMatch
-      let count = self.search.count
+      let current = self.currentMatch
       self.document.withUTF16(in: lineStart ..< lineStart + length) { units in
-        self.forEachMatch(in: units) { column in
-          runs.append(LineDecoration(start: Int32(column), end: Int32(column + count), background: color, squiggle: nil))
+        self.forEachMatch(in: units) { column, count in
+          let isCurrent = current == lineStart + column ..< lineStart + column + count
+          runs.append(LineDecoration(start: Int32(column), end: Int32(column + count),
+                                     background: isCurrent ? self.theme.currentSearchMatch : color, squiggle: nil))
         }
+      }
+    }
+    if let (a, b) = self.bracketPair {
+      for offset in [a, b] where offset >= lineStart && offset < lineStart + length {
+        let column = Int32(offset - lineStart)
+        runs.append(LineDecoration(start: column, end: column + 1, background: self.theme.bracketMatch, squiggle: nil))
       }
     }
     let diagnostics = self.document.diagnostics

@@ -999,7 +999,7 @@ enum ElementCatalog {
     "focused": ModifierSpec(
       name: "focused", labels: [nil],
       produces: "FocusableElement", setter: "setFocused", combine: .identity,
-      inPlaceOn: ["FocusableElement"]
+      inPlaceOn: ["FocusableElement", "TextField", "SecureField"]
     ),
     "onFocusChange": ModifierSpec(
       name: "onFocusChange", labels: [nil],
@@ -1084,6 +1084,26 @@ enum ElementCatalog {
       name: "attachmentProvider", labels: [nil],
       produces: "TextEditor", setter: "setAttachmentProvider", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
     ),
+    "searchOptions": ModifierSpec(
+      name: "searchOptions", labels: [nil],
+      produces: "TextEditor", setter: "setSearchOptions", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
+    "bracketMatching": ModifierSpec(
+      name: "bracketMatching", labels: [nil],
+      produces: "TextEditor", setter: "setMatchesBrackets", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
+    "autoClosingPairs": ModifierSpec(
+      name: "autoClosingPairs", labels: [nil],
+      produces: "TextEditor", setter: "setAutoClosingPairs", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
+    "foldingRanges": ModifierSpec(
+      name: "foldingRanges", labels: [nil],
+      produces: "TextEditor", setter: "setFoldingRanges", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
+    "controller": ModifierSpec(
+      name: "controller", labels: [nil],
+      produces: "TextEditor", setter: "setController", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
     "followsTail": ModifierSpec(
       name: "followsTail", labels: [nil],
       produces: "TextEditor", setter: "setFollowsTail", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
@@ -1104,11 +1124,35 @@ enum ElementCatalog {
       handler: HandlerSpec(property: "onCommand", placeholder: "{ _ in false }"),
       inPlaceOn: ["TextEditor"]
     ),
+    "onTextHover": ModifierSpec(
+      name: "onTextHover", labels: [nil],
+      produces: "TextEditor", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "onTextHover", placeholder: "{ _, _ in }"),
+      inPlaceOn: ["TextEditor"]
+    ),
+    "onCommandClick": ModifierSpec(
+      name: "onCommandClick", labels: [nil],
+      produces: "TextEditor", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "onCommandClick", placeholder: "{ _ in }"),
+      inPlaceOn: ["TextEditor"]
+    ),
+    "onSearchChange": ModifierSpec(
+      name: "onSearchChange", labels: [nil],
+      produces: "TextEditor", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "onSearchChange", placeholder: "{ _, _ in }"),
+      inPlaceOn: ["TextEditor"]
+    ),
     "onSelectionChange": ModifierSpec(
       name: "onSelectionChange", labels: [nil],
       produces: "TextEditor", setter: nil, combine: .identity,
       handler: HandlerSpec(property: "onSelectionChange", placeholder: "{ _ in }"),
       inPlaceOn: ["TextEditor"]
+    ),
+    "onEdit": ModifierSpec(
+      name: "onEdit", labels: [nil],
+      produces: "TextField", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "onEdit", placeholder: "{ _ in }"),
+      inPlaceOn: ["TextField", "SecureField"]
     ),
     "onSubmit": ModifierSpec(
       name: "onSubmit", labels: [nil],

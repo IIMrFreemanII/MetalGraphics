@@ -60,6 +60,8 @@ public struct EditorTheme: Hashable, Sendable {
   /// The current search match's box, and the others' fill.
   public var searchMatch: float4
   public var currentSearchMatch: float4
+  /// Behind a bracket beside the caret and its partner.
+  public var bracketMatch: float4
   public var diagnosticColors: [float4]
   /// Extra space below every line on screen.
   public var lineSpacing: Float
@@ -76,8 +78,10 @@ public struct EditorTheme: Hashable, Sendable {
     currentLine: float4?, gutterBackground: float4, gutterForeground: float4, gutterCurrentLine: float4,
     gutterSeparator: float4?, markedText: float4, searchMatch: float4, currentSearchMatch: float4,
     diagnosticColors: [float4], lineSpacing: Float = 3, textInset: float2 = float2(6, 4),
-    font: TextFont = .system(size: 13, design: .monospaced), styles: [TextToken: SpanStyle] = [:]
+    font: TextFont = .system(size: 13, design: .monospaced), styles: [TextToken: SpanStyle] = [:],
+    bracketMatch: float4 = float4(0.5, 0.5, 0.55, 0.28)
   ) {
+    self.bracketMatch = bracketMatch
     self.background = background
     self.foreground = foreground
     self.caret = caret

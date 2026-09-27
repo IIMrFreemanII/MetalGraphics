@@ -22,6 +22,110 @@ public enum LineWrapping: Hashable, Sendable {
   case soft
 }
 
+/// How a search matches: `TextEditor.setSearchOptions`, `.searchOptions(_:)`.
+public struct TextSearchOptions: Hashable, Sendable {
+  /// "Name" does not match "name".
+  public var caseSensitive: Bool
+  /// "name" does not match inside "rename".
+  public var wholeWord: Bool
+  /// The query is an `NSRegularExpression` pattern, matched within each line. A replacement
+  /// may use `$1` and the rest.
+  public var regex: Bool
+
+  public init(caseSensitive: Bool = false, wholeWord: Bool = false, regex: Bool = false) {
+    self.caseSensitive = caseSensitive
+    self.wholeWord = wholeWord
+    self.regex = regex
+  }
+}
+
+/// How far a selection moved from code scrolls the editor.
+public enum TextReveal: Sendable {
+  /// Not at all.
+  case none
+  /// Just enough to show it.
+  case minimal
+  /// Its line to the middle of the view: a jump to a line, a definition, a problem.
+  case center
+}
+
+/// A handle on a `TextEditor` for the code around it, which builds the editor in a body and has
+/// no reference to it: hold one, pass it to `.controller(_:)`, then select and reveal through
+/// it. Does nothing while no editor has it.
+public final class EditorController {
+  public fileprivate(set) weak var editor: TextEditor?
+
+  public init() {}
+
+  /// Selects `range` (a caret when empty), and scrolls it into view by `reveal`, once the
+  /// editor is laid out.
+  public func select(_ range: Range<Int>, reveal: TextReveal = .minimal) {
+    self.editor?.select(range, reveal: reveal)
+  }
+
+  /// A caret at `line`, `column` (zero-based, UTF-16), centred.
+  public func goTo(line: Int, column: Int = 0) {
+    guard let editor = self.editor else { return }
+    let document = editor.document
+    let line = line.clamped(to: 0 ... max(document.lineCount - 1, 0))
+    let column = column.clamped(to: 0 ... document.lineRange(line).count)
+    let offset = document.offset(line: line, column: column)
+    editor.select(offset ..< offset, reveal: .center)
+  }
+
+  /// Gives the editor the keyboard.
+  public func focus() {
+    self.editor?.focus()
+  }
+
+  /// Runs `command` as a key would: typing a completion over what was typed of it. Returns
+  /// whether anything took it.
+  @discardableResult
+  public func perform(_ command: EditorCommand) -> Bool {
+    self.editor?.perform(command) ?? false
+  }
+
+  /// See `TextEditor.caretRect(for:)`.
+  public func caretRect(for offset: Int) -> (origin: float2, height: Float)? {
+    self.editor?.caretRect(for: offset)
+  }
+
+  /// Selects the next match of the search after the selection, or the one before it, wrapping
+  /// around. Returns whether there was one.
+  @discardableResult
+  public func findNext(forward: Bool = true) -> Bool {
+    self.editor?.findNext(forward: forward) ?? false
+  }
+
+  /// Replaces the selected match, then selects the next. Returns whether it replaced one.
+  @discardableResult
+  public func replaceCurrent(with template: String) -> Bool {
+    self.editor?.replaceCurrent(with: template) ?? false
+  }
+
+  /// Replaces every match as one step to undo. Returns how many.
+  @discardableResult
+  public func replaceAll(with template: String) -> Int {
+    self.editor?.replaceAll(with: template) ?? 0
+  }
+
+  /// Folds the innermost range around the caret that is not folded yet. Returns whether it did.
+  @discardableResult
+  public func foldAtCaret() -> Bool { self.editor?.foldAtCaret() ?? false }
+
+  /// Unfolds the fold whose first line holds the caret, or around it. Returns whether it did.
+  @discardableResult
+  public func unfoldAtCaret() -> Bool { self.editor?.unfoldAtCaret() ?? false }
+
+  public func unfoldAll() { self.editor?.unfoldAll() }
+
+  /// "3 of 12" for a find bar: the selected match's index, from 1 (0 when no match is
+  /// selected), and how many there are.
+  public var matchPosition: (current: Int, count: Int) {
+    self.editor?.matchPosition ?? (0, 0)
+  }
+}
+
 /// Multi-line, styled, editable text: the base of a code editor, a console, a markdown editor.
 ///
 /// `TextEditor(text: $source)` edits a string, as SwiftUI's does. For a long document, give it a
@@ -57,6 +161,13 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   public var onTextChange: ((String) -> Void)?
   /// Called with the selection when it changed, once per frame.
   public var onSelectionChange: ((EditorSelection) -> Void)?
+  /// Called with `matchPosition` — the selected match's index from 1, or 0, and how many there
+  /// are — when it may have changed: a new query or options, a find, an edit or a move while
+  /// searching. At most once per frame, and only when the numbers differ; each call counts the
+  /// matches, O(document).
+  public var onSearchChange: ((_ current: Int, _ count: Int) -> Void)?
+  private var searchReportScheduled = false
+  private var lastSearchReport = (current: 0, count: 0)
   /// Sees every command first, from a key, the input method or the app; returns true to take it
   /// over. A console submits on Return this way.
   public var onCommand: ((EditorCommand) -> Bool)?
@@ -66,6 +177,28 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     get { self.state.filter }
     set { self.state.filter = newValue }
   }
+  /// What can fold, sorted by start: each range from its first line through its last, which
+  /// folding hides. The gutter shows a chevron by each first line. Set by `.foldingRanges`, from
+  /// a language's parse; moved with edits until set again.
+  public internal(set) var foldingRanges: [Range<Int>] = []
+  /// What is folded, moving with edits. An edit inside one unfolds it.
+  let folds = TextMarks<Void>(removesEmptied: true)
+  /// Called when the pointer has rested over the text for `hoverDelay`, with the offset under it
+  /// and the point, in the editor's own coordinates; with nil when it moves on or leaves, after
+  /// a call with an offset. A tooltip shows and hides this way.
+  public var onTextHover: ((_ offset: Int?, _ point: float2) -> Void)?
+  /// Called instead of placing the caret when the text is clicked with ⌘ held, with the offset
+  /// clicked: go to a definition.
+  public var onCommandClick: ((_ offset: Int) -> Void)?
+  static let hoverDelay: Double = 0.5
+  /// Where the pointer rests, in the window, and when it will have rested long enough.
+  private var hoverPoint: float2? = nil
+  private var hoverDeadline: Double? = nil
+  private var hoverReported = false
+  /// Where the editor is in the window, and its size, as last laid out: what its own
+  /// coordinates are from.
+  public private(set) var origin: float2 = .zero
+  public private(set) var bounds: float2 = .zero
   /// Whether the view stays at the end as text is added there, when it was at the end: a log's.
   public private(set) var followsTail = false
   /// Set by an app's edit made while the view was at the end, with `followsTail`.
@@ -168,7 +301,10 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     keys.action = { [unowned self] press in self.handle(press) }
     focusable.onFocusChange = { [unowned self] focused in self.focusChanged(focused) }
     pointer.onPress = { [unowned self] down, input in
-      if down {
+      if down, input.commandPressed, let action = self.onCommandClick {
+        self.context?.focus(self.focusable)
+        action(self.offset(at: input.mousePosition).0)
+      } else if down {
         self.pressed(at: input.mousePosition, clicks: input.clickCount, extending: input.shiftPressed)
       } else {
         self.autoscrollPoint = nil
@@ -176,6 +312,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     }
     pointer.onDrag = { [unowned self] input in self.dragged(to: input.mousePosition) }
     pointer.pointerStyle = .horizontalText
+    pointer.setContinuousHover(.global) { [unowned self] phase in self.hovered(phase) }
     gutterPointer.onPress = { [unowned self] down, input in
       if down {
         self.pressedGutter(at: input.mousePosition, extending: input.shiftPressed)
@@ -209,6 +346,9 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
 
   public override func unmount(_ context: UIContext) {
     self.isFocused = false
+    self.hoverPoint = nil
+    self.hoverDeadline = nil
+    self.hoverReported = false
     self.autoscrollPoint = nil
     self.nextBlink = nil
     context.cancelWake(for: self)
@@ -227,7 +367,64 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     self.font = scope.font != nil || scope.design != nil || scope.weight != nil ? scope.resolvedFont : self.theme.font
     let size = Self.resolve(proposal)
     _ = self.child?.calcSize(ProposedSize(size))
+    self.bounds = size
     return size
+  }
+
+  public override func calcPosition(_ position: float2) {
+    self.origin = position
+    super.calcPosition(position)
+  }
+
+  // MARK: - Geometry
+
+  /// The caret at `offset`, in the editor's own coordinates (its top left is the origin): where
+  /// its row starts, and the row's height. For what an app shows by the caret: a completion
+  /// list. Nil before the editor is laid out.
+  public func caretRect(for offset: Int) -> (origin: float2, height: Float)? {
+    guard self.mounted, self.bounds != .zero else { return nil }
+    let offset = offset.clamped(to: 0 ... self.document.length)
+    let caret = self.layout.caretRect(offset, affinity: .downstream)
+    let point = self.content.textOrigin + float2(caret.x, Float(caret.top))
+    return (point - self.origin, caret.height)
+  }
+
+  /// The offset nearest `point`, in the editor's own coordinates.
+  public func offset(atLocal point: float2) -> Int {
+    self.offset(at: self.origin + point).0
+  }
+
+  /// The pointer moved over the editor, or left it: a hover starts over, and one reported ends.
+  private func hovered(_ phase: HoverPhase) {
+    guard self.onTextHover != nil, let context = self.context else { return }
+    if self.hoverReported {
+      self.hoverReported = false
+      self.onTextHover?(nil, .zero)
+    }
+    switch phase {
+    case .active(let point):
+      // Over the text, not the gutter.
+      guard point.x >= self.content.textOrigin.x - self.theme.textInset.x else { fallthrough }
+      self.hoverPoint = point
+      self.hoverDeadline = context.clock() + Self.hoverDelay
+    case .ended:
+      self.hoverPoint = nil
+      self.hoverDeadline = nil
+    }
+    self.scheduleWake(context, now: context.clock())
+  }
+
+  /// The pointer rested long enough: reports what is under it, when it is text.
+  private func hoverRested() {
+    guard let point = self.hoverPoint, let report = self.onTextHover else { return }
+    let (offset, _) = self.offset(at: point)
+    // Past a line's end, or below the text, is not over anything.
+    let caret = self.layout.caretRect(offset, affinity: .downstream)
+    let top = self.content.textOrigin.y + Float(caret.top)
+    let x = self.content.textOrigin.x + caret.x
+    guard point.y >= top, point.y <= top + caret.height, abs(point.x - x) <= self.layout.averageAdvance * 1.5 else { return }
+    self.hoverReported = true
+    report(offset, point - self.origin)
   }
 
   /// The proposal's lengths, the ideal ones where it gives none, or no finite one.
@@ -260,7 +457,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     if revealCaret {
       self.revealCaret(context)
     }
-    if self.gutter.width != self.gutter.size.x && self.showsLineNumbers {
+    if self.gutter.width != self.gutter.size.x && (self.showsLineNumbers || self.gutter.showsFolding) {
       context.invalidate(.layout)
     }
     context.invalidate(.render)
@@ -298,12 +495,16 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
 
   func document(_ document: TextDocument, didApply changes: ChangeSet, origin: EditOrigin) {
     self.content.anchorOffset = changes.map(self.content.anchorOffset, .before)
+    if !self.foldingRanges.isEmpty || !self.folds.isEmpty {
+      self.foldsDidApply(changes)
+    }
     if self.followsTail && origin == .program && self.mounted {
       let scroll = self.scrollView
       if scroll.offset.y >= scroll.scrollableSize.y - 4 { self.pinToEnd = true }
     }
     self.textChanged = true
     self.scheduleReport()
+    self.scheduleSearchReport()
     if !self.inCommand {
       // An app's edit, or an input method's: brought on screen at the end of the frame.
       self.scheduleRefresh()
@@ -312,7 +513,13 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   }
 
   func editorStateDidChangeSelection(_ state: EditorState) {
+    if !self.folds.isEmpty { self.unfoldAroundSelection() }
     self.selectionDirty = true
+    self.scheduleBracketMatch()
+    self.scheduleSearchReport()
+    if let current = self.styling.currentMatch, current != state.selection.primary.range {
+      self.showCurrentMatch(nil)
+    }
     self.scheduleReport()
     if !self.inCommand {
       self.context?.invalidate(.render)
@@ -378,6 +585,12 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     case .centerSelection:
       self.centerCaret()
       reveal = false
+    case .fold:
+      handled = self.foldAtCaret()
+      reveal = false
+    case .unfold:
+      handled = self.unfoldAtCaret()
+      reveal = false
     default:
       handled = self.state.perform(command, layout: self.layout)
     }
@@ -405,6 +618,149 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     let text = self.state.selectedText
     guard !text.isEmpty else { return }
     Pasteboard.write(text)
+  }
+
+  // MARK: - From code
+
+  /// Selects `range` (a caret when empty), clamped to the text, and scrolls it into view by
+  /// `reveal` once the editor is laid out.
+  public func select(_ range: Range<Int>, reveal: TextReveal = .minimal) {
+    let length = self.document.length
+    let low = range.lowerBound.clamped(to: 0 ... length)
+    let high = range.upperBound.clamped(to: low ... length)
+    self.state.setSelection(EditorSelection(SelectionRange(anchor: low, head: high)))
+    self.restartBlink()
+    guard reveal != .none, let context = self.context else { return }
+    context.afterLayout { [weak self] in
+      guard let self, self.mounted else { return }
+      self.refresh(revealCaret: reveal == .minimal)
+      if reveal == .center { self.centerCaret() }
+    }
+  }
+
+  /// Gives the editor the keyboard.
+  public func focus() {
+    self.context?.focus(self.focusable)
+  }
+
+  // MARK: - Find and replace
+
+  /// Selects the next match of the search after the selection (before it, backward), wrapping
+  /// around, and scrolls it into view. Returns whether there was one.
+  @discardableResult
+  public func findNext(forward: Bool = true) -> Bool {
+    let matches = self.styling.searchMatches()
+    guard !matches.isEmpty else { return false }
+    let selection = self.state.selection.primary.range
+    let match: Range<Int>
+    if forward {
+      match = matches.first { $0.lowerBound >= selection.upperBound && $0 != selection } ?? matches[0]
+    } else {
+      match = matches.last { $0.upperBound <= selection.lowerBound && $0 != selection } ?? matches[matches.count - 1]
+    }
+    self.showCurrentMatch(match)
+    self.select(match, reveal: .minimal)
+    return true
+  }
+
+  /// Replaces the selection with `template` when the selection is a match, then selects the
+  /// next match. Returns whether it replaced one.
+  @discardableResult
+  public func replaceCurrent(with template: String) -> Bool {
+    let selection = self.state.selection.primary.range
+    guard !selection.isEmpty, self.styling.searchMatches().contains(selection) else {
+      self.findNext()
+      return false
+    }
+    let text = self.styling.replacement(for: selection, template: template)
+    self.inCommand = true
+    let replaced = self.state.apply(EditorTransaction(
+      changes: ChangeSet(TextChange(range: selection, with: text)),
+      selection: .caret(selection.lowerBound + text.utf16.count), kind: .other
+    ))
+    self.inCommand = false
+    self.refresh(revealCaret: false)
+    if replaced { self.findNext() }
+    return replaced
+  }
+
+  /// Replaces every match with `template`, as one step to undo. Returns how many it replaced.
+  @discardableResult
+  public func replaceAll(with template: String) -> Int {
+    let matches = self.styling.searchMatches(limit: .max)
+    guard !matches.isEmpty else { return 0 }
+    let changes = matches.map { TextChange(range: $0, with: self.styling.replacement(for: $0, template: template)) }
+    self.inCommand = true
+    let replaced = self.state.apply(EditorTransaction(changes: ChangeSet(changes), kind: .other))
+    self.inCommand = false
+    self.refresh(revealCaret: true)
+    return replaced ? matches.count : 0
+  }
+
+  /// The selected match's index, from 1, or 0 when the selection is not a match; and how many
+  /// matches there are. O(document) — for a find bar, after a search or a find, not per frame.
+  public var matchPosition: (current: Int, count: Int) {
+    let matches = self.styling.searchMatches()
+    let selection = self.state.selection.primary.range
+    let index = matches.firstIndex(of: selection).map { $0 + 1 } ?? 0
+    return (index, matches.count)
+  }
+
+  /// Reports the match position at the end of the frame, if anyone listens and a search is
+  /// set (or was, to report it gone).
+  private func scheduleSearchReport() {
+    guard self.onSearchChange != nil, !self.searchReportScheduled, let context = self.context,
+          self.styling.isSearching || self.lastSearchReport.count > 0
+    else { return }
+    self.searchReportScheduled = true
+    context.afterLayout { [weak self] in
+      guard let self else { return }
+      self.searchReportScheduled = false
+      let position = self.styling.isSearching ? self.matchPosition : (0, 0)
+      guard position != self.lastSearchReport else { return }
+      self.lastSearchReport = position
+      self.onSearchChange?(position.0, position.1)
+    }
+  }
+
+  /// Draws `match` in the current match's colour, and the one before in the others'.
+  private func showCurrentMatch(_ match: Range<Int>?) {
+    guard match != self.styling.currentMatch else { return }
+    for old in [self.styling.currentMatch, match].compactMap({ $0 }) {
+      self.layout.invalidate(lineID: self.document.lineID(self.document.line(containing: old.lowerBound)))
+    }
+    self.styling.currentMatch = match
+  }
+
+  // MARK: - Brackets
+
+  /// Whether the bracket beside the caret and its partner are highlighted.
+  public private(set) var matchesBrackets = false
+  private var bracketsScheduled = false
+
+  /// After the frame's edits and moves, once: finds the bracket pair at the caret, and reshapes
+  /// the lines of the pair that went and the one that came.
+  private func scheduleBracketMatch() {
+    guard self.matchesBrackets, !self.bracketsScheduled, let context = self.context else { return }
+    self.bracketsScheduled = true
+    context.afterLayout { [weak self] in
+      guard let self else { return }
+      self.bracketsScheduled = false
+      self.updateBracketMatch()
+    }
+  }
+
+  private func updateBracketMatch() {
+    let selection = self.state.selection
+    let pair = self.matchesBrackets && selection.isSingleCaret && self.isFocused
+      ? self.styling.matchingBracket(near: selection.primary.head) : nil
+    let old = self.styling.bracketPair
+    guard pair?.0 != old?.0 || pair?.1 != old?.1 else { return }
+    self.styling.bracketPair = pair
+    for offset in [old?.0, old?.1, pair?.0, pair?.1].compactMap({ $0 }) where offset < self.document.length {
+      self.layout.invalidate(lineID: self.document.lineID(self.document.line(containing: offset)))
+    }
+    self.refresh(revealCaret: false)
   }
 
   // MARK: - Keys
@@ -435,6 +791,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   }
 
   private func pressed(at point: float2, clicks: Int, extending: Bool) {
+    if !self.folds.isEmpty, self.pressedFoldMarker(at: point) { return }
     let (offset, affinity) = self.offset(at: point)
     self.granularity = clicks >= 3 ? .line : clicks == 2 ? .word : .character
     let range = self.unitRange(at: offset)
@@ -459,6 +816,11 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     self.granularity = .line
     let origin = self.content.textOrigin
     let line = self.layout.line(atY: Double(point.y - origin.y))
+    if self.gutter.isInFoldColumn(point.x) {
+      self.toggleFold(atLine: line)
+      self.pressRange = self.state.selection.primary.range
+      return
+    }
     let range = self.document.lineRange(line, includingNewline: true)
     if extending {
       let anchor = self.state.selection.primary.anchor
@@ -533,6 +895,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
 
   private func focusChanged(_ focused: Bool) {
     self.isFocused = focused
+    self.scheduleBracketMatch()
     if !focused {
       self.state.unmarkText()
     }
@@ -555,6 +918,9 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
 
   private func scheduleWake(_ context: UIContext, now: Double) {
     var next = self.nextBlink
+    if let hover = self.hoverDeadline {
+      next = min(next ?? .infinity, hover)
+    }
     if self.autoscrollPoint != nil {
       next = min(next ?? .infinity, now + 1.0 / 60)
     }
@@ -570,6 +936,10 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   }
 
   public func wake(_ context: UIContext, now: Double) {
+    if let deadline = self.hoverDeadline, now >= deadline {
+      self.hoverDeadline = nil
+      self.hoverRested()
+    }
     if let point = self.autoscrollPoint {
       self.autoscroll(to: point, context)
     }
@@ -690,6 +1060,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     self.document = value
     let editable = self.state.isEditable
     let filter = self.state.filter
+    let pairs = self.state.autoClosingPairs
     self.state.delegate = nil
     self.state = EditorState(document: value)
     self.state.isEditable = editable
@@ -701,6 +1072,8 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     self.styling.setDocument(value)
     self.state.lineComment = self.styling.styler?.lineComment
     self.state.wordCharacters = self.styling.styler?.wordCharacters ?? []
+    self.state.indentation = self.styling.styler as? any IndentationRules
+    self.state.autoClosingPairs = pairs
     self.lastText = nil
     context.invalidate(.layout)
   }
@@ -734,6 +1107,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
 
   private func applyStyler(_ value: (any TextStyler)?) {
     self.styling.setStyler(value)
+    self.state.indentation = value as? any IndentationRules
     self.state.lineComment = value?.lineComment
     self.state.wordCharacters = value?.wordCharacters ?? []
     self.layout.invalidateAll()
@@ -767,11 +1141,26 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     return inserted
   }
 
-  /// Highlights every match of `value`, ignoring case; nil or empty for none.
+  /// Highlights every match of `value`, by the search options; nil or empty for none.
   public func setSearchQuery(_ value: String?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
     guard self.styling.setSearch(value) else { return }
     self.layout.invalidateAll()
     self.refresh(revealCaret: false)
+    self.scheduleSearchReport()
+  }
+
+  /// How the search matches: case, whole words, a regular expression.
+  public func setSearchOptions(_ value: TextSearchOptions, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard self.styling.setSearch(self.styling.searchQuery, options: value) else { return }
+    self.layout.invalidateAll()
+    self.refresh(revealCaret: false)
+    self.scheduleSearchReport()
+  }
+
+  public func setMatchesBrackets(_ value: Bool, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.matchesBrackets else { return }
+    self.matchesBrackets = value
+    if value { self.scheduleBracketMatch() } else { self.updateBracketMatch() }
   }
 
   /// The ranges of the current search's matches.
@@ -830,10 +1219,33 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     return self
   }
 
-  /// Highlights every match of `value`, ignoring case.
+  /// Highlights every match of `value`, ignoring case unless the options say otherwise.
   public func searchQuery(_ value: String?) -> Self {
     self.styling.setSearch(value)
     return self
+  }
+
+  public func searchOptions(_ value: TextSearchOptions) -> Self {
+    self.styling.setSearch(self.styling.searchQuery, options: value)
+    return self
+  }
+
+  /// Highlights the bracket beside the caret and its partner, skipping those in strings and
+  /// comments.
+  public func bracketMatching(_ value: Bool = true) -> Self {
+    self.matchesBrackets = value
+    return self
+  }
+
+  /// Types the closing half of a pair with the opening one, types over it, and deletes both
+  /// halves of an empty pair together. Swift's brackets and quotes by default; `[]` for none.
+  public func autoClosingPairs(_ value: [AutoClosingPair] = AutoClosingPair.code) -> Self {
+    self.state.autoClosingPairs = value
+    return self
+  }
+
+  public func setAutoClosingPairs(_ value: [AutoClosingPair], _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.state.autoClosingPairs = value
   }
 
   /// Underlines problems in the text with squiggles.
@@ -856,9 +1268,50 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     return self
   }
 
+  public func onTextHover(_ action: @escaping (_ offset: Int?, _ point: float2) -> Void) -> Self {
+    self.onTextHover = action
+    return self
+  }
+
+  public func onCommandClick(_ action: @escaping (_ offset: Int) -> Void) -> Self {
+    self.onCommandClick = action
+    return self
+  }
+
+  public func onSearchChange(_ action: @escaping (_ current: Int, _ count: Int) -> Void) -> Self {
+    self.onSearchChange = action
+    return self
+  }
+
   public func onSelectionChange(_ action: @escaping (EditorSelection) -> Void) -> Self {
     self.onSelectionChange = action
     return self
+  }
+
+  /// Offers `value` to fold, from a language's parse: sorted by start. See `foldingRanges`.
+  public func foldingRanges(_ value: [Range<Int>]) -> Self {
+    self.foldingRanges = value
+    return self
+  }
+
+  public func setFoldingRanges(_ value: [Range<Int>], _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.foldingRanges else { return }
+    let wasEmpty = self.foldingRanges.isEmpty
+    self.foldingRanges = value
+    // The chevrons' column comes or goes with the first ranges and the last.
+    if wasEmpty != value.isEmpty { context.invalidate(.layout) }
+    context.invalidate(.render)
+  }
+
+  /// Lets `controller` select and reveal in this editor from code.
+  public func controller(_ value: EditorController?) -> Self {
+    value?.editor = self
+    return self
+  }
+
+  public func setController(_ value: EditorController?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard let value, value.editor !== self else { return }
+    value.editor = self
   }
 
   /// Keeps the view at the end as text is added there, when it was at the end.

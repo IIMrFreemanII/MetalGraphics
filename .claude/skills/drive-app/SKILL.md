@@ -29,6 +29,20 @@ The app is a bare executable, not an `.app` bundle: `UserDefaults` and `UIStorag
 buffered and log timestamps are useless for timing. Never truncate the log while the app runs
 (it keeps writing at its old offset and the file fills with NULs) — count lines instead.
 
+### The Editor app
+
+The package's second app, the Swift editor (`docs/Editor.md`), is driven the same way: build and
+launch `Editor` instead, with the folder to open as its argument, and pass `--app Editor` (or
+`UIDRIVE_APP=Editor`) to every `uidrive` command.
+
+```bash
+swift build --product Editor 2>&1 | grep -E "error:|Build complete"
+pkill -x Editor
+(NSUnbufferedIO=YES .build/debug/Editor "$PWD" > "$S/editor.log" 2>&1 &)
+sleep 3
+.build/release/uidrive --app Editor shot "$S/editor.png"
+```
+
 ## 2. Build the driver
 
 ```bash

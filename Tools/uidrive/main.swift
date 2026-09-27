@@ -1,4 +1,5 @@
-// uidrive: drives the running Demo app with real window-server events.
+// uidrive: drives the running Demo app (or, with `--app Editor` or `UIDRIVE_APP=Editor`, another
+// of the package's apps) with real window-server events.
 //
 // Coordinates are points relative to the app window's top-left corner (title bar included).
 // `shot` saves the window at 1x, so a pixel in the screenshot is a point here: read a position
@@ -33,7 +34,8 @@ import AppKit
 import CoreGraphics
 import Foundation
 
-let appName = "Demo"
+/// `--app NAME` or `UIDRIVE_APP`, taken off the arguments before the command is read.
+var appName = ProcessInfo.processInfo.environment["UIDRIVE_APP"] ?? "Demo"
 
 func fail(_ message: String) -> Never {
   FileHandle.standardError.write((message + "\n").data(using: .utf8)!)
@@ -292,10 +294,10 @@ func shot(_ file: String, crop: [String]) {
 // MARK: - Main
 
 var arguments = CommandLine.arguments.dropFirst()
-if arguments.first == "--window" {
-  arguments = arguments.dropFirst()
-  guard let selector = arguments.first else { fail("--window needs an index or a title") }
-  windowSelector = selector
+while arguments.first == "--window" || arguments.first == "--app" {
+  let option = arguments.removeFirst()
+  guard let value = arguments.first else { fail("\(option) needs a value") }
+  if option == "--app" { appName = value } else { windowSelector = value }
   arguments = arguments.dropFirst()
 }
 guard let command = arguments.first else { fail("usage: see the header of Tools/uidrive/main.swift") }

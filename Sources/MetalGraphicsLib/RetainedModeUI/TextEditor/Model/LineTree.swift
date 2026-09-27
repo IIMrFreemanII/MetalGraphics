@@ -18,6 +18,8 @@ struct LineFlags: OptionSet {
   static let measured = LineFlags(rawValue: 1 << 0)
   /// `styleState` was computed from the line above's end state since that line last changed.
   static let styleValid = LineFlags(rawValue: 1 << 1)
+  /// Folded away: height 0, skipped when drawn and by the caret moving up and down.
+  static let hidden = LineFlags(rawValue: 1 << 2)
 }
 
 /// The line index and the height index of a document in one structure: every line's length in

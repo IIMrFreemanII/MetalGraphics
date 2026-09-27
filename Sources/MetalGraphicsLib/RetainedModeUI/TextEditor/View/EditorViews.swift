@@ -134,6 +134,11 @@ final class EditorContentView : UIRenderableElement {
     var line = first
     let count = document.lineCount
     while line < count && (top < viewBottom || line == first) {
+      // Folded away: no height, nothing to show.
+      if line != first && layout.isHidden(line) {
+        line += 1
+        continue
+      }
       let lineLayout = layout.layout(line)
       self.visible.append(VisibleLine(line: line, start: document.lineStart(line), top: top, layout: lineLayout))
       top += Double(lineLayout.height)
@@ -237,6 +242,19 @@ final class EditorContentView : UIRenderableElement {
         renderer.draw(squiggle: start, length: (squiggle.x1 - squiggle.x0) * scale, amplitude: 1.2 * scale,
                       wavelength: 4 * scale, thickness: 1 * scale, color: color)
       }
+      // A fold's first line ends in a "⋯" standing for what is folded.
+      if !editor.folds.isEmpty, let rect = editor.foldMarkerRect(forLine: visible.line) {
+        var box = theme.foreground
+        box.w = 0.12 * opacity
+        let min = effect.apply(to: rect.min) - half
+        renderer.draw(roundedRect: min, size: (rect.max - rect.min) * scale, radii: float4(repeating: 4 * scale), color: box)
+        var dot = theme.foreground
+        dot.w = 0.7 * opacity
+        let center = (rect.min + rect.max) * 0.5
+        for dx: Float in [-5, 0, 5] {
+          renderer.draw(circle: Circle2D(position: effect.apply(to: center + float2(dx, 0)) - half, radius: 1.3 * scale, color: dot))
+        }
+      }
     }
 
     // The input method's composition, underlined.
@@ -304,6 +322,8 @@ final class EditorGutterView : UIRenderableElement {
   private var scratch = TextLayout()
 
   static let padding: Float = 10
+  static let dotRadius: Float = 3
+  static let dotInset: Float = 6
 
   override init() {
     super.init()
@@ -319,13 +339,26 @@ final class EditorGutterView : UIRenderableElement {
 
   override func getSize() -> float2 { self.size }
 
-  /// Wide enough for the largest line number, or 0 when numbers are hidden.
+  /// Wide enough for the largest line number, and the fold chevrons when anything can fold;
+  /// 0 when neither shows.
   var width: Float {
-    guard self.editor.showsLineNumbers else { return 0 }
+    let folding = self.showsFolding
+    guard self.editor.showsLineNumbers || folding else { return 0 }
     self.prepareDigits()
     let count = max(self.editor.document.lineCount, 1)
     let places = max(3, String(count).count)
-    return Float(places) * self.digitAdvance + Self.padding * 2
+    let numbers = self.editor.showsLineNumbers ? Float(places) * self.digitAdvance + Self.padding * 2 : Self.padding
+    return numbers + (folding ? Self.foldColumn : 0)
+  }
+
+  var showsFolding: Bool { !self.editor.foldingRanges.isEmpty || !self.editor.folds.isEmpty }
+
+  /// Where fold chevrons are, between the numbers and the text.
+  static let foldColumn: Float = 14
+
+  /// Whether `x`, in the window, is in the chevrons' column.
+  func isInFoldColumn(_ x: Float) -> Bool {
+    self.showsFolding && x >= self.position.x + self.size.x - Self.foldColumn
   }
 
   override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
@@ -380,12 +413,29 @@ final class EditorGutterView : UIRenderableElement {
 
     let content = editor.content
     let originY = content.textOrigin.y
-    let right = self.position.x + self.size.x - Self.padding
-    let caretLine = editor.document.line(containing: editor.state.selection.primary.head)
+    let folding = self.showsFolding
+    let right = self.position.x + self.size.x - Self.padding - (folding ? Self.foldColumn : 0)
+    let document = editor.document
+    let caretLine = document.line(containing: editor.state.selection.primary.head)
+    let diagnostics = document.diagnostics
     for visible in content.visible {
       let layout = visible.layout
       let baseline = originY + Float(visible.top) + (layout.text.lines.first?.baseline ?? 0)
       guard baseline > self.position.y - 20, baseline < self.position.y + self.size.y + 20 else { continue }
+      if !diagnostics.isEmpty {
+        // A dot by the number of a line with problems, in the colour of the worst.
+        var worst: DiagnosticSeverity? = nil
+        let lineRange = document.lineRange(visible.line)
+        diagnostics.forEach(overlapping: lineRange.lowerBound ..< lineRange.upperBound + 1) { mark in
+          if worst.map({ mark.payload.severity.rawValue > $0.rawValue }) ?? true { worst = mark.payload.severity }
+        }
+        if let worst {
+          var color = theme.color(for: worst)
+          color.w *= opacity
+          let center = float2(self.position.x + Self.dotInset, baseline - editor.layout.baseFont.size * 0.35)
+          renderer.draw(circle: Circle2D(position: effect.apply(to: center) - half, radius: Self.dotRadius * scale, color: color))
+        }
+      }
       // The number's digits, right to left, into the scratch line.
       var number = visible.line + 1
       var x: Float = 0
@@ -397,6 +447,19 @@ final class EditorGutterView : UIRenderableElement {
         self.scratch.lines[0].glyphs.append(glyph)
         number /= 10
       } while number > 0
+      if folding, let folded = editor.foldState(ofLine: visible.line) {
+        // ⌄ over what can fold, › over what is folded.
+        var color = theme.gutterForeground
+        color.w *= folded ? opacity : opacity * 0.55
+        let center = float2(self.position.x + self.size.x - Self.foldColumn * 0.5 - 1, baseline - editor.layout.baseFont.size * 0.35)
+        let points: [float2] = folded ? [float2(-1.5, -3.5), float2(2, 0), float2(-1.5, 3.5)]
+                                      : [float2(-3.5, -1.5), float2(0, 2), float2(3.5, -1.5)]
+        for i in 0 ..< 2 {
+          renderer.draw(stroke: effect.apply(to: center + points[i]) - half, to: effect.apply(to: center + points[i + 1]) - half,
+                        width: 1.3 * scale, color: color)
+        }
+      }
+      guard editor.showsLineNumbers else { continue }
       var color = visible.line == caretLine ? theme.gutterCurrentLine : theme.gutterForeground
       color.w *= opacity
       renderer.draw(textLayout: self.scratch, at: effect.apply(to: float2(right, baseline)) - half, color: color, scale: scale)

@@ -16,6 +16,7 @@ let package = Package(
     .library(name: "MetalGraphicsLib", targets: ["MetalGraphicsLib"]),
     .library(name: "ReactiveUI", targets: ["ReactiveUI"]),
     .executable(name: "Demo", targets: ["Demo"]),
+    .executable(name: "Editor", targets: ["Editor"]),
   ],
   dependencies: [
     // Pinned to the newest release that has a prebuilt for the current toolchain (Swift 6.4,
@@ -64,6 +65,29 @@ let package = Package(
       linkerSettings: [.unsafeFlags(["-Xlinker", "-interposable"], .when(configuration: .debug))]
     ),
 
+    // The Swift editor's model, with no UI: the workspace's files, reading and saving them.
+    // Foundation only, so its tests need no window.
+    .target(name: "EditorCore", swiftSettings: swiftSettings),
+
+    // Swift source as a parse tree, for the editor's outline and folding. The one target linking
+    // swift-syntax's parser: only the Editor and its tests build it.
+    .target(
+      name: "SwiftCodeModel",
+      dependencies: [
+        .product(name: "SwiftSyntax", package: "swift-syntax"),
+        .product(name: "SwiftParser", package: "swift-syntax"),
+      ],
+      swiftSettings: swiftSettings
+    ),
+
+    // The Swift editor: `swift run Editor [folder]`. See docs/Editor.md.
+    .executableTarget(
+      name: "Editor",
+      dependencies: ["MetalGraphicsLib", "ReactiveUI", "EditorCore", "SwiftCodeModel"],
+      swiftSettings: swiftSettings,
+      linkerSettings: [.unsafeFlags(["-Xlinker", "-interposable"], .when(configuration: .debug))]
+    ),
+
     .testTarget(
       name: "MetalGraphicsLibTests",
       dependencies: ["MetalGraphicsLib", "ReactiveUI"],
@@ -74,6 +98,13 @@ let package = Package(
     .testTarget(
       name: "DemoTests",
       dependencies: ["Demo", "MetalGraphicsLib", "ReactiveUI"],
+      exclude: ["__Snapshots__"],
+      swiftSettings: swiftSettings
+    ),
+    .testTarget(name: "EditorCoreTests", dependencies: ["EditorCore", "SwiftCodeModel"], swiftSettings: swiftSettings),
+    .testTarget(
+      name: "EditorTests",
+      dependencies: ["Editor", "EditorCore", "MetalGraphicsLib", "ReactiveUI"],
       exclude: ["__Snapshots__"],
       swiftSettings: swiftSettings
     ),
