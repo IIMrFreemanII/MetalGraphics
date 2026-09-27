@@ -84,6 +84,9 @@ public final class ScrollView : SingleChildElement {
   // it needs there: a `Rectangle` its ideal 10 points, not forever.
   /// The text style this scroll view was last laid out under. See `positionContent`.
   private var textScope = TextEnvironment()
+  /// What its parent last proposed. With both lengths given the scroll view's size does not
+  /// depend on its content, so a content size change stops here: see `contentSizeDidChange`.
+  private var lastProposal: ProposedSize? = nil
 
   private func contentProposal(_ proposal: ProposedSize) -> ProposedSize {
     ProposedSize(
@@ -102,6 +105,7 @@ public final class ScrollView : SingleChildElement {
   }
 
   public override func calcSize(_ proposal: ProposedSize) -> float2 {
+    self.lastProposal = proposal
     let wasInScrollView = LazyStackViewport.inScrollView
     LazyStackViewport.inScrollView = true
     defer { LazyStackViewport.inScrollView = wasInScrollView }
@@ -198,6 +202,43 @@ public final class ScrollView : SingleChildElement {
     }
     target.replace(with: self.offset, where: self.axes.size .== 0)
     self.scrollTo(offset: target, context, animation: animation)
+  }
+
+  /// The content's size changed, and it can size itself again on its own, cheaply: an editor
+  /// whose lines grew. Sizes it again, keeping the offset within reach, and moves the offset by
+  /// `delta` — what keeps the view still when content above it changed height. Without a layout
+  /// pass, unless the scroll view's own size depends on its content.
+  func contentSizeDidChange(_ context: UIContext, offsetBy delta: float2 = .zero) {
+    guard let child = self.child else { return }
+    guard let proposal = self.lastProposal, proposal.width != nil, proposal.height != nil else {
+      context.invalidate(.layout)
+      return
+    }
+    let size = TextScope.with(self.textScope) { child.calcSize(self.contentProposal(proposal)) }
+    let sizeChanged = size != self.contentSize
+    self.contentSize = size
+    let target = simd_clamp(self.offset + delta * self.axes.size, .zero, self.scrollableSize)
+    guard sizeChanged || target != self.offset else { return }
+    if target != self.offset {
+      context.animator.cancel(self, .offset)
+      self.offset = target
+    }
+    self.positionContent()
+    context.invalidate([.hitGrid, .render])
+  }
+
+  /// Scrolls by as little as it takes to show the content's rect from `origin`, `size` long,
+  /// `margin` clear of the edges — and not at all when it shows already. For a caret.
+  func scrollToVisible(contentRect origin: float2, size: float2, margin: float2, _ context: UIContext) {
+    let low = origin - margin
+    let high = origin + size + margin
+    var target = simd_max(self.offset, high - self.size)
+    target = simd_min(target, low)
+    target.replace(with: self.offset, where: self.axes.size .== 0)
+    target = simd_clamp(target, .zero, self.scrollableSize)
+    guard target != self.offset else { return }
+    context.animator.cancel(self, .offset)
+    self.setOffset(target, context)
   }
 
   // MARK: - Modifiers

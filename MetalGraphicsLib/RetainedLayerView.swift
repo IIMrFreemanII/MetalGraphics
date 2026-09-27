@@ -2,7 +2,7 @@ import GameController
 import MetalKit
 
 /// A window's content: the `CAMetalLayer` the window's thread draws into, and the AppKit end of
-/// the window — its events, size, key status and cursor — on the main thread.
+/// the window — its events, size, key status, cursor and input methods — on the main thread.
 ///
 /// Nothing here touches the window's tree. Events go to the window's thread as `InputEvent`s,
 /// which carry no AppKit object; a resize or an occlusion change is posted to it; the cursor the
@@ -81,7 +81,61 @@ public final class RetainedLayerView: NSView {
     // The window handles ⌘V off the main thread, where the pasteboard can't be read: it is read
     // here, with the key.
     let isPaste = event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers?.lowercased() == "v"
-    self.send(.keyDown(Self.key(event, pasteboard: isPaste ? NSPasteboard.general.string(forType: .string) : nil)))
+    var key = Self.key(event, pasteboard: isPaste ? NSPasteboard.general.string(forType: .string) : nil)
+    // Focused text takes the key through the input method, which calls back into this view, at
+    // once, with what it makes of the key. Command keys are shortcuts, and go past it.
+    if self.textInput.isActive, !event.modifierFlags.contains(.command), let context = self.inputContext {
+      self.collected = []
+      _ = context.handleEvent(event)
+      let actions = self.collected ?? []
+      self.collected = nil
+      self.textSequence &+= 1
+      key.textActions = actions
+      key.textSequence = self.textSequence
+      key.textRevision = self.textInput.revision
+    }
+    self.send(.keyDown(key))
+  }
+
+  // MARK: - Input methods
+
+  /// The focused text as the window's thread last published it, moved on by what this view has
+  /// sent since: what the input method's questions are answered from, at once.
+  private(set) var textInput = TextInputSnapshot.inactive
+  /// Batches of text actions sent to the window's thread, counted.
+  private var textSequence: UInt64 = 0
+  /// Set while the input method handles a key: what it asks for is collected, and goes with the
+  /// key.
+  private var collected: [TextInputAction]? = nil
+
+  /// The window's thread published its focused text.
+  func textInputChanged(_ snapshot: TextInputSnapshot) {
+    // From before what this view last sent: its own copy is ahead.
+    guard snapshot.appliedSequence >= self.textSequence else { return }
+    let wasComposing = self.textInput.marked != nil
+    let wasActive = self.textInput.isActive
+    self.textInput = snapshot
+    guard let context = self.inputContext ?? (wasActive ? super.inputContext : nil) else { return }
+    if wasComposing && snapshot.marked == nil {
+      // The composition ended over there: a click elsewhere, focus moving, an edit refused.
+      context.discardMarkedText()
+    }
+    context.invalidateCharacterCoordinates()
+  }
+
+  override public var inputContext: NSTextInputContext? {
+    self.textInput.isActive ? super.inputContext : nil
+  }
+
+  /// Collects `action` while a key is handled; sends it on its own otherwise.
+  private func textAction(_ action: TextInputAction) {
+    self.textInput = self.textInput.applying(action)
+    if self.collected != nil {
+      self.collected!.append(action)
+    } else {
+      self.textSequence &+= 1
+      self.send(.textInput([action], sequence: self.textSequence, revision: self.textInput.revision))
+    }
   }
 
   override public func keyUp(with event: NSEvent) {
@@ -325,5 +379,65 @@ public final class RetainedLayerView: NSView {
       }
       return .frameResize(position: edge, directions: set)
     }
+  }
+}
+
+
+// MARK: - NSTextInputClient
+
+/// Input methods ask synchronously, on the main thread, about text that lives on the window's
+/// thread. They are answered from `textInput`, the last snapshot that thread published, moved on
+/// by what this view sent since; what they ask for is sent there as `TextInputAction`s.
+extension RetainedLayerView: @preconcurrency NSTextInputClient {
+  public func insertText(_ string: Any, replacementRange: NSRange) {
+    let text = (string as? NSAttributedString)?.string ?? (string as? String) ?? ""
+    self.textAction(.insert(text, replacement: replacementRange.location == NSNotFound ? nil : replacementRange))
+  }
+
+  public func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
+    let text = (string as? NSAttributedString)?.string ?? (string as? String) ?? ""
+    self.textAction(.setMarked(
+      text, selected: selectedRange, replacement: replacementRange.location == NSNotFound ? nil : replacementRange
+    ))
+  }
+
+  public func unmarkText() {
+    self.textAction(.unmark)
+  }
+
+  override public func doCommand(by selector: Selector) {
+    self.textAction(.command(NSStringFromSelector(selector)))
+  }
+
+  public func selectedRange() -> NSRange {
+    self.textInput.selection
+  }
+
+  public func markedRange() -> NSRange {
+    self.textInput.marked ?? NSRange(location: NSNotFound, length: 0)
+  }
+
+  public func hasMarkedText() -> Bool {
+    self.textInput.marked != nil
+  }
+
+  public func attributedSubstring(forProposedRange range: NSRange, actualRange: NSRangePointer?) -> NSAttributedString? {
+    guard let (text, covered) = self.textInput.substring(range) else { return nil }
+    actualRange?.pointee = covered
+    return NSAttributedString(string: text)
+  }
+
+  public func validAttributesForMarkedText() -> [NSAttributedString.Key] {
+    []
+  }
+
+  public func firstRect(forCharacterRange range: NSRange, actualRange: NSRangePointer?) -> NSRect {
+    actualRange?.pointee = range
+    guard let window = self.window else { return .zero }
+    return window.convertToScreen(self.convert(self.textInput.caretRect, to: nil))
+  }
+
+  public func characterIndex(for point: NSPoint) -> Int {
+    NSNotFound
   }
 }

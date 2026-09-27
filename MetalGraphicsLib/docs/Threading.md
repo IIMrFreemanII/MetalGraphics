@@ -19,9 +19,14 @@ thread. They post to each other:
   in it, and `WindowHandle.post(_:)` runs a block with the window's renderer. Both are drained at
   the start of the window's next turn. A resize, an occlusion change, a scene storage restore, a
   hot reload and a shader reload all arrive this way.
-- **Window → main:** a changed cursor, a copy to the pasteboard, `openWindow(id:)` and a scene
-  storage save go through `DispatchQueue.main.async`. ⌘V's text is read by the view on the main
-  thread, with the key, and travels in the event.
+- **Window → main:** a changed cursor, a copy to the pasteboard (`Pasteboard.write`),
+  `openWindow(id:)` and a scene storage save go through `DispatchQueue.main.async`. ⌘V's text is
+  read by the view on the main thread, with the key, and travels in the event.
+- **Input methods** ask synchronously, on main, about text on the window's thread. The window
+  publishes a `TextInputSnapshot` of its focused text after each frame that changed it; the view
+  answers from it, moves it on itself for what it sends, and sends what the input method asks for
+  as `TextInputAction`s, with the key or as `InputEvent.textInput` (`TextEditor.md`, *Input
+  methods across threads*).
 
 Main holds only a window's `WindowHandle`. The renderer is made, used and released on the
 window's thread. A closed window's thread unmounts its tree, which unsubscribes it from shared
@@ -66,7 +71,9 @@ which drags a window itself and posts back where the pointer is to the area unde
 ## Idle windows
 
 A frame that finds nothing to draw and nothing animating pauses the window's display link.
-Anything posted to the window — an event, a shared model's write, a resize — resumes it. An idle
+Anything posted to the window — an event, a shared model's write, a resize — resumes it, and so
+does the earliest wake an element asked for (`UIContext.requestWake(at:for:)`, a caret's blink),
+through a timer on the thread's run loop. An idle
 window costs no CPU, not even a wakeup per display refresh. An occluded window stays paused, and
 catches up on whatever changed when it is visible again.
 

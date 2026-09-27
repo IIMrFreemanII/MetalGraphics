@@ -191,6 +191,27 @@ struct BindingMacroTests {
     #expect(text.contains("n.setText(self._name, context, animation: transaction)"))
   }
 
+  @Test("a text editor's text is a binding; its editor modifiers are in place")
+  func textEditor() {
+    let (text, diagnostics) = expand(component(
+      states: """
+        @State var source: String = ""
+        @State var wrap: Bool = false
+      """,
+      """
+          TextEditor(text: $source)
+            .lineWrapping(self.wrap ? .soft : .none)
+            .lineNumbers(true)
+            .onCommand { command in command == .insertNewline }
+      """
+    ))
+    #expect(diagnostics.isEmpty)
+    #expect(text.contains("n.setText(self._source, context, animation: transaction)"))
+    #expect(text.contains("n.setLineWrapping(self._wrap ? .soft : .none, context, animation: transaction)"))
+    #expect(text.contains(".onTextChange = {\nself.source = $0\n}"))
+    #expect(text.contains(".onCommand = {"))
+  }
+
   @Test("F14: a binding that cannot be lowered at compile time")
   func unlowerable() {
     let (_, diagnostics) = expand(component(

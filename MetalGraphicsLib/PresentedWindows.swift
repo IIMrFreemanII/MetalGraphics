@@ -29,6 +29,7 @@ struct PresentedWindowRequest: @unchecked Sendable {
   func move(_ handle: WindowHandle, anchor: ClipRect)
   func close(_ handle: WindowHandle)
   func showPointerStyle(_ handle: WindowHandle, _ style: PointerStyle)
+  func showTextInput(_ handle: WindowHandle, _ snapshot: TextInputSnapshot)
 }
 
 @MainActor enum PresentedWindows {
@@ -270,6 +271,10 @@ final class PresentedWindow : NSWindow, NSWindowDelegate {
 
   func showPointerStyle(_ handle: WindowHandle, _ style: PointerStyle) {
     WindowRegistry.view(for: handle)?.pointerStyle = style
+  }
+
+  func showTextInput(_ handle: WindowHandle, _ snapshot: TextInputSnapshot) {
+    WindowRegistry.view(for: handle)?.textInputChanged(snapshot)
   }
 
   // MARK: - Placing

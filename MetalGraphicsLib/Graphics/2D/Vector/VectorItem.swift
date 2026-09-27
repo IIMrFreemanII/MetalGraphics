@@ -17,6 +17,9 @@ struct VectorItem {
     case ellipse = 2
     /// `params0`: center, half size. `params1`: corner radii, as `UIShape.radii` orders them.
     case roundedBox = 3
+    /// A wavy underline from the local origin along +x. `params0`: length, amplitude,
+    /// wavelength, half thickness.
+    case wave = 4
   }
 
   static let closedFlag: UInt32 = 1

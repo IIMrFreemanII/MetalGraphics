@@ -69,7 +69,12 @@ public struct KeyPress: Sendable {
   public let keyCode: GCKeyCode?
   /// The pasteboard's text when this is ⌘V down, read on the main thread with the key's event,
   /// since the window handling it runs on a thread of its own.
-  let pasteboard: String?
+  public let pasteboard: String?
+  /// What the input method made of this key, when the focused element takes text through one:
+  /// empty when it kept the key for a composition. Nil when the key went past it.
+  let textInput: [TextInputAction]?
+  /// The text's revision the input method's ranges refer to.
+  let textRevision: UInt64
 
   public init(
     key: KeyEquivalent, characters: String, modifiers: NSEvent.ModifierFlags = [], phase: Phases,
@@ -80,7 +85,7 @@ public struct KeyPress: Sendable {
 
   init(
     key: KeyEquivalent, characters: String, modifiers: NSEvent.ModifierFlags, phase: Phases,
-    keyCode: GCKeyCode?, pasteboard: String?
+    keyCode: GCKeyCode?, pasteboard: String?, textInput: [TextInputAction]? = nil, textRevision: UInt64 = 0
   ) {
     self.key = key
     self.characters = characters
@@ -88,6 +93,8 @@ public struct KeyPress: Sendable {
     self.phase = phase
     self.keyCode = keyCode
     self.pasteboard = pasteboard
+    self.textInput = textInput
+    self.textRevision = textRevision
   }
 }
 

@@ -78,7 +78,11 @@ import simd
     let opener: (@MainActor (String) -> Void)?
     let post: @Sendable (@escaping @Sendable () -> Void) -> Void
     let presentedWindows: any PresentedWindowHost
+    let pasteboard: @Sendable (String) -> Void
   }
+
+  /// What the app last copied: a copy writes here, never to the real pasteboard.
+  public var pasteboard: String? { HeadlessPasteboard.shared.text }
 
   public init(scenes: [RetainedScene], screenSize: float2 = float2(1440, 900), pixelsPerPoint: Float = 2) {
     precondition(Thread.isMainThread, "A HeadlessApp runs on the main thread, as the app's main thread does")
@@ -95,8 +99,11 @@ import simd
       executor: state.executor, defaults: UIStorage.defaults,
       opener: Windows.setOpener { [weak self] id in self?.open(id: id) },
       post: MainQueue.post,
-      presentedWindows: PresentedWindows.host
+      presentedWindows: PresentedWindows.host,
+      pasteboard: Pasteboard.write
     )
+    HeadlessPasteboard.shared.text = nil
+    Pasteboard.write = { text in HeadlessPasteboard.shared.text = text }
     state.executor = mainExecutor
     UIStorage.defaults = self.defaults
     MainQueue.post = { work in mainExecutor.post(work) }
@@ -129,6 +136,7 @@ import simd
       Windows.setOpener(saved.opener)
       MainQueue.post = saved.post
       PresentedWindows.host = saved.presentedWindows
+      Pasteboard.write = saved.pasteboard
     }
     self.presentedWindows = nil
     self.saved = nil
@@ -383,4 +391,16 @@ import simd
 /// The fake clock every window of a `HeadlessApp` reads.
 final class HeadlessClock: @unchecked Sendable {
   var now: Double = 0
+}
+
+/// Where a headless app's copies go. Written from window threads, read on the main one.
+final class HeadlessPasteboard: @unchecked Sendable {
+  static let shared = HeadlessPasteboard()
+  private let lock = NSLock()
+  private var stored: String?
+
+  var text: String? {
+    get { self.lock.withLock { self.stored } }
+    set { self.lock.withLock { self.stored = newValue } }
+  }
 }

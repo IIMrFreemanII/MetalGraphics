@@ -198,7 +198,7 @@ public func caretOffsets(_ text: String, style: TextStyle = TextStyle()) -> [Flo
 // MARK: - Shaping
 
 /// Which run a stretch of the attributed string came from, as an `NSNumber`.
-private let runAttribute = NSAttributedString.Key("MetalGraphics.run")
+let runAttribute = NSAttributedString.Key("MetalGraphics.run")
 
 /// Font sizes land on quarter points when shrunk, so a bisection reuses faces between texts.
 private func scaledSize(_ size: Float, _ scale: Float) -> Float {
@@ -296,8 +296,9 @@ private func shapeParagraph(
   return layout
 }
 
-/// The state of shaping one paragraph: its string, typesetter and faces.
-private struct ParagraphShaper {
+/// The state of shaping one paragraph: its string, typesetter and faces. Also what an editor's
+/// `shapeLine` places its lines with.
+struct ParagraphShaper {
   let runs: [TextRunInput]
   let faces: [ResolvedFace]
   let string: NSAttributedString
@@ -311,14 +312,18 @@ private struct ParagraphShaper {
 
   var baseHeight: Float { self.baseAscent + self.baseDescent + self.baseLeading }
 
-  init(runs: [TextRunInput], faces: [ResolvedFace], string: NSAttributedString, maxSize: float2, scale: Float) {
+  /// `base` is the font no line is shorter than, the first run's when nil.
+  init(
+    runs: [TextRunInput], faces: [ResolvedFace], string: NSAttributedString, maxSize: float2, scale: Float,
+    base: CTFont? = nil
+  ) {
     self.runs = runs
     self.faces = faces
     self.string = string
     self.typesetter = CTTypesetterCreateWithAttributedString(string)
     self.maxWidth = Double(min(maxSize.x, 1e7))
     self.scale = scale
-    let base = faces[0].font
+    let base = base ?? faces[0].font
     self.baseAscent = Float(CTFontGetAscent(base))
     self.baseDescent = Float(CTFontGetDescent(base))
     self.baseLeading = Float(CTFontGetLeading(base))
@@ -394,7 +399,9 @@ private struct ParagraphShaper {
       CTRunGetGlyphs(run, CFRange(), &glyphs)
       CTRunGetPositions(run, CFRange(), &positions)
 
-      for i in 0..<glyphCount {
+      // An attachment's placeholder: its space is kept, and its element drawn there instead.
+      let isAttachment = attributes[kCTRunDelegateAttributeName as String] != nil
+      for i in 0..<glyphCount where !isAttachment {
         let metrics = FontManager.shared.glyphMetrics(face: face, font: runFont, glyph: glyphs[i], oblique: oblique)
         if metrics.hasOutline {
           textLine.glyphs.append(PlacedGlyph(

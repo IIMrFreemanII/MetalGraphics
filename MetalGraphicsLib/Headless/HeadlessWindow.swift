@@ -95,6 +95,7 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
       persist: { encoded in state.persisted = encoded },
       layer: nil,
       showPointerStyle: { style in state.pointerStyle = style },
+      showTextInput: { snapshot in state.textInput = snapshot },
       clock: { clock.now }
     )
     ThreadState.current.executor = previous
@@ -126,6 +127,13 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
   func setPointerStyle(_ style: PointerStyle) {
     self.state.pointerStyle = style
   }
+
+  func setTextInput(_ snapshot: TextInputSnapshot) {
+    self.state.textInput = snapshot
+  }
+
+  /// The focused text as an input method would see it: its selection, marked text and caret.
+  public var textInput: TextInputSnapshot { self.state.textInput }
 
   // MARK: - State
 
@@ -432,6 +440,31 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
     }
   }
 
+  /// An input method's composition so far, as a Japanese or Chinese one sends it while keys
+  /// are typed: `text` marked, the input method's selection `selected` in it (its end when nil).
+  public func compose(_ text: String, selected: NSRange? = nil) {
+    let selected = selected ?? NSRange(location: text.utf16.count, length: 0)
+    self.sendText(.setMarked(text, selected: selected, replacement: nil))
+  }
+
+  /// An input method committing `text`: in place of what is composed, or at the selection.
+  public func commit(_ text: String) {
+    self.sendText(.insert(text, replacement: nil))
+  }
+
+  private var textSequence: UInt64 = 0
+
+  private func sendText(_ action: TextInputAction) {
+    if let top = self.app.topPresentation(over: self) {
+      top.sendText(action)
+      return
+    }
+    self.activate()
+    self.textSequence &+= 1
+    self.send(.textInput([action], sequence: self.textSequence, revision: self.state.textInput.revision))
+    self.app.step()
+  }
+
   /// ⌘V with `text` on the pasteboard, as the view reads it with the key.
   public func paste(_ text: String) {
     if let top = self.app.topPresentation(over: self) {
@@ -546,6 +579,7 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
 final class HeadlessWindowState: @unchecked Sendable {
   var persisted: String
   var pointerStyle = PointerStyle.default
+  var textInput = TextInputSnapshot.inactive
 
   init(persisted: String) {
     self.persisted = persisted
