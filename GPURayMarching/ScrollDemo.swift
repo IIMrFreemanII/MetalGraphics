@@ -1,5 +1,6 @@
 import MetalGraphicsLib
 import ReactiveUI
+import Synchronization
 
 struct ScrollRow : Identifiable {
   let id: Int
@@ -50,7 +51,6 @@ final class ScrollRowView : SingleChildElement {
 
 // Scrolling to a row by id. A body cannot take a closure of the reader's shape, so this part is
 // built by hand and reaches the demo through a one-row list's `onCreate`.
-@MainActor
 func makeScrollToDemo(rows: [ScrollRow]) -> UIElement {
   let font = TextFont.system(size: 13)
   let button = { (title: String, action: @escaping () -> Void) -> UIElement in
@@ -173,8 +173,8 @@ final class ScrollDemo : SingleChildElement {
             .foregroundColor(Self.captionColor)
           ScrollView(.vertical, showsIndicators: self.indicators) {
             LazyVStack(alignment: .leading, spacing: 2, items: self.manyRows) { row in
-              LazyRowCounter.count += 1
-              return Text("\(row.name) · built #\(LazyRowCounter.count)")
+              let built = LazyRowCounter.count.add(1, ordering: .relaxed).newValue
+              return Text("\(row.name) · built #\(built)")
                 .font(ScrollDemo.chipFont)
                 .foregroundColor(.white)
                 .padding(Inset(vertical: 4, horizontal: 8))
@@ -190,8 +190,7 @@ final class ScrollDemo : SingleChildElement {
   }
 }
 
-/// How many rows the lazy stack in `ScrollDemo` has built so far.
-@MainActor
+/// How many rows the lazy stacks in `ScrollDemo` have built so far, in every window.
 enum LazyRowCounter {
-  static var count = 0
+  static let count = Atomic<Int>(0)
 }

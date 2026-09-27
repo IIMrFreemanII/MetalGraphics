@@ -8,6 +8,8 @@ import SwiftSyntax
 // the "is this subtree currently built?" test, because an untaken branch has nil fields.
 struct CodeGen {
   let states: [StateProperty]
+  /// The component's `@Bindable` models. Reads of their properties are keyed "model.member".
+  let models: [ModelProperty]
   let nodes: [NodeIR]
 
   /// Where a child list is attached: the component itself, or a container node.
@@ -27,6 +29,7 @@ struct CodeGen {
     decls.append(contentsOf: containerAppliers())
     decls.append(contentsOf: branchMethods())
     decls.append(contentsOf: updates())
+    decls.append(contentsOf: modelMethods())
     decls.append(contentsOf: mutations())
     return decls
   }
@@ -74,25 +77,46 @@ struct CodeGen {
     // Re-armed on every mount, not just the first: an unmounted element had its handlers
     // cleared, and a remounted one has to get them back.
     let armCall = armedHandlers.isEmpty ? "" : "\n  self.\(Naming.armHandlers)()"
+    guard !modelKeys.isEmpty else {
+      return """
+      public override func mount(_ context: UIContext) {
+        self.\(raw: Naming.context) = context
+        if !self.__built {
+          self.__built = true
+          self.setChild(self.\(raw: Naming.build)(context), context)
+        } else if self.\(raw: Naming.needsRefresh) {
+          self.\(raw: Naming.needsRefresh) = false
+          self.\(raw: Naming.refreshAll)()
+        }\(raw: armCall)
+      }
+      """
+    }
+    // Unmounted, the component heard no model writes, so a remount always replays what it
+    // reads of its models; its states only when one changed meanwhile.
     return """
     public override func mount(_ context: UIContext) {
       self.\(raw: Naming.context) = context
       if !self.__built {
         self.__built = true
         self.setChild(self.\(raw: Naming.build)(context), context)
-      } else if self.\(raw: Naming.needsRefresh) {
-        self.\(raw: Naming.needsRefresh) = false
-        self.\(raw: Naming.refreshAll)()
-      }\(raw: armCall)
+      } else {
+        if self.\(raw: Naming.needsRefresh) {
+          self.\(raw: Naming.needsRefresh) = false
+          self.\(raw: Naming.refreshAll)()
+        }
+        self.\(raw: Naming.refreshModels)()
+      }
+      self.\(raw: Naming.subscribeModels)()\(raw: armCall)
     }
     """
   }
 
   private func lifecycleUnmount() -> DeclSyntax {
+    let unsubscribeCall = modelKeys.isEmpty ? "" : "self.\(Naming.unsubscribeModels)()\n  "
     let disarmCall = armedHandlers.isEmpty ? "" : "self.\(Naming.disarmHandlers)()\n  "
     return """
     public override func unmount(_ context: UIContext) {
-      \(raw: disarmCall)self.\(raw: Naming.context) = nil
+      \(raw: unsubscribeCall)\(raw: disarmCall)self.\(raw: Naming.context) = nil
     }
     """
   }
@@ -550,6 +574,84 @@ struct CodeGen {
       }
       return applier(Naming.update(stateName), Self.animatedParameter, dependents)
     }
+  }
+
+  // MARK: - Models
+
+  /// Every model property the body reads outside a closure, as "model.member" read keys, in a
+  /// fixed order: a key's index is the token the component subscribes with.
+  ///
+  /// Only bindings and branch conditions count. An `.animation(_:value:)` trigger alone feeds
+  /// nothing, so it would subscribe to a method with no lines.
+  private var modelKeys: [String] {
+    guard !models.isEmpty else { return [] }
+    var keys: Set<String> = []
+    forEachElement { element in
+      for link in element.chain {
+        for bound in link.bound {
+          keys.formUnion(bound.reads.filter { StateRewriter.splitModelKey($0) != nil })
+        }
+      }
+    }
+    forEachBranch { branch in
+      keys.formUnion(branch.reads.filter { StateRewriter.splitModelKey($0) != nil })
+    }
+    return keys.sorted()
+  }
+
+  /// One update method per model key, like a state's, and the subscription around them:
+  ///
+  ///     public override func __modelDidChange(_ token: Int, _ animated: Bool) {
+  ///       switch token { case 0: self.__modelUpdate_model_count(animated) … }
+  ///     }
+  ///     private func __subscribeModels() { self.model.__observers(named: "count").add(self, token: 0) … }
+  ///     private func __unsubscribeModels() { self.model.__observers(named: "count").remove(self) … }
+  ///     private func __refreshModels() { self.__modelUpdate_model_count(false) … }
+  ///
+  /// `__modelDidChange` is a method of `UIElement`, so a write reaches each reader through one
+  /// virtual call, with no closure to store.
+  private func modelMethods() -> [DeclSyntax] {
+    let keys = modelKeys
+    guard !keys.isEmpty else { return [] }
+
+    var decls: [DeclSyntax] = []
+    var cases: [String] = []
+    var subscribe: [String] = []
+    var unsubscribe: [String] = []
+    var refresh: [String] = []
+    for (token, key) in keys.enumerated() {
+      guard let (model, member) = StateRewriter.splitModelKey(key) else { continue }
+      let update = Naming.modelUpdate(model, member)
+      decls.append(applier(update, Self.animatedParameter, dependents(for: key, rows: .full)))
+      cases.append("case \(token): self.\(update)(animated)")
+      subscribe.append("self.\(model).__observers(named: \"\(member)\").add(self, token: \(token))")
+      unsubscribe.append("self.\(model).__observers(named: \"\(member)\").remove(self)")
+      refresh.append("self.\(update)(false)")
+    }
+    decls.append("""
+    public override func __modelDidChange(_ token: Int, _ animated: Bool) {
+      switch token {
+      \(raw: cases.joined(separator: "\n  "))
+      default: break
+      }
+    }
+    """)
+    decls.append("""
+    private func \(raw: Naming.subscribeModels)() {
+      \(raw: subscribe.joined(separator: "\n  "))
+    }
+    """)
+    decls.append("""
+    private func \(raw: Naming.unsubscribeModels)() {
+      \(raw: unsubscribe.joined(separator: "\n  "))
+    }
+    """)
+    decls.append("""
+    private func \(raw: Naming.refreshModels)() {
+      \(raw: refresh.joined(separator: "\n  "))
+    }
+    """)
+    return decls
   }
 
   // MARK: - Mutations

@@ -199,7 +199,8 @@ struct BindingMacroTests {
     ))
     #expect(diagnostics == [
       "'isOn:' is a binding, lowered at compile time: write '$<state>' for a @State property "
-        + "(or a member of one, '$<state>.<member>'), or '.constant(<value>)'."
+        + "(or a member of one, '$<state>.<member>'), '$<model>.<property>' for a @Bindable model's "
+        + "property, or '.constant(<value>)'."
     ])
   }
 

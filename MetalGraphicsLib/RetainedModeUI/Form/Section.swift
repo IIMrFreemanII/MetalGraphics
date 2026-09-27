@@ -202,7 +202,6 @@ final class CaptionSlot : TextStyleElement {
 /// How form rows are stacked: each at least `FormMetrics.rowMinHeight` tall inside its inset,
 /// its content centred vertically, with a separator between one row and the next. Shared by a
 /// section's card and a disclosure group's content.
-@MainActor
 enum RowLayout {
   static func height(_ contentHeight: Float, _ inset: Inset) -> Float {
     max(contentHeight, FormMetrics.rowMinHeight) + inset.top + inset.bottom

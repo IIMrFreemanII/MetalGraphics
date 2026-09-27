@@ -7,7 +7,7 @@ import Foundation
 /// 2. swap it in for the plugin Xcode's compile commands load (`-load-plugin-executable`), which
 ///    sits next to the app in `Build/Products/<config>`; every `swift-frontend` launches the
 ///    plugin afresh, so the next compile expands with the new code;
-/// 3. re-save every source file that uses `@Component`, unchanged, so InjectionNext recompiles
+/// 3. re-save every source file that uses `@Component` or `@Model`, unchanged, so InjectionNext recompiles
 ///    and re-injects each one. `HotReload` coalesces the injections into one tree rebuild.
 ///
 /// Only the plugin reloads. The `ReactiveUI` target (the macro declarations) needs a rebuild.
@@ -74,7 +74,7 @@ enum MacroReloader {
         // The attribute itself, at the start of a line; not a mention in a comment.
         url.pathExtension == "swift"
           && (try? String(contentsOf: url, encoding: .utf8))?
-            .range(of: #"(?m)^\s*@Component\b"#, options: .regularExpression) != nil
+            .range(of: #"(?m)^\s*(@\w+\s+)*@(Component|Model)\b"#, options: .regularExpression) != nil
       }
     }
   }

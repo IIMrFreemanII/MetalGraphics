@@ -65,13 +65,13 @@ extension BodyParser {
       guard let run = self.run(operand) else { return .failed }
       runs.append("TextRun(\(run.string.trimmedDescription), style: \(run.style))")
 
-      let (string, stringReads) = StateRewriter.scan(run.string, states: states)
+      let (string, stringReads) = StateRewriter.scan(run.string, states: states, models: models)
       if !stringReads.isEmpty {
         bound.append(BoundArg(
           setter: "setRunText", value: "Text.RunText(\(raw: index), \(string))", reads: stringReads, animatable: true
         ))
       }
-      let (style, styleReads) = StateRewriter.scan("\(raw: run.style)", states: states)
+      let (style, styleReads) = StateRewriter.scan("\(raw: run.style)", states: states, models: models)
       if !styleReads.isEmpty {
         bound.append(BoundArg(
           setter: "setRunStyle", value: "Text.RunStyle(\(raw: index), \(style))", reads: styleReads, animatable: true

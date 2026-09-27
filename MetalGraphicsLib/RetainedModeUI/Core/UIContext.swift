@@ -16,7 +16,11 @@ public struct Invalidation: OptionSet, Sendable {
   public static let all: Invalidation = [.render, .layout, .hitGrid, .treeOrder]
 }
 
-@MainActor
+/// Something a press drags that Escape cancels. See `UIContext.escapeTarget`.
+protocol EscapeCancellable: AnyObject {
+  func cancelOnEscape()
+}
+
 public class UIContext {
   private var renderableViews: [ObjectIdentifier : UIRenderableElement] = [:]
   private var hittableViews: [ObjectIdentifier : any Hittable] = [:]
@@ -135,6 +139,10 @@ public class UIContext {
   private var dropOrder: [DropDestinationBase] = []
   private var dropClips: [Int] = []
 
+  /// What an Escape press cancels besides a drag and drop: a dock drag, which is its own. Set
+  /// for as long as it lasts.
+  weak var escapeTarget: (any EscapeCancellable)?
+
   /// The drag in progress, if any. See `beginDrag`.
   private(set) var drag: DragSession? = nil
   /// The element whose drawing follows the pointer during the drag, found in `collect` by
@@ -172,6 +180,12 @@ public class UIContext {
 
   public var needsRender: Bool { self.pending.contains(.render) }
 
+  /// Nothing to draw, nothing animating, nothing left for the next frame: until input or a write
+  /// arrives, frames would find nothing to do. A window pauses its frames then.
+  public var isIdle: Bool {
+    !self.needsRender && self.animator.isIdle && self.afterLayoutWork.isEmpty
+  }
+
   /// The time animations start and advance by. Tests swap it for a fake clock so frames can be
   /// stepped deterministically; `update` reads it once per frame when no `time` is passed.
   public var clock: () -> Double = CACurrentMediaTime
@@ -179,6 +193,10 @@ public class UIContext {
   /// The renderer the last `update` ran for: lets a control change how frames are drawn, such as
   /// `Graphics2D.sceneData.debug`.
   public private(set) weak var graphics: Graphics2D?
+
+  /// The window this tree is in, with its per-window storage. Set by `RootViewRenderer`; nil in
+  /// a tree hosted any other way, such as a test harness.
+  public var scene: WindowScene?
 
   public init() {}
 
@@ -301,6 +319,7 @@ public class UIContext {
     let time = time ?? self.clock()
     let hitInvalidationsAtStart = self.hitInvalidations
     if self.graphics !== graphics { self.graphics = graphics }
+    graphics.size = size
     if size != self.lastSize {
       self.lastSize = size
       self.invalidate(.layout)
@@ -320,12 +339,16 @@ public class UIContext {
     // `mouseDown`/`mouseUp` too: a click whose down and up both land between two frames is no
     // longer pressed by the time this runs, and would otherwise be missed.
     let pointerEvent = input.mouseMoved || input.mousePressed || input.mouseDown || input.mouseUp
+    // Set when the grid below is built from a layout this frame then replaces: a window's first
+    // frame, whose become-key event carries the pointer, builds it before anything is laid out.
+    var gridPredatesLayout = false
     if pointerEvent {
       if self.pending.contains(.treeOrder) {
         self.rebuildTreeOrder(root)
       }
       if self.pending.contains(.hitGrid) {
         self.rebuildHitGrid(graphics)
+        gridPredatesLayout = self.pending.contains(.layout)
       }
       // Before the tap handlers, so one that reads `focused` sees what this click focused.
       if input.leftMouseDown, !self.focusables.isEmpty {
@@ -339,8 +362,13 @@ public class UIContext {
     // After the click, so a click and the typing after it that land in one frame go together.
     if !input.keyPresses.isEmpty {
       // Escape cancels a drag, and still goes on to whatever handles it.
-      if self.drag != nil, input.keyPresses.contains(where: { $0.key == .escape && $0.phase == .down }) {
-        self.cancelDrag()
+      if self.drag != nil || self.escapeTarget != nil,
+         input.keyPresses.contains(where: { $0.key == .escape && $0.phase == .down }) {
+        if self.drag != nil { self.cancelDrag() }
+        if let target = self.escapeTarget {
+          self.escapeTarget = nil
+          target.cancelOnEscape()
+        }
       }
       if self.pending.contains(.treeOrder) {
         self.rebuildTreeOrder(root)
@@ -383,8 +411,12 @@ public class UIContext {
         self.layoutGroups.removeAll()
       }
       assert(TextScope.depth == 0, "a TextStyleElement left its style pushed")
-      // `.hitGrid` stays pending: `invalidate(.layout)` added it.
+      // `.hitGrid` stays pending: `invalidate(.layout)` added it — unless the pointer rebuilt
+      // the grid earlier in this frame, from the layout this pass replaced.
       self.pending.remove(.layout)
+      if gridPredatesLayout {
+        self.invalidate(.hitGrid)
+      }
     }
 
     // Last, so what it changes is laid out on the next frame rather than inside this one.
@@ -430,7 +462,7 @@ public class UIContext {
     if self.pending.contains(.treeOrder) {
       self.rebuildTreeOrder(root)
     }
-    FrameProfiler.shared.set(.elements, self.paintOrder.count)
+    renderer.profiler.set(.elements, self.paintOrder.count)
 
     if !self.effectOrder.isEmpty {
       self.resolveEffects()

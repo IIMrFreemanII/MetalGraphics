@@ -8,7 +8,6 @@
 // `insertRow` / `removeRow` are the incremental forms, used when the caller already knows what
 // changed and so no diff is needed. The generated mutation methods on a `@Component` pick the
 // incremental form; a plain assignment to the state falls back to `setItems`.
-@MainActor
 final class ListRows<T : Identifiable> {
   private unowned let stack: MultiChildElement
   private let create: (T) -> UIElement

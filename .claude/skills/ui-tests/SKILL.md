@@ -27,7 +27,7 @@ Failures print as `file:line: error: ... : XCTAssert... failed`.
 
 ## Write a test
 
-New files go in `MetalGraphicsLibTests/`. The folder is synchronized, so there is no project file to edit. A test class is `@MainActor final class ...: XCTestCase` with `@testable import MetalGraphicsLib`.
+New files go in `MetalGraphicsLibTests/`. The folder is synchronized, so there is no project file to edit. A test class is `@MainActor final class ...: XCTestCase` with `@testable import MetalGraphicsLib` (or not `@MainActor`, when it drives harnesses on other threads).
 
 ```swift
 func testSaveButtonSaves() {
@@ -58,6 +58,9 @@ func testSaveButtonSaves() {
 - The builder has no `for`. Build a list with an explicit `return`, e.g. `VStack { return (0..<20).map { _ in Rectangle(.blue).frame(height: 50) } }`, or use `VList`.
 - Elements have no common `position`. Read one where the type has it: `Rectangle.position/size`, `HittableView.hitPosition/hitSize`, `FocusableElement.position/size`, `ScrollView.offset`, or `getSize()`.
 - The root is a centre-aligned `Frame` the size of the window. A fixed-size child sits in the middle.
+- The harness never resizes the hit grid, which covers 500×500 points around the window's centre. For a larger harness, call `h.context.resizeHitGrid(for: size)` once, as the app's resize does, or nothing outside that square is hit.
+
+**Docking** (`DockingTests`, `DockLayoutTests`, `docs/Docking.md`): make a `DockSpace(name:kinds:persists: false) { layout }` and mount `DockArea(space, host: "main")`. Find tabs with `all(DockTabItem.self)`, groups with `all(DockTabsView.self)` (`rect`, `barRect`), floats with `all(DockFloatView.self)`, and the markers on `first(DockDropOverlay.self)!.markers`. Pick a panel up with `mouseDown` on its tab and a few `mouseDrag`s; a drag that undocks reflows the rest, so read a target's marker after it has undocked. A float being dragged is drawn by an offset (`dragOrigin`) and laid out on release. Between windows, run each area's harness on its own `WindowThread` (`DockWindowsTests`) and call the area's `remoteHover`/`remoteDrop` as `DockWindows` does from the main thread.
 
 ## Snapshots
 
@@ -76,7 +79,8 @@ Goldens are stored at `MetalGraphicsLibTests/__Snapshots__/<TestClass>/<name>.pn
 ## Rules
 
 - Never sleep and never read real time. Time moves only through `step` / `advance` / `settle`.
-- Tests run serially on the main actor (the scheme marks the bundle as not parallelizable). Global statics exist: `LayoutPass`, `UITransaction`, and `HorizontalAlignment.anyExplicit`, which never resets once set. A test that sets an explicit alignment guide changes the fast path for every test after it in the process, so give such tests their own class and expect them to affect others.
+- Tests run serially on the main thread (the scheme marks the bundle as not parallelizable). A harness belongs to the thread that made it, as a window's tree does: the main thread for most tests. `LayoutPass`, `TextScope` and `UITransaction` are per thread (`ThreadState`). `HorizontalAlignment.anyExplicit` is process-wide and never resets once set. A test that sets an explicit alignment guide changes the fast path for every test after it in the process, so give such tests their own class and expect them to affect others.
+- Windows on threads of their own: `WindowThreadTests` makes each harness on its own `WindowThread` and runs blocks there with a helper that waits for them. That is how to test anything that crosses windows — a `@Model` written in one and read in another, a glyph baked by one and drawn by another. Keep such harnesses alive while the other thread writes to a model they read. Run those tests under Thread Sanitizer too: add `-enableThreadSanitizer YES` to the test command.
 - Tests run in the `xctest` process, so `UIStorage` and `UserDefaults.standard` belong to that process, not to the app.
 - A change to UI behaviour or rendering comes with a test next to the existing ones: `InteractionTests`, `AnimationTests`, `LayoutTests` or `SnapshotTests`.
 - Guard idleness where it matters: after `settle()`, `h.step(frames: 30)` must not change `h.renders` (see `AnimationTests.testIdleTreeStopsDrawing`).
@@ -84,16 +88,17 @@ Goldens are stored at `MetalGraphicsLibTests/__Snapshots__/<TestClass>/<name>.pn
 ## When to launch the app instead (drive-app skill)
 
 These are outside the harness:
-- `NSEvent` → `Input` translation in `MyMTKView`: real mouse and trackpad events, modifier edge cases, key repeat.
+- `NSEvent` → `InputEvent` translation in `RetainedLayerView`: real mouse and trackpad events, modifier edge cases, key repeat. What `Input.apply` makes of an `InputEvent` is testable here (`WindowInputTests`).
 - Windowing: resizing, Retina scale changes, key-window hover tracking.
 - Hot reload, and real frame pacing or idle CPU (with `top`, or Instruments).
-- `@Component` demos in the `GPURayMarching` app target. The tests link only `MetalGraphicsLib`, so they build trees by hand.
+- The `@Component` demos in the `GPURayMarching` app target. The tests link `MetalGraphicsLib` and `ReactiveUI`, so a test can declare its own `@Component` and `@Model` (see `ModelSyncTests`). Most tests still build trees by hand.
+- Several real windows: opening them, key status and focus between them. For shared state across windows, the headless form is two `UIHarness` instances over one `@Model`, as in `ModelSyncTests`.
 
 Do one final `drive-app` check when a feature is finished. Iterate with the tests.
 
 ## How it works (when the harness itself needs changing)
 
 - `UIContext.clock` is what animations start and tick on. The harness points it at its fake `now`.
-- `Graphics2D.render(into:pixelsPerPoint:_:)` is `context(in: MTKView)` without a view. It shares `encodeFrame` and `finishFrame` with the app's `drawData`.
+- `Graphics2D.render(into:pixelsPerPoint:_:)` is `context(in: FrameTarget)` without a drawable. It shares `encodeFrame` and `finishFrame` with the app's `drawData`.
 - `Graphics2D.makeOffscreenTarget` and `readPixels` are in `Graphics/2D/Graphics2D+Offscreen.swift`.
-- `Graphics2D.endFrame` ends the input frame. A step that doesn't draw calls `input.endFrame()` itself, as `TestViewRenderer.draw(in:)` does.
+- Every step ends the input frame with `input.endFrame()`, drawn or not, as `RootViewRenderer.frame(drawable:)` does.

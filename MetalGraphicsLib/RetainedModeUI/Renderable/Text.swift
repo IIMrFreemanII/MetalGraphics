@@ -91,8 +91,6 @@ public class Text : UIRenderableElement {
   /// The `TextScope.current` `resolved` was made under.
   private var resolvedScope = TextEnvironment()
   private var resolved = ResolvedText()
-  // Filled for each draw of a text whose runs differ in colour; never shrinks.
-  private static var paintScratch: [TextRunPaint] = []
 
   public init(_ text: String) {
     self.runs = [TextRun(text)]
@@ -390,7 +388,8 @@ public class Text : UIRenderableElement {
       return
     }
 
-    Self.paintScratch.removeAll(keepingCapacity: true)
+    let state = ThreadState.current
+    state.paintScratch.removeAll(keepingCapacity: true)
     for paint in self.resolved.paints {
       var text = color
       if let own = paint.text {
@@ -407,9 +406,9 @@ public class Text : UIRenderableElement {
         strikethrough = own
         strikethrough.w *= effect.opacity
       }
-      Self.paintScratch.append(TextRunPaint(text: text, underline: underline, strikethrough: strikethrough))
+      state.paintScratch.append(TextRunPaint(text: text, underline: underline, strikethrough: strikethrough))
     }
-    renderer.draw(textLayout: self.layout, at: origin, color: color, paints: Self.paintScratch, scale: scale)
+    renderer.draw(textLayout: self.layout, at: origin, color: color, paints: state.paintScratch, scale: scale)
   }
 
   // MARK: - Modifiers

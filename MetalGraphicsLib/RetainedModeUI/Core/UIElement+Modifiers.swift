@@ -172,7 +172,7 @@ extension UIElement {
 /// wrap it, live in this protocol's extension instead of `UIElement`'s: a member of a concrete
 /// class ranks above a protocol extension's in overload resolution, so on a shape the shape's own
 /// win, and on everything else these do.
-@MainActor public protocol UIElementWrapping: AnyObject {}
+public protocol UIElementWrapping: AnyObject {}
 
 extension UIElement: UIElementWrapping {}
 

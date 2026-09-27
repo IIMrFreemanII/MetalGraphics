@@ -4,14 +4,23 @@
 // `shot` saves the window at 1x, so a pixel in the screenshot is a point here: read a position
 // off the image and pass it straight to `click`.
 //
+// The window is the app's frontmost one, unless `--window SEL` (or `UIDRIVE_WINDOW=SEL`) picks
+// another: SEL is an index from `uidrive windows` (creation order), or a title. Events go to
+// whatever is on screen at the point, so raise a window with `activate --window SEL` before
+// clicking into it; `shot` captures it even behind others.
+//
 //   swiftc -O Tools/uidrive/main.swift -o <dir>/uidrive
 //
-//   uidrive activate                     bring the app to the front (hover needs the key window)
+//   uidrive windows                      list the app's windows: index, id, title, frame
+//   uidrive activate                     bring the app to the front (hover needs the key window);
+//                                        with --window, that window too
 //   uidrive bounds                       print the window id and frame
 //   uidrive move X Y
 //   uidrive click X Y [COUNT] [MODS]     COUNT 2 for a double click; MODS cmd|shift|alt|ctrl
 //   uidrive rightclick X Y
-//   uidrive drag X1 Y1 X2 Y2
+//   uidrive drag X1 Y1 X2 Y2 [STEPS [MS]]  press, STEPS moves (default 12) MS apart (default 16),
+//                                        and release: a slow drag gives the app time to react
+//                                        mid-drag, as a dock drag that opens a window does
 //   uidrive scroll X Y DX DY [STEPS]     wheel over X Y, DX DY points in STEPS events (default 10);
 //                                        positive DY moves content down, as a trackpad swipe down
 //   uidrive key TEXT                     types TEXT (letters, digits, space, return)
@@ -35,27 +44,72 @@ func fail(_ message: String) -> Never {
 
 struct Window {
   let id: CGWindowID
+  let title: String
   let frame: CGRect
 }
 
-/// The app's largest on-screen normal window.
-func findWindow() -> Window {
+/// `--window SEL` or `UIDRIVE_WINDOW`, taken off the arguments before the command is read.
+var windowSelector: String? = ProcessInfo.processInfo.environment["UIDRIVE_WINDOW"]
+
+/// The app's on-screen normal windows, frontmost first.
+func appWindows() -> [Window] {
   guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
     as? [[String: Any]]
   else { fail("cannot list windows") }
 
-  let windows = list.compactMap { info -> Window? in
+  return list.compactMap { info -> Window? in
     guard info[kCGWindowOwnerName as String] as? String == appName,
           info[kCGWindowLayer as String] as? Int == 0,
           let id = info[kCGWindowNumber as String] as? CGWindowID,
           let boundsDict = info[kCGWindowBounds as String] as? NSDictionary,
           let frame = CGRect(dictionaryRepresentation: boundsDict)
     else { return nil }
-    return Window(id: id, frame: frame)
+    return Window(id: id, title: info[kCGWindowName as String] as? String ?? "", frame: frame)
   }
-  guard let window = windows.max(by: { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height })
-  else { fail("\(appName) has no window on screen — is it running?") }
+}
+
+/// The windows in creation order: window ids only grow, so an index stays put while windows
+/// above it in the stack come and go.
+func windowsByCreation() -> [Window] {
+  appWindows().sorted { $0.id < $1.id }
+}
+
+/// The selected window, or the frontmost.
+func findWindow() -> Window {
+  let windows = appWindows()
+  guard !windows.isEmpty else { fail("\(appName) has no window on screen — is it running?") }
+  guard let selector = windowSelector else { return windows[0] }
+  let ordered = windowsByCreation()
+  if let index = Int(selector) {
+    guard ordered.indices.contains(index) else { fail("no window \(index); `uidrive windows` lists \(ordered.count)") }
+    return ordered[index]
+  }
+  guard let window = ordered.first(where: { $0.title == selector }) else { fail("no window titled '\(selector)'") }
   return window
+}
+
+/// Makes `window` the app's frontmost, through Accessibility: the AX window with its frame.
+func raise(_ window: Window, of app: NSRunningApplication) {
+  let element = AXUIElementCreateApplication(app.processIdentifier)
+  var value: CFTypeRef?
+  guard AXUIElementCopyAttributeValue(element, kAXWindowsAttribute as CFString, &value) == .success,
+        let axWindows = value as? [AXUIElement]
+  else { fail("cannot read the app's windows through Accessibility") }
+  for axWindow in axWindows {
+    var position: CFTypeRef?
+    var size: CFTypeRef?
+    AXUIElementCopyAttributeValue(axWindow, kAXPositionAttribute as CFString, &position)
+    AXUIElementCopyAttributeValue(axWindow, kAXSizeAttribute as CFString, &size)
+    var origin = CGPoint.zero
+    var extent = CGSize.zero
+    if let position { AXValueGetValue(position as! AXValue, .cgPoint, &origin) }
+    if let size { AXValueGetValue(size as! AXValue, .cgSize, &extent) }
+    if CGRect(origin: origin, size: extent) == window.frame {
+      AXUIElementPerformAction(axWindow, kAXRaiseAction as CFString)
+      return
+    }
+  }
+  fail("window \(window.id) not found through Accessibility")
 }
 
 func screenPoint(_ x: String, _ y: String) -> CGPoint {
@@ -132,16 +186,16 @@ func click(_ point: CGPoint, count: Int, right: Bool = false, flags: CGEventFlag
   }
 }
 
-func drag(from: CGPoint, to: CGPoint) {
+func drag(from: CGPoint, to: CGPoint, steps: Int = 12, ms: UInt32 = 16) {
   post(.mouseMoved, from)
   sleepMs()
   post(.leftMouseDown, from)
   sleepMs()
-  let steps = 12
+  let steps = max(steps, 1)
   for step in 1 ... steps {
     let t = CGFloat(step) / CGFloat(steps)
     post(.leftMouseDragged, CGPoint(x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t))
-    sleepMs(16)
+    sleepMs(ms)
   }
   post(.leftMouseUp, to)
 }
@@ -237,14 +291,28 @@ func shot(_ file: String, crop: [String]) {
 
 // MARK: - Main
 
-let arguments = CommandLine.arguments.dropFirst()
+var arguments = CommandLine.arguments.dropFirst()
+if arguments.first == "--window" {
+  arguments = arguments.dropFirst()
+  guard let selector = arguments.first else { fail("--window needs an index or a title") }
+  windowSelector = selector
+  arguments = arguments.dropFirst()
+}
 guard let command = arguments.first else { fail("usage: see the header of Tools/uidrive/main.swift") }
 let rest = Array(arguments.dropFirst())
 
 switch command {
+case "windows":
+  for (index, window) in windowsByCreation().enumerated() {
+    let f = window.frame
+    print("\(index) id \(window.id) '\(window.title)' x \(Int(f.minX)) y \(Int(f.minY)) w \(Int(f.width)) h \(Int(f.height))")
+  }
 case "activate":
   guard let app = NSWorkspace.shared.runningApplications.first(where: { $0.localizedName == appName })
   else { fail("\(appName) is not running") }
+  if windowSelector != nil {
+    raise(findWindow(), of: app)
+  }
   app.activate()
   sleepMs(300)
 case "bounds":
@@ -259,8 +327,11 @@ case "click" where rest.count >= 2:
         flags: modifierFlags(rest.dropFirst(count == nil ? 2 : 3)))
 case "rightclick" where rest.count == 2:
   click(screenPoint(rest[0], rest[1]), count: 1, right: true)
-case "drag" where rest.count == 4:
-  drag(from: screenPoint(rest[0], rest[1]), to: screenPoint(rest[2], rest[3]))
+case "drag" where (4 ... 6).contains(rest.count):
+  drag(
+    from: screenPoint(rest[0], rest[1]), to: screenPoint(rest[2], rest[3]),
+    steps: rest.count > 4 ? Int(rest[4]) ?? 12 : 12, ms: rest.count > 5 ? UInt32(rest[5]) ?? 16 : 16
+  )
 case "scroll" where rest.count == 4 || rest.count == 5:
   guard let dx = Int32(rest[2]), let dy = Int32(rest[3]) else { fail("DX and DY must be whole numbers") }
   scroll(at: screenPoint(rest[0], rest[1]), dx: dx, dy: dy, steps: rest.count == 5 ? Int(rest[4]) ?? 10 : 10)

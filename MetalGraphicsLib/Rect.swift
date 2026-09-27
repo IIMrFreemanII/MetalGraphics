@@ -1,4 +1,4 @@
-public struct Rect {
+public struct Rect: Sendable {
   var position: float2
   var size: float2
 

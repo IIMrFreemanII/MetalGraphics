@@ -24,7 +24,6 @@ import simd
 /// `sizeThatFits` may be called several times per layout pass with different proposals, and
 /// `placeSubviews` once, with the size the container settled on. A subview that is not placed
 /// sits in the middle at its ideal size.
-@MainActor
 public protocol Layout {
   associatedtype Cache = Void
 
@@ -51,7 +50,6 @@ extension Layout {
 }
 
 /// One child of a `LayoutView`, as its layout sees it.
-@MainActor
 public struct LayoutSubview {
   unowned let element: UIElement
   unowned let host: LayoutView
@@ -79,8 +77,7 @@ public struct LayoutSubview {
 }
 
 /// The children of a `LayoutView`, in order, those leaving left out. Indexing makes no copies.
-@MainActor
-public struct LayoutSubviews: @MainActor RandomAccessCollection {
+public struct LayoutSubviews: RandomAccessCollection {
   unowned let host: LayoutView
 
   public var startIndex: Int { 0 }
@@ -119,7 +116,6 @@ public struct AnyLayout: Layout {
 
 /// Holds a layout and its cache, and keeps the cache current: made on first use, updated once
 /// per layout pass.
-@MainActor
 class AnyLayoutBox {
   func sizeThatFits(_ proposal: ProposedSize, _ subviews: LayoutSubviews) -> float2 { .zero }
   func placeSubviews(_ bounds: ClipRect, _ proposal: ProposedSize, _ subviews: LayoutSubviews) {}

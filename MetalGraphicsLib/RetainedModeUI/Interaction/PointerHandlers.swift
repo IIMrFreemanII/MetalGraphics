@@ -3,7 +3,7 @@ import simd
 /// What a hittable element does with the pointer beyond tap, hover, press and drag: its pointer
 /// style, continuous hover, tap gesture and `.gesture`. Made only for an element that uses one,
 /// so the many that don't carry nothing extra.
-@MainActor public final class PointerHandlers {
+public final class PointerHandlers {
   public var pointerStyle: PointerStyle?
   /// Shown instead of `pointerStyle` while the element is pressed: a draggable's closed hand.
   var pressedPointerStyle: PointerStyle?
@@ -48,7 +48,7 @@ import simd
 /// An element that keeps `PointerHandlers`: a `HittableView` or a vector shape. The properties
 /// here are what `@Component` arms on mount and clears on unmount; clearing one never makes the
 /// storage.
-@MainActor public protocol PointerHandling: AnyObject {
+public protocol PointerHandling: AnyObject {
   var pointer: PointerHandlers? { get set }
 }
 

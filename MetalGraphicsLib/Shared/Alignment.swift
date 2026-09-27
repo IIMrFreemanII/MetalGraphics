@@ -1,3 +1,5 @@
+import Synchronization
+
 /// A kind of alignment guide of your own, as SwiftUI's `AlignmentID`: where it lies in an
 /// element unless the element says otherwise with `.alignmentGuide(_:computeValue:)`.
 ///
@@ -12,7 +14,7 @@ public protocol AlignmentID {
 }
 
 /// An element's size, as an alignment guide's `computeValue` sees it.
-public struct ViewDimensions {
+public struct ViewDimensions: Sendable {
   public let width: Float
   public let height: Float
 
@@ -97,7 +99,11 @@ public struct AlignmentKey: Hashable, @unchecked Sendable {
 
   /// Set once any element is given an explicit guide. Until then a fraction guide is always its
   /// default, and layout skips asking elements for it.
-  nonisolated(unsafe) static var anyExplicit = false
+  static var anyExplicit: Bool {
+    get { explicitGuides.load(ordering: .relaxed) }
+    set { explicitGuides.store(newValue, ordering: .relaxed) }
+  }
+  private static let explicitGuides = Atomic<Bool>(false)
 }
 
 public struct HorizontalAlignment : Sendable, Equatable {

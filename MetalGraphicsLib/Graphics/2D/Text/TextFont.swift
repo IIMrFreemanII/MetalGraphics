@@ -120,7 +120,7 @@ public struct TextFont: Hashable, Sendable {
   }
 
   /// The installed family or face named `name`, e.g. "Georgia" or "Avenir Next".
-  @MainActor public static func custom(_ name: String, size: Float) -> TextFont {
+  public static func custom(_ name: String, size: Float) -> TextFont {
     TextFont(face: .custom(FontManager.shared.font(named: name)), size: size)
   }
 

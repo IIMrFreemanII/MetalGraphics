@@ -13,5 +13,9 @@ struct ReactiveUIMacrosPlugin: CompilerPlugin {
   let providingMacros: [Macro.Type] = [
     StateMacro.self,
     ComponentMacro.self,
+    ModelMacro.self,
+    ModelTrackedMacro.self,
+    ModelIgnoredMacro.self,
+    BindableMacro.self,
   ]
 }

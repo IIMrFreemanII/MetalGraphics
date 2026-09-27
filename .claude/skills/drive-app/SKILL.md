@@ -7,8 +7,8 @@ description: Build, launch and drive the GPURayMarching macOS app with real clic
 
 The app is macOS-only and draws its UI with Metal, so there is no accessibility tree to query:
 you look at screenshots and act on window coordinates. `Tools/uidrive` posts real window-server
-events, which reach the app exactly like a user's (all input comes from `MyMTKView`'s `NSEvent`
-handlers — never GameController).
+events, which reach the app exactly like a user's (all input comes from `RetainedLayerView`'s
+`NSEvent` handlers — never GameController — and is applied on the window's own thread).
 
 Use a scratch directory for everything below (`$S`); nothing here belongs in the repo.
 
@@ -46,9 +46,49 @@ Then Read the PNG. Screenshots are saved at 1x, so **a pixel in the image is a w
 read a position off the image and pass it to `click`/`move` unchanged. A cropped shot is offset
 by its crop origin — add it back.
 
-Commands: `activate`, `bounds`, `move X Y`, `click X Y [COUNT]`, `rightclick X Y`,
-`drag X1 Y1 X2 Y2`, `scroll X Y DX DY [STEPS]`, `key TEXT`, `keycode CODE [cmd|shift|alt|ctrl ...]`, `shot FILE [X Y W H]`.
+Commands: `windows`, `activate`, `bounds`, `move X Y`, `click X Y [COUNT]`, `rightclick X Y`,
+`drag X1 Y1 X2 Y2 [STEPS [MS]]`, `scroll X Y DX DY [STEPS]`, `key TEXT`, `keycode CODE [cmd|shift|alt|ctrl ...]`, `shot FILE [X Y W H]`.
 The header of `Tools/uidrive/main.swift` documents each.
+
+### Several windows
+
+Commands act on the app's frontmost window. `--window SEL` before a command (or
+`UIDRIVE_WINDOW=SEL`) picks another: SEL is an index from `windows` (creation order, so it stays
+put as windows are raised) or a title.
+
+```bash
+$U keycode 45 cmd                  # ⌘N: another Demos window
+$U windows                         # 0 id 4220 'Demos' x … / 1 id 4231 'Demos' x …
+$U --window 1 activate             # raise it and make it key
+$U --window 1 click 48 521
+$U --window 0 shot "$S/w0.png"     # a window behind others is captured all the same
+```
+
+- Events go to whatever is on screen at the point, so raise a window with `--window N activate`
+  before clicking into it.
+- The first click on a window that isn't key only activates it, as in any macOS app.
+- Keys go to the key window.
+- ⌘W closes the key window.
+
+### Docking
+
+The Workspace window (⌘⇧D, or the Docking demo) holds dock panels; `docs/Docking.md` covers
+what a drag does.
+
+- `drag X1 Y1 X2 Y2 STEPS MS` drags slowly. A tear-out or a window drag crosses threads before
+  the window follows, so give it time: `40 40` works.
+- Tear a panel out by dragging its tab past the window's edge (a negative or too-large
+  coordinate). The new window appears in `windows` under the panel's title, or "N panels".
+- To dock a detached window, drag its tab (or, in the custom look, its title bar) onto a marker
+  of another window. Only this app's windows count, frontmost first, so raise the target with
+  `--window N activate` before raising the dragged one. A window listed in front of the target
+  at that point, such as Demos, takes the drop instead.
+- `uidrive shot` captures a window even when it is covered, but the markers are drawn only in the
+  window the pointer is over.
+- Indices from `windows` follow creation order. Detached windows are made at launch, so they
+  come first after a relaunch: list them again before acting.
+- The layout is saved in the app's sandbox container, which `defaults` cannot read; use Reset
+  layout on the Docking page to start over.
 
 ## Notes
 
@@ -77,5 +117,7 @@ The header of `Tools/uidrive/main.swift` documents each.
   (via `open`, so neither the app nor InjectionNext inherits the shell's sandbox). Save with a
   rename (`sed -i ''`, or write a temp file and `mv`); InjectionNext ignores in-place writes, and
   may miss the first save after launch. Look for `✅ Hot reload complete` then
-  `🔥 HotReload: rebuilding the UI tree` before taking the shot. The selected demo tab is restored
-  from `UIStorage`, so after a rebuild or relaunch the app opens on the last tab rather than Text.
+  `🔥 HotReload: rebuilding the UI tree in N window(s)` before taking the shot. Each window's
+  selected demo tab is restored from its scene storage. After a rebuild the window stays on its
+  tab; a new window, or a relaunch that restores no windows, opens on the last tab picked in any
+  window rather than Text.

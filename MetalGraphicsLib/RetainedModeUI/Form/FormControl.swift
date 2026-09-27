@@ -2,7 +2,6 @@ import simd
 
 /// How forms and their controls look: one place, like `TableMetrics`. SwiftUI's grouped form
 /// style on macOS, approximately.
-@MainActor
 public enum FormMetrics {
   /// Behind the whole form, and between its sections.
   public static let groupedBackground = float4(0.93, 0.93, 0.94, 1)

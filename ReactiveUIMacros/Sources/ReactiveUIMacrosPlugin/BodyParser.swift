@@ -10,9 +10,12 @@ struct BodyParser {
   /// Full declarations, not just names: resolving a list's generic argument needs the written
   /// type annotation of the `@State` its `items:` refers to.
   let stateProperties: [StateProperty]
+  /// The component's `@Bindable` models: reads of their properties are dependencies too.
+  var modelProperties: [ModelProperty] = []
   let context: any MacroExpansionContext
 
   var states: Set<String> { Set(stateProperties.map(\.name)) }
+  var models: Set<String> { Set(modelProperties.map(\.name)) }
 
   /// Finds the `@UIElementBuilder var body` member.
   static func findBody(in members: MemberBlockItemListSyntax) -> (decl: VariableDeclSyntax, statements: CodeBlockItemListSyntax)? {
@@ -100,7 +103,7 @@ struct BodyParser {
 
     switch condition.condition {
     case .expression(let expr):
-      let scanned = StateRewriter.scan(expr, states: states)
+      let scanned = StateRewriter.scan(expr, states: states, models: models)
       kind = .condition(scanned.expr)
       reads = scanned.reads
 
@@ -111,7 +114,7 @@ struct BodyParser {
       }
       // `if let x { … }` is shorthand for `if let x = x`.
       let value = binding.initializer?.value ?? "\(raw: name)"
-      let scanned = StateRewriter.scan(value, states: states)
+      let scanned = StateRewriter.scan(value, states: states, models: models)
       kind = .optional(name: name, value: scanned.expr)
       reads = scanned.reads
 
@@ -411,18 +414,18 @@ struct BodyParser {
       return nil
     }
 
-    let triggers = StateRewriter.scan(arguments[1].expression, states: states).reads
+    let triggers = StateRewriter.scan(arguments[1].expression, states: states, models: models).reads
     guard !triggers.isEmpty else {
       context.error(
         "F12",
         "'.animation(_:value:)' animates the changes a write to the states 'value:' reads makes, "
-          + "so 'value:' must read a @State property, e.g. 'value: self.isOn'.",
+          + "so 'value:' must read a @State property or a @Bindable model's, e.g. 'value: self.isOn'.",
         at: arguments[1].expression
       )
       return nil
     }
 
-    let (animation, reads) = StateRewriter.scan(arguments[0].expression, states: states)
+    let (animation, reads) = StateRewriter.scan(arguments[0].expression, states: states, models: models)
     return AnimationScope(
       upToLink: upToLink, animation: animation, triggers: triggers,
       constantField: Self.isConstant(animation, reads: reads)
@@ -638,18 +641,24 @@ struct BodyParser {
       current = base
     }
 
-    guard let root, root.hasPrefix("$"), states.contains(String(root.dropFirst())) else {
+    // A model is bound through one of its properties, `$model.count`: the model itself is a
+    // reference, and a `let`.
+    guard let root, root.hasPrefix("$"),
+          case let name = String(root.dropFirst()),
+          states.contains(name) || (models.contains(name) && !members.isEmpty)
+    else {
       let argument = label.map { "'\($0):'" } ?? "this argument"
       context.error(
         "F14",
         "\(argument) is a binding, lowered at compile time: write '$<state>' for a @State property "
-          + "(or a member of one, '$<state>.<member>'), or '.constant(<value>)'.",
+          + "(or a member of one, '$<state>.<member>'), '$<model>.<property>' for a @Bindable model's "
+          + "property, or '.constant(<value>)'.",
         at: expr
       )
       return nil
     }
 
-    let path = (["self", String(root.dropFirst())] + members).joined(separator: ".")
+    let path = (["self", name] + members).joined(separator: ".")
     return ("\(raw: path)", BoundHandler(property: spec.property, closure: "{ \(raw: path) = $0 }", adapter: spec.adapter))
   }
 
@@ -666,7 +675,7 @@ struct BodyParser {
       guard let argSpec = spec.spec(forLabel: label, position: position), let setter = argSpec.setter
       else { continue }
 
-      let (rewritten, reads) = StateRewriter.scan(argument.expression, states: states)
+      let (rewritten, reads) = StateRewriter.scan(argument.expression, states: states, models: models)
       if !reads.isEmpty {
         bound.append(BoundArg(
           setter: setter, value: rewritten, reads: reads,
@@ -693,7 +702,7 @@ struct BodyParser {
         guard let argSpec = argSetters.first(where: { $0.label == label }), let setter = argSpec.setter else {
           return nil
         }
-        let (rewritten, reads) = StateRewriter.scan(argument.expression, states: states)
+        let (rewritten, reads) = StateRewriter.scan(argument.expression, states: states, models: models)
         guard !reads.isEmpty else { return nil }
         return BoundArg(setter: setter, value: rewritten, reads: reads, animatable: argSpec.animatable)
       }
@@ -708,7 +717,7 @@ struct BodyParser {
     var rewritten: [ExprSyntax] = []
     var reads: Set<String> = []
     for argument in arguments {
-      let (expr, found) = StateRewriter.scan(argument.expression, states: states)
+      let (expr, found) = StateRewriter.scan(argument.expression, states: states, models: models)
       rewritten.append(expr)
       reads.formUnion(found)
     }

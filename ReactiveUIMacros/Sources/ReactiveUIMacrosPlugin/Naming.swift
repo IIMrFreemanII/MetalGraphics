@@ -84,6 +84,23 @@ enum Naming {
   static let armHandlers = "__armHandlers"
   static let disarmHandlers = "__disarmHandlers"
 
+  /// `@Model`'s per-property subscriber list, and the list for reads of any property.
+  static func modelObservers(_ property: String) -> String { "__observers_\(property)" }
+  static let modelObserversAny = "__observers_any"
+  /// `@Model`'s lock around its tracked storage: windows read and write it from their own
+  /// threads. A `ModelLock`, from MetalGraphicsLib.
+  static let modelLock = "__lock"
+
+  /// Marker protocol for `@Model`, declared in ReactiveUI.
+  static let modelProtocol = "ReactiveModel"
+
+  /// A component's update method for one model property its body reads, `self.model.count`.
+  /// Keyed apart from `update(_:)`, which a `@State` named `model_count` would otherwise share.
+  static func modelUpdate(_ model: String, _ member: String) -> String { "__modelUpdate_\(model)_\(member)" }
+  static let subscribeModels = "__subscribeModels"
+  static let unsubscribeModels = "__unsubscribeModels"
+  static let refreshModels = "__refreshModels"
+
   /// The component's captured `UIContext`, and the remount replay flag.
   static let context = "__context"
   static let needsRefresh = "__needsRefresh"

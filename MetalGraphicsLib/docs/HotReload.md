@@ -5,14 +5,28 @@ here is `#if DEBUG` (see `MetalGraphicsLib/HotReload/`). Release is unaffected.
 
 | You edit | What happens | Measured |
 |---|---|---|
-| Swift in `GPURayMarching/` or `MetalGraphicsLib/` | InjectionNext recompiles the file, rebinds its functions and patches the class vtables. `ViewRenderer.hotReload()` then rebuilds the UI tree. | 0.4–1 s |
-| `MetalGraphicsLib/Shaders/*.metal`, `*.h` | `ShaderReloader` recompiles the Metal library and swaps `Graphics2D`'s pipelines. | 0.8–2 s |
-| `ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/*` | `MacroReloader` rebuilds the plugin, puts it where Xcode's compile commands load it, and re-injects every `@Component` file. The UI rebuilds once at the end. | ~8 s + ~1 s per component file |
+| Swift in `GPURayMarching/` or `MetalGraphicsLib/` | InjectionNext recompiles the file, rebinds its functions and patches the class vtables. Every window's `ViewRenderer.hotReload()` then rebuilds its UI tree, on the window's own thread. | 0.4–1 s |
+| `MetalGraphicsLib/Shaders/*.metal`, `*.h` | `ShaderReloader` recompiles and loads the Metal library once, then each window's `Graphics2D` builds its pipelines from it on the window's thread. | 0.8–2 s |
+| `ReactiveUIMacros/Sources/ReactiveUIMacrosPlugin/*` | `MacroReloader` rebuilds the plugin, puts it where Xcode's compile commands load it, and re-injects every `@Component` and `@Model` file. The UI rebuilds once at the end. | ~8 s + ~1 s per component file |
 
-After a rebuild, the app reopens on the screen you were on. Components read their navigation
-state from `UIStorage`, a store backed by `UserDefaults`, similar to SwiftUI's `@SceneStorage`.
-`Demos` keeps the selected demo there, so it also survives a relaunch. Anything not stored
-there, such as scroll offsets or text field contents, resets.
+Every window registers its `WindowHandle` in `WindowRegistry` when its view is made and leaves
+when it closes. A reload posts to every live one, so all open windows update together, each on
+its own thread (see `Threading.md`). InjectionNext patches code on the main thread while window
+threads may be mid-frame; a frame running the old code as it is replaced is a debug-only risk,
+and in practice the rebuild that follows replaces the tree.
+
+After a rebuild, each window reopens on the screen it was on. `Demos` keeps the selected demo in
+its window's `UISceneStorage` (`WindowScene.storage`), which is like SwiftUI's `@SceneStorage`:
+- Hot reload runs the root again with the same `WindowScene`, so each window gets its own tab back.
+- A new window starts on the tab last picked in any window (`UIStorage`, backed by `UserDefaults`).
+- A relaunch restores each window's tab along with the window. This needs macOS to restore
+  windows: with "Close windows when quitting an application" on (the default), no window is
+  restored, and the app opens one new window.
+
+Anything not stored there, such as scroll offsets or text field contents, resets. `@Model`
+instances are not part of the tree, so they survive a hot reload with their values. Adding a
+stored property to a `@Model`, or a `@Bindable` to a component, changes the class layout, so it
+needs a relaunch.
 
 ## Setup
 
@@ -81,7 +95,7 @@ a clean build. Alternatively, pass the argument explicitly.
 ## How it fits the frame loop
 
 Nothing runs per frame. FSEvents and the injection socket wait on background threads, and
-compiling happens off the main thread. The main thread does one thing per reload: it either
+compiling happens off the main thread. Per reload, each window's thread does one thing: it either
 swaps the pipelines and invalidates `.render`, or it rebuilds the tree with `setChild`, which
 invalidates `[.layout, .treeOrder]`. A macro reload's burst of injections produces a single
 rebuild. When nothing changes, the app stays idle.

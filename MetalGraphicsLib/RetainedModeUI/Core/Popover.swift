@@ -1,7 +1,7 @@
 import simd
 
 /// A popover on screen, for dismissing it. See `UIContext.presentPopover`.
-@MainActor public final class PopoverHandle {
+public final class PopoverHandle {
   fileprivate weak var layer: PopoverLayer?
 
   /// True until it has finished animating out.

@@ -34,18 +34,18 @@ public struct TableColumn<T> {
   public var alignment: HorizontalAlignment = .leading
   /// What sorting by this column sorts by; nil when the column does not sort.
   public let comparator: KeyPathComparator<T>?
-  let content: @MainActor (T) -> UIElement
+  let content: (T) -> UIElement
 
   /// A column of text read from each row, sorting by it.
   public init(_ title: String, value: KeyPath<T, String> & Sendable) {
     self.title = title
     self.comparator = KeyPathComparator(value)
-    self.content = { @MainActor item in Text(item[keyPath: value]).font(TableMetrics.cellFont) }
+    self.content = { item in Text(item[keyPath: value]).font(TableMetrics.cellFont) }
   }
 
   /// A column of cells made by `content`, sorting by `value`.
   public init<V: Comparable>(
-    _ title: String, value: KeyPath<T, V> & Sendable, content: @escaping @MainActor (T) -> UIElement
+    _ title: String, value: KeyPath<T, V> & Sendable, content: @escaping (T) -> UIElement
   ) {
     self.title = title
     self.comparator = KeyPathComparator(value)
@@ -53,7 +53,7 @@ public struct TableColumn<T> {
   }
 
   /// A column of cells made by `content`, which does not sort.
-  public init(_ title: String, content: @escaping @MainActor (T) -> UIElement) {
+  public init(_ title: String, content: @escaping (T) -> UIElement) {
     self.title = title
     self.comparator = nil
     self.content = content
@@ -96,7 +96,6 @@ public enum TableColumnBuilder<T> {
 ///
 /// Widths depend only on the width offered and on what was resized, so every row asks for them
 /// with its own proposal and all but the first get the answer memoised: O(1) per row.
-@MainActor
 final class TableColumnLayout {
   let specs: [TableColumnWidth]
   /// Widths set by dragging a header divider; nil for a column never resized.

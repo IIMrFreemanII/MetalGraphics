@@ -1,109 +1,27 @@
 import MetalKit
-import Combine
-import SwiftUI
 
-@MainActor open class ViewRenderer: NSObject, ObservableObject {
-  public var metalView: MTKView!
-  public var input: Input!
+/// A window's frame state: its input, its `UIContext` and its `Graphics2D`, sized to the view.
+/// Lives on the window's thread, like everything it holds. See `RootViewRenderer`.
+open class ViewRenderer: NSObject {
+  public let input = Input()
   public var graphics2D: Graphics2D?
   public let uiContext: UIContext = .init()
-  @Published public var windowSize = float2() {
-    didSet { self.cachedWindowSize = self.windowSize }
-  }
-  /// `windowSize`, read without `@Published`: its getter is a generic key-path access that costs
-  /// more than the draw call reading it, and every renderable reads it every frame.
-  public private(set) var cachedWindowSize = float2()
-  @Published public var mousePosition = float2()
-  @Published public var temp = float2(1, 2)
-
-  public var clearColor = MTLClearColor(
-    red: 0.93,
-    green: 0.97,
-    blue: 1.0,
-    alpha: 1.0
-  )
+  /// The view's size in points: what the next frame lays out in.
+  public private(set) var windowSize = float2()
 
   private var lastTime: Double = CFAbsoluteTimeGetCurrent()
   public var deltaTime: Float = 0
   public var time: Float = 0
-  
-  public var navigationView: some View {
-    List {
-      SwiftUI.Text("Navigation")
-        .font(.title)
-    }
-  }
-  
-  public var inspectorView: some View {
-    SwiftUI.HStack(spacing: 0) {
-      SwiftUI.VStack(alignment: .leading) {
-        SwiftUI.Text("Inspector")
-          .font(.title)
-        SwiftUI.Divider()
-        SwiftUI.Text("Window size: \(String(describing: self.windowSize).split(separator: ">").last!)")
-        SwiftUI.Divider()
-        Number2Field(label: "Position:", value: SwiftUI.Binding(get: {self.temp}, set: { self.temp = $0 }))
-        SwiftUI.Divider()
-        SwiftUI.Text("Mouse position: \(String(describing: self.mousePosition).split(separator: ">").last!)")
-        SwiftUI.Spacer()
-      }
-      SwiftUI.Spacer()
-    }
-    .frame(minWidth: 200)
-  }
 
   public func updateTime() {
     let currentTime = CFAbsoluteTimeGetCurrent()
     self.deltaTime = Float(currentTime - self.lastTime)
     self.time += self.deltaTime
     self.lastTime = currentTime
-
-//    Time.deltaTime = self.deltaTime
-//    Time.time = self.time
-
-//    Time.cursorTime += self.deltaTime
-//    Time.cursorSinBlinking = sin(Time.cursorTime * 5)
   }
 
   override public init() {
     super.init()
-  }
-
-  public func initialize(metalView: MyMTKView) {
-    self.metalView = metalView
-    self.input = metalView.input
-    self.metalView.device = GPUDevice.main
-    self.metalView.delegate = self
-    self.metalView.clearColor = self.clearColor
-//    self.metalView.depthStencilPixelFormat = .depth32Float
-    self.metalView.framebufferOnly = false
-
-//    self.metalView.addTrackingArea(
-//      NSTrackingArea(
-//        rect: metalView.frame,
-//        options: [.activeInActiveApp, .mouseMoved],
-//        owner: self.metalView
-//      )
-//    )
-
-    mtkView(
-      metalView,
-      drawableSizeWillChange: metalView.drawableSize
-    )
-
-    self.start()
-
-    // `start()` is where a subclass creates its `Graphics2D`, so the sizing pass above ran
-    // while `graphics2D` was still nil and skipped the render grid entirely. Without this the
-    // grid keeps the 10x10 default from its `lazy` initializer — a 500x500 box around the
-    // origin — while the window is much larger, so every shape outside that box maps to no
-    // cell and the compute pass rasterizes nothing. The result was a blank first frame that
-    // stayed blank until a window resize happened to run this code again.
-    self.resizeRenderGrid(for: self.input.windowSize)
-
-#if DEBUG
-    HotReload.start(renderer: self)
-#endif
   }
 
   open func start() {}
@@ -111,32 +29,17 @@ import SwiftUI
   /// Called after InjectionNext injects edited Swift code (Debug only). The retained tree was
   /// built by the old code, so a subclass rebuilds it here for the new code to take effect.
   open func hotReload() {}
-}
 
-extension ViewRenderer: MTKViewDelegate {
-  open func mtkView(
-    _ view: MTKView,
-    drawableSizeWillChange size: CGSize
-  ) {
-//    let contentScale = Float(view.layer!.contentsScale)
-
-    let width = Float(view.frame.width)
-    let height = Float(view.frame.height)
-
-//    let resolution = float2(Float(size.width), Float(size.height))
-    let windowSize = float2(width, height)
-    DispatchQueue.main.async {
-      self.windowSize = windowSize
-    }
-    self.input.windowSize = windowSize
-
-    self.uiContext.resizeHitGrid(for: windowSize)
-    self.resizeRenderGrid(for: windowSize)
+  /// The view is now `size` points.
+  open func resize(to size: float2) {
+    self.windowSize = size
+    self.input.windowSize = size
+    self.uiContext.resizeHitGrid(for: size)
+    self.resizeRenderGrid(for: size)
   }
 
   /// The render grid covers the window in cells of a fixed size, so a new window size means a
-  /// new cell count. Split out of `mtkView(_:drawableSizeWillChange:)` because it also has to be
-  /// sized once more after `start()`, when `graphics2D` first exists.
+  /// new cell count. Also run once more after `start()`, when `graphics2D` first exists.
   func resizeRenderGrid(for windowSize: float2) {
     guard let graphics2D = self.graphics2D else { return }
 
@@ -155,9 +58,52 @@ extension ViewRenderer: MTKViewDelegate {
       )
     }
   }
+}
 
-  open func draw(in _: MTKView) {
-//    self.mousePosition = input.mousePositionFromCenter
-    self.updateTime()
+/// Every open window, weakly, by its handle: what hot reload rebuilds and what a shader reload
+/// swaps pipelines in, each on the window's own thread. A window joins when its view is made and
+/// leaves when it closes.
+@MainActor public enum WindowRegistry {
+  private struct Entry {
+    weak var handle: WindowHandle?
+    weak var view: RetainedLayerView?
+  }
+
+  private static var entries: [Entry] = []
+  private static var observesTermination = false
+
+  public static var live: [WindowHandle] {
+    entries.compactMap(\.handle)
+  }
+
+  /// The view showing the window `handle` runs, while it is open.
+  static func view(for handle: WindowHandle) -> RetainedLayerView? {
+    entries.first { $0.handle === handle }?.view
+  }
+
+  public static func add(_ handle: WindowHandle, view: RetainedLayerView? = nil) {
+    entries.removeAll { $0.handle == nil || $0.handle === handle }
+    entries.append(Entry(handle: handle, view: view))
+    if !observesTermination {
+      observesTermination = true
+      // Each window unmounts on its own thread, and the app waits a moment for them.
+      NotificationCenter.default.addObserver(
+        forName: NSApplication.willTerminateNotification, object: nil, queue: .main
+      ) { _ in
+        MainActor.assumeIsolated {
+          let handles = WindowRegistry.live
+          handles.forEach { $0.close() }
+          for handle in handles {
+            handle.thread.waitUntilFinished(timeout: 0.5)
+          }
+          // After the trees unmounted: panels save their last values as they go.
+          DockSpace.saveAllNow()
+        }
+      }
+    }
+  }
+
+  public static func remove(_ handle: WindowHandle) {
+    entries.removeAll { $0.handle == nil || $0.handle === handle }
   }
 }

@@ -5,7 +5,7 @@ import simd
 
 /// A retained-mode UI tree running headlessly: no window, no view, no display link.
 ///
-/// It runs the app's frame (`TestViewRenderer.draw(in:)`) by hand: `step()` feeds whatever
+/// It runs the app's frame (`RootViewRenderer.frame(drawable:)`) by hand: `step()` feeds whatever
 /// input the helpers set into `UIContext.update`, and renders into an offscreen texture when
 /// the context needs it. Time is a fake clock that only moves when a step moves it, so
 /// animations land on exact values.
@@ -13,13 +13,14 @@ import simd
 ///     let h = UIHarness(size: float2(320, 240)) { Button("Save") { saved += 1 } }
 ///     h.click(at: float2(160, 120))
 ///     XCTAssertEqual(saved, 1)
-@MainActor
+///
+/// Like a window's tree, it belongs to the thread that made it: the main thread for most tests,
+/// a `WindowThread` for the ones about windows on threads of their own.
 final class UIHarness {
-  let renderer: ViewRenderer
+  let context = UIContext()
+  let input = Input()
   let graphics: Graphics2D
   let root = Frame(float2())
-  var context: UIContext { self.renderer.uiContext }
-  var input: Input { self.renderer.input }
 
   /// Seconds on the fake clock; starts at 0.
   private(set) var now: Double = 0
@@ -34,23 +35,18 @@ final class UIHarness {
     self.size = size
     self.pixelsPerPoint = pixelsPerPoint
 
-    let renderer = ViewRenderer()
-    renderer.input = Input()
-    renderer.windowSize = size
-    renderer.input.windowSize = size
-    self.renderer = renderer
-    self.graphics = Graphics2D(renderer: renderer)
-    renderer.graphics2D = self.graphics
+    self.input.windowSize = size
+    self.graphics = Graphics2D()
     self.target = Graphics2D.makeOffscreenTarget(size: size, pixelsPerPoint: pixelsPerPoint)
 
-    // Parked far away, as `MyMTKView.mouseExited` does, so nothing starts hovered.
+    // Parked far away, as `RetainedLayerView.mouseExited` does, so nothing starts hovered.
     let outside = float2(repeating: -1_000_000)
-    renderer.input.mousePosition = outside
-    renderer.input.prevMousePosition = outside
+    self.input.mousePosition = outside
+    self.input.prevMousePosition = outside
 
-    self.renderer.uiContext.clock = { [unowned self] in self.now }
+    self.context.clock = { [unowned self] in self.now }
     self.root.mounted = true
-    self.root.setChild(tree(), self.renderer.uiContext)
+    self.root.setChild(tree(), self.context)
     self.step()
   }
 
@@ -92,10 +88,10 @@ final class UIHarness {
 
   private func draw() {
     self.renders += 1
-    // `Graphics2D.endFrame` ends the input frame too, as in the app.
     self.graphics.render(into: self.target, pixelsPerPoint: self.pixelsPerPoint) { _ in
       self.context.render(root: self.root, self.graphics)
     }
+    self.input.endFrame()
   }
 
   // MARK: - Mouse
@@ -134,7 +130,7 @@ final class UIHarness {
     self.click(at: point, count: 2)
   }
 
-  /// The pointer leaving the window, as `MyMTKView.mouseExited` reports it.
+  /// The pointer leaving the window, as `RetainedLayerView.mouseExited` reports it.
   func mouseExit() {
     let input = self.input
     let outside = float2(repeating: -1_000_000)

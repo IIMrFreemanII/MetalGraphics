@@ -61,7 +61,6 @@ public enum AnimatedProperty: UInt8, Sendable {
 ///
 /// The element's property is the *presented* value and `@State` is the model, so a retarget
 /// mid-flight simply starts from wherever the element is now.
-@MainActor
 public final class Animator {
   struct Key: Hashable {
     let element: ObjectIdentifier

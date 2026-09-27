@@ -1,4 +1,4 @@
-@MainActor public class Background : UIRenderableElement {
+public class Background : UIRenderableElement {
   public var position: SIMD2<Float> = .init()
   public var size: SIMD2<Float> = .init()
   public var color: SIMD4<Float> = .black
@@ -102,7 +102,7 @@ public struct GlassMaterial: Equatable, Sendable {
 /// Glass stacks: a panel above another shows the lower one frosted, since each panel's backdrop
 /// is rendered, lowest first, in a pass of its own before the frame. See
 /// `Graphics2D.draw(glass:...)` for the cost, which grows with the panels' area, not the blur.
-@MainActor public class GlassBackground : Background {
+public class GlassBackground : Background {
   public var material: GlassMaterial = .regular
 
   public init(_ material: GlassMaterial = .regular, in shape: UIShape = .rect, @UIElementBuilder content: () -> [UIElement] = { [] }) {

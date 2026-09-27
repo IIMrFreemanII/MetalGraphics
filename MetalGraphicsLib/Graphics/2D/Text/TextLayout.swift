@@ -1,7 +1,7 @@
 import CoreText
 import Foundation
 
-public struct TextStyle {
+public struct TextStyle: Sendable {
   public var color: float4
   public var fontSize: Float
   /// nil is the system font.
@@ -127,7 +127,7 @@ struct TextParagraph: Equatable {
 /// Shapes `text` with CoreText (kerning, ligatures, combining marks, font fallback) and wraps it
 /// at words to fit `maxSize.x`. Lines that would not fit in `maxSize.y` are dropped — all but the
 /// first when `keepsFirstLine` is set.
-@MainActor public func layoutText(
+public func layoutText(
   _ text: String, style: TextStyle = TextStyle(), maxSize: float2? = nil, keepsFirstLine: Bool = false
 ) -> TextLayout {
   layoutText(
@@ -142,7 +142,7 @@ struct TextParagraph: Equatable {
 /// last line kept ends in an ellipsis (or starts with, or has one in the middle, by
 /// `paragraph.truncation`). Then, if `minimumScaleFactor` allows it, the fonts shrink until it
 /// all fits, or as far as allowed.
-@MainActor func layoutText(
+func layoutText(
   runs: [TextRunInput], paragraph: TextParagraph, maxSize: float2?, keepsFirstLine: Bool
 ) -> TextLayout {
   let maxSize = maxSize ?? float2(repeating: .greatestFiniteMagnitude)
@@ -169,14 +169,14 @@ struct TextParagraph: Equatable {
   return fitting
 }
 
-@MainActor public func measureText(_ text: String, style: TextStyle = TextStyle(), maxSize: float2? = nil) -> float2 {
+public func measureText(_ text: String, style: TextStyle = TextStyle(), maxSize: float2? = nil) -> float2 {
   layoutText(text, style: style, maxSize: maxSize).size
 }
 
 /// Where a caret goes in `text` set on one line: before each character, then after the last —
 /// `text.count + 1` offsets from the leading edge, in points. One CoreText line, so it costs one
 /// shaping however many offsets are read. Unlike `measureText`, trailing spaces count.
-@MainActor public func caretOffsets(_ text: String, font: TextFont) -> [Float] {
+public func caretOffsets(_ text: String, font: TextFont) -> [Float] {
   var offsets: [Float] = [0]
   guard !text.isEmpty, font.size > 0, font.size.isFinite else { return offsets }
   offsets.reserveCapacity(text.count + 1)
@@ -191,7 +191,7 @@ struct TextParagraph: Equatable {
   return offsets
 }
 
-@MainActor public func caretOffsets(_ text: String, style: TextStyle = TextStyle()) -> [Float] {
+public func caretOffsets(_ text: String, style: TextStyle = TextStyle()) -> [Float] {
   caretOffsets(text, font: style.textFont)
 }
 
@@ -205,7 +205,7 @@ private func scaledSize(_ size: Float, _ scale: Float) -> Float {
   scale == 1 ? size : (size * scale * 4).rounded(.down) / 4
 }
 
-@MainActor private func shapeParagraph(
+private func shapeParagraph(
   _ runs: [TextRunInput], _ paragraph: TextParagraph, _ maxSize: float2, _ keepsFirstLine: Bool, scale: Float
 ) -> TextLayout {
   var layout = TextLayout(fontScale: scale)
@@ -297,7 +297,7 @@ private func scaledSize(_ size: Float, _ scale: Float) -> Float {
 }
 
 /// The state of shaping one paragraph: its string, typesetter and faces.
-@MainActor private struct ParagraphShaper {
+private struct ParagraphShaper {
   let runs: [TextRunInput]
   let faces: [ResolvedFace]
   let string: NSAttributedString

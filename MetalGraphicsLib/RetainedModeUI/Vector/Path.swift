@@ -27,6 +27,8 @@ public final class Path: VectorShape {
   private var geometry = VectorGeometry([], closing: true, tolerance: 1)
   private var geometryStyle: Style? = nil
   private var slot: SDFSlot? = nil
+  /// The window's baker `slot` is a tile of.
+  private weak var baker: VectorBaker? = nil
   private var region: BakedRegion? = nil
   /// The resolution asked for at the last bake, in texels per local unit.
   private var bakedTexelsPerUnit: Float = 0
@@ -75,7 +77,7 @@ public final class Path: VectorShape {
   public override func unmount(_ context: UIContext) {
     super.unmount(context)
     if let slot = self.slot {
-      VectorBaker.shared.free(slot)
+      self.baker?.free(slot)
       self.slot = nil
       self.region = nil
     }
@@ -132,7 +134,7 @@ public final class Path: VectorShape {
 
   // MARK: - Drawing
 
-  override func prepare(pointsPerUnit: Float, pixelsPerUnit: Float) -> Bool {
+  override func prepare(pointsPerUnit: Float, pixelsPerUnit: Float, baker: VectorBaker) -> Bool {
     // A little over one texel per pixel, in steps of √2, so a path growing or shrinking on
     // screen re-bakes only when it crosses a step.
     let wanted = min(max(pixelsPerUnit * 1.1, 1e-3), 1e4)
@@ -155,7 +157,8 @@ public final class Path: VectorShape {
     if self.region == nil || halfWidth > self.bakedHalfWidth {
       // Room for the stroke to grow a little without baking again.
       let reach = self.style == .stroke ? halfWidth * 1.25 : 0
-      self.region = VectorBaker.shared.bake(
+      self.baker = baker
+      self.region = baker.bake(
         self.geometry.segments,
         mode: self.style == .stroke ? .stroke : .fillNonZero,
         totalLength: self.geometry.totalLength,
