@@ -212,7 +212,7 @@ final class DockingDemo : SingleChildElement {
           Button("Native look") { Workspace.space.setWindowStyle(.native) }.buttonStyle(.bordered)
           Button("Custom look") { Workspace.space.setWindowStyle(.custom) }.buttonStyle(.bordered)
         }
-        Text("The custom look draws its own title bar: drag it to move the window, and dock it.")
+        Text("Drag either look's title bar to move the window, and dock it. The custom look draws its own.")
       }
       Section {
         Button("Reset layout") { Workspace.space.reset() }

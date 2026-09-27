@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 @testable import MetalGraphicsLib
 import simd
@@ -399,6 +400,39 @@ final class DockWindowsTests: XCTestCase {
       return window.value.all(DockTabsView.self).filter(\.mounted).count
     }
     XCTAssertEqual(left, 0)
+  }
+}
+
+// A detached window's native title bar: a press on it, off its buttons, drags the window through
+// `DockWindows`, and so docks it.
+@MainActor
+final class DockWindowTitleBarTests: XCTestCase {
+  func testANativeTitleBarPressHoldsTheWindow() {
+    let window = DockWindow(space: makeSpace(), host: "w", handle: WindowHandle(threadlessNamed: "test"))
+    defer { window.close() }
+    window.apply(.native)
+    XCTAssertFalse(window.isMovable)
+    let content = window.contentLayoutRect
+    let titleBar = window.frame.height - content.maxY
+    XCTAssertGreaterThan(titleBar, 0)
+
+    // In the title bar, above the content: held from the content's top left, y up is negative.
+    let grab = window.titleBarGrab(at: NSPoint(x: 150, y: content.maxY + titleBar / 2))
+    XCTAssertEqual(grab?.x, Float(150 - content.minX))
+    XCTAssertEqual(grab.map { Double($0.y) } ?? 0, -Double(titleBar / 2), accuracy: 0.001)
+    // The content is the area's.
+    XCTAssertNil(window.titleBarGrab(at: NSPoint(x: 150, y: content.midY)))
+    // The traffic lights keep their clicks.
+    let close = window.standardWindowButton(.closeButton)!
+    let center = close.convert(NSPoint(x: close.bounds.midX, y: close.bounds.midY), to: nil)
+    XCTAssertNil(window.titleBarGrab(at: center))
+  }
+
+  func testTheCustomLooksTitleBarIsTheAreas() {
+    let window = DockWindow(space: makeSpace(), host: "w", handle: WindowHandle(threadlessNamed: "test"))
+    defer { window.close() }
+    window.apply(.custom)
+    XCTAssertNil(window.titleBarGrab(at: NSPoint(x: 150, y: window.frame.height - 10)))
   }
 }
 
