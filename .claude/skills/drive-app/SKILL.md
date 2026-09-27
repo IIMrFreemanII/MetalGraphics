@@ -1,9 +1,9 @@
 ---
 name: drive-app
-description: Build, launch and drive the GPURayMarching macOS app with real clicks, hovers and key presses, then screenshot it. Slow (seconds per click and shot) and it takes over the mouse, so prefer the ui-tests skill (headless, seconds per suite) for checking layout, input, focus, animation and rendering logic. Use this for what the headless tests cannot see: real NSEvent input, windowing and resizing, hot reload, frame pacing and idle CPU, the @Component demos, a final end-to-end check of a finished feature, or when asked to run or screenshot the app.
+description: Build, launch and drive the Demo macOS app with real clicks, hovers and key presses, then screenshot it. Slow (seconds per click and shot) and it takes over the mouse, so prefer the ui-tests skill (headless, seconds per suite) for checking layout, input, focus, animation and rendering logic. Use this for what the headless tests cannot see: real NSEvent input, windowing and resizing, hot reload, frame pacing and idle CPU, the @Component demos, a final end-to-end check of a finished feature, or when asked to run or screenshot the app.
 ---
 
-# Driving GPURayMarching
+# Driving Demo
 
 The app is macOS-only and draws its UI with Metal, so there is no accessibility tree to query:
 you look at screenshots and act on window coordinates. `Tools/uidrive` posts real window-server
@@ -15,27 +15,30 @@ Use a scratch directory for everything below (`$S`); nothing here belongs in the
 ## 1. Build and launch
 
 ```bash
-xcodebuild -project MetalGraphics.xcodeproj -scheme GPURayMarching -configuration Debug \
-  -destination 'platform=macOS' -derivedDataPath "$S/dd" build 2>&1 | grep -E "error:|BUILD"
-pkill -x GPURayMarching
-(NSUnbufferedIO=YES "$S/dd/Build/Products/Debug/GPURayMarching.app/Contents/MacOS/GPURayMarching" > "$S/run.log" 2>&1 &)
+swift build --product Demo 2>&1 | grep -E "error:|Compiling|Build complete"
+pkill -x Demo
+(NSUnbufferedIO=YES .build/debug/Demo > "$S/run.log" 2>&1 &)
 sleep 3
 ```
+
+The app is a bare executable, not an `.app` bundle: `UserDefaults` and `UIStorage` live in the
+`Demo` preferences domain, and its window-server owner name is `Demo`. For Release, use
+`swift build -c release --product Demo` and `.build/release/Demo`.
 
 `NSUnbufferedIO=YES` makes `print` reach the log immediately; without it stdout is block
 buffered and log timestamps are useless for timing. Never truncate the log while the app runs
 (it keeps writing at its old offset and the file fills with NULs) — count lines instead.
 
-## 2. Compile the driver
+## 2. Build the driver
 
 ```bash
-swiftc -O Tools/uidrive/main.swift -o "$S/uidrive"
+swift build -c release --product uidrive
 ```
 
 ## 3. Drive and look
 
 ```bash
-U="$S/uidrive"
+U=.build/release/uidrive
 $U activate                 # hover tracking needs the key window: do this first
 $U shot "$S/a.png"          # whole window, at 1x
 $U click 451 65             # coordinates read straight off that screenshot
@@ -108,14 +111,14 @@ what a drag does.
   nothing and `bounds` works, that permission is the first thing to check.
 - In zsh, a glob that matches nothing aborts the whole line. Don't start a script with
   `rm $S/shot_*.png`; use `rm -f` on explicit names or `find -delete`.
-- Hot reload (`MetalGraphicsLib/docs/HotReload.md`): with a Debug build running, saving a file in
-  `MetalGraphicsLib/Shaders/` recompiles and swaps the shaders in ~1 s (watch `$S/run.log` for
+- Hot reload (`docs/HotReload.md`): with a Debug build running, saving a file in
+  `Sources/MetalGraphicsLib/Shaders/` recompiles and swaps the shaders in ~1 s (watch `$S/run.log` for
   `🔥 HotReload: shaders reloaded`), so a shader tweak needs no rebuild or relaunch — edit, wait,
   `shot`. Swift and macro edits reload too when InjectionNext is running, but only for a build in
-  the *default* DerivedData (InjectionNext reads its build logs): build without
-  `-derivedDataPath`, and launch with
-  `open -n <app> --env INJECTION_PROJECT_ROOT=$PWD --env NSUnbufferedIO=YES --stdout $S/run.log --stderr $S/run.log`
-  (via `open`, so neither the app nor InjectionNext inherits the shell's sandbox). Save with a
+  the *default* DerivedData with per-file commands in its log (InjectionNext reads Xcode's build
+  logs; `swift build` writes none): build and launch as in `docs/HotReload.md` ▸ Setup
+  (`xcodebuild -scheme Demo -destination 'platform=macOS' EMIT_FRONTEND_COMMAND_LINES=YES build`,
+  then the `Demo` in that DerivedData folder's `Build/Products/Debug`). Save with a
   rename (`sed -i ''`, or write a temp file and `mv`); InjectionNext ignores in-place writes, and
   may miss the first save after launch. Look for `✅ Hot reload complete` then
   `🔥 HotReload: rebuilding the UI tree in N window(s)` before taking the shot. Each window's

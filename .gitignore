@@ -1,7 +1,7 @@
-# SwiftPM build products for the macro package
+# SwiftPM build products and Xcode's package state
 .build/
+.swiftpm/
 build
-ReactiveUIMacros/.build/
 
 # Xcode per-user state
 xcuserdata/

@@ -1,4 +1,4 @@
-// uidrive: drives the running GPURayMarching app with real window-server events.
+// uidrive: drives the running Demo app with real window-server events.
 //
 // Coordinates are points relative to the app window's top-left corner (title bar included).
 // `shot` saves the window at 1x, so a pixel in the screenshot is a point here: read a position
@@ -9,7 +9,7 @@
 // whatever is on screen at the point, so raise a window with `activate --window SEL` before
 // clicking into it; `shot` captures it even behind others.
 //
-//   swiftc -O Tools/uidrive/main.swift -o <dir>/uidrive
+//   swift build -c release --product uidrive   # then .build/release/uidrive
 //
 //   uidrive windows                      list the app's windows: index, id, title, frame
 //   uidrive activate                     bring the app to the front (hover needs the key window);
@@ -33,7 +33,7 @@ import AppKit
 import CoreGraphics
 import Foundation
 
-let appName = "GPURayMarching"
+let appName = "Demo"
 
 func fail(_ message: String) -> Never {
   FileHandle.standardError.write((message + "\n").data(using: .utf8)!)
@@ -315,6 +315,13 @@ case "activate":
   }
   app.activate()
   sleepMs(300)
+  // A bare executable (`swift run Demo`) launched from a shell is refused that request; making
+  // it frontmost through Accessibility, as System Events does, is not.
+  if !app.isActive {
+    AXUIElementSetAttributeValue(
+      AXUIElementCreateApplication(app.processIdentifier), kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+    sleepMs(300)
+  }
 case "bounds":
   let window = findWindow()
   print("id \(window.id) x \(Int(window.frame.minX)) y \(Int(window.frame.minY)) w \(Int(window.frame.width)) h \(Int(window.frame.height))")

@@ -1,11 +1,11 @@
 ---
 name: ui-tests
-description: Headless UI tests for MetalGraphicsLib's retained-mode UI and for the whole app. A tree (UIHarness) or the app's real scenes and windows (HeadlessApp, GPURayMarchingTests) run in an XCTest bundle with no window, synthetic mouse/key/scroll input, a fake clock, and offscreen Metal rendering compared against golden PNGs. The whole suite takes seconds. This is the default way to check or test any change to layout, hover/tap, focus, keys, text fields, scrolling, animation or rendering. Also use when asked to write, run or fix UI tests, snapshot tests or golden images. Use the drive-app skill instead only for the things listed under "When to launch the app instead".
+description: Headless UI tests for MetalGraphicsLib's retained-mode UI and for the whole app. A tree (UIHarness) or the app's real scenes and windows (HeadlessApp, DemoTests) run in an XCTest bundle with no window, synthetic mouse/key/scroll input, a fake clock, and offscreen Metal rendering compared against golden PNGs. The whole suite takes seconds. This is the default way to check or test any change to layout, hover/tap, focus, keys, text fields, scrolling, animation or rendering. Also use when asked to write, run or fix UI tests, snapshot tests or golden images. Use the drive-app skill instead only for the things listed under "When to launch the app instead".
 ---
 
 # Headless UI tests
 
-`MetalGraphicsLibTests` (an XCTest bundle with no host app, in `MetalGraphicsLibTests/`) runs the app's frame by hand:
+`MetalGraphicsLibTests` (an XCTest bundle with no host app, in `Tests/MetalGraphicsLibTests/`) runs the app's frame by hand:
 
 - `UIContext.update` → `UIContext.render` → `Graphics2D.render(into:)`, drawing into an offscreen texture.
 - No window, no screen, no Accessibility or screen-capture rights, and no real time. Nothing takes the mouse.
@@ -16,18 +16,17 @@ description: Headless UI tests for MetalGraphicsLib's retained-mode UI and for t
 ## Run
 
 ```bash
-xcodebuild test -project MetalGraphics.xcodeproj -scheme GPURayMarching \
-  -destination 'platform=macOS' -only-testing:MetalGraphicsLibTests 2>&1 \
-  | grep -E "error:|Test Case.*failed|Executed .* tests|\*\* "
+swift test --filter MetalGraphicsLibTests 2>&1 \
+  | grep -E "error:|Test Case.*failed|Executed .* tests"
 ```
 
-To run one class or test, narrow the filter: `-only-testing:MetalGraphicsLibTests/InteractionTests` or `.../InteractionTests/testHoverEntersAndLeaves`.
+To run one class or test, narrow the filter: `--filter MetalGraphicsLibTests.InteractionTests` or `--filter InteractionTests/testHoverEntersAndLeaves`. `swift test` with no filter also runs `DemoTests` and the macro tests (`ReactiveUIMacrosTests`).
 
 Failures print as `file:line: error: ... : XCTAssert... failed`.
 
 ## Write a test
 
-New files go in `MetalGraphicsLibTests/`. The folder is synchronized, so there is no project file to edit. A test class is `@MainActor final class ...: XCTestCase` with `@testable import MetalGraphicsLib` (or not `@MainActor`, when it drives harnesses on other threads).
+New files go in `Tests/MetalGraphicsLibTests/`; SwiftPM picks them up, so there is nothing to register. A test class is `@MainActor final class ...: XCTestCase` with `@testable import MetalGraphicsLib` (or not `@MainActor`, when it drives harnesses on other threads).
 
 ```swift
 func testSaveButtonSaves() {
@@ -39,7 +38,7 @@ func testSaveButtonSaves() {
 }
 ```
 
-`UIHarness` (`MetalGraphicsLibTests/Support/UIHarness.swift`):
+`UIHarness` (`Tests/MetalGraphicsLibTests/Support/UIHarness.swift`):
 
 | Call | Does |
 |---|---|
@@ -69,28 +68,28 @@ func testSaveButtonSaves() {
 assertSnapshot(h.snapshot(), named: "card-hovered", testCase: self)
 ```
 
-Goldens are stored at `MetalGraphicsLibTests/__Snapshots__/<TestClass>/<name>.png`. Commit them.
+Goldens are stored at `Tests/MetalGraphicsLibTests/__Snapshots__/<TestClass>/<name>.png`. Commit them.
 
 - **First run, or a missing golden:** the test records the golden and fails on purpose. Read the PNG, check it looks right, then run again.
-- **An intended look change:** re-record with `TEST_RUNNER_RECORD_SNAPSHOTS=1 xcodebuild test ...`. xcodebuild passes only `TEST_RUNNER_`-prefixed variables to the test process, with the prefix stripped; a plain `RECORD_SNAPSHOTS=1` is silently ignored. Narrow `-only-testing` to the tests whose look changed, so no other golden is overwritten. Read the new PNGs before accepting them, and say in the summary that goldens were re-recorded and why.
-- **A mismatch:** the failure prints the golden, actual and diff paths (`$TMPDIR/MetalGraphicsSnapshots/<TestClass>/`). Read the diff: differing pixels are red over a faded actual. The images are also attached to the xcresult.
+- **An intended look change:** re-record with `RECORD_SNAPSHOTS=1 swift test --filter ...`. Narrow `--filter` to the tests whose look changed, so no other golden is overwritten. Read the new PNGs before accepting them, and say in the summary that goldens were re-recorded and why.
+- **A mismatch:** the failure prints the golden, actual and diff paths (`$TMPDIR/MetalGraphicsSnapshots/<TestClass>/`). Read the diff: differing pixels are red over a faded actual.
 - **Tolerance:** by default, a pixel counts as different when a channel is off by more than 8, and the test fails when more than 0.2 % of pixels differ. That absorbs GPU antialiasing noise but catches a colour change or a 1 pt move. Keep trees small and fixed-size, e.g. 320×240 at 2×.
 - **Checking colour, not the whole image:** use `h.pixel(at:)`.
 
 ## Rules
 
 - Never sleep and never read real time. Time moves only through `step` / `advance` / `settle`.
-- Tests run serially on the main thread (the scheme marks the bundle as not parallelizable). A harness belongs to the thread that made it, as a window's tree does: the main thread for most tests. `LayoutPass`, `TextScope` and `UITransaction` are per thread (`ThreadState`). `HorizontalAlignment.anyExplicit` is process-wide and never resets once set. A test that sets an explicit alignment guide changes the fast path for every test after it in the process, so give such tests their own class and expect them to affect others.
-- Windows on threads of their own: `WindowThreadTests` makes each harness on its own `WindowThread` and runs blocks there with a helper that waits for them. That is how to test anything that crosses windows — a `@Model` written in one and read in another, a glyph baked by one and drawn by another. Keep such harnesses alive while the other thread writes to a model they read. Run those tests under Thread Sanitizer too: add `-enableThreadSanitizer YES` to the test command.
+- Tests run serially on the main thread (`swift test` runs serially unless given `--parallel`; never pass it). A harness belongs to the thread that made it, as a window's tree does: the main thread for most tests. `LayoutPass`, `TextScope` and `UITransaction` are per thread (`ThreadState`). `HorizontalAlignment.anyExplicit` is process-wide and never resets once set. A test that sets an explicit alignment guide changes the fast path for every test after it in the process, so give such tests their own class and expect them to affect others.
+- Windows on threads of their own: `WindowThreadTests` makes each harness on its own `WindowThread` and runs blocks there with a helper that waits for them. That is how to test anything that crosses windows — a `@Model` written in one and read in another, a glyph baked by one and drawn by another. Keep such harnesses alive while the other thread writes to a model they read. Run those tests under Thread Sanitizer too: add `--sanitize=thread` to the test command.
 - Tests run in the `xctest` process, so `UIStorage` and `UserDefaults.standard` belong to that process, not to the app.
 - A change to UI behaviour or rendering comes with a test next to the existing ones: `InteractionTests`, `AnimationTests`, `LayoutTests` or `SnapshotTests`.
 - Guard idleness where it matters: after `settle()`, `h.step(frames: 30)` must not change `h.renders` (see `AnimationTests.testIdleTreeStopsDrawing`).
 - `settle()` stops while a wake (`UIContext.requestWake`, a caret's blink) is still in the future: `advance(seconds)` fires it. A focused `TextEditor` blinks for a minute after its last input.
 - What a copy writes goes through `Pasteboard.write`: replace it in a test to see it (`TextEditorTests.testCopyCutAndPaste`).
 
-## The whole app (`HeadlessApp`, `GPURayMarchingTests`)
+## The whole app (`HeadlessApp`, `DemoTests`)
 
-`GPURayMarchingTests` is a second test bundle. It compiles the app's own sources, except `GPURayMarchingApp.swift`, and runs them in a `HeadlessApp` (`MetalGraphicsLib/docs/HeadlessApp.md`):
+`DemoTests` is a second test bundle. It imports the app's module (`@testable import Demo`; SwiftPM leaves out its `@main`) and runs its scenes in a `HeadlessApp` (`docs/HeadlessApp.md`):
 - the app's real scenes (`AppScenes.all`);
 - every window stepped in turn on the test's thread;
 - `openWindow(id:)`, dock windows, and storage kept across a relaunch.
@@ -98,9 +97,8 @@ Goldens are stored at `MetalGraphicsLibTests/__Snapshots__/<TestClass>/<name>.pn
 Use it for a feature that crosses windows, opens them, uses the demos, or has to survive a relaunch. It is also where a finished feature gets its end-to-end test.
 
 ```bash
-xcodebuild test -project MetalGraphics.xcodeproj -scheme GPURayMarching \
-  -destination 'platform=macOS' -only-testing:GPURayMarchingTests 2>&1 \
-  | grep -E "error:|Test Case.*failed|Executed .* tests|\*\* "
+swift test --filter DemoTests 2>&1 \
+  | grep -E "error:|Test Case.*failed|Executed .* tests"
 ```
 
 ```swift
@@ -115,13 +113,13 @@ final class SharedStateE2ETests: AppTestCase {        // launches the app; `main
 }
 ```
 
-- New files go in `GPURayMarchingTests/`, which is a synchronized folder. A new app source file must also be added to the test target's Sources phase in the project file, next to the other app files.
+- New files go in `Tests/DemoTests/`, with `@testable import Demo` next to `@testable import MetalGraphicsLib`. A new app source file in `Sources/Demo/` is visible to the tests without anything to register.
 - Every action on a `HeadlessWindow` steps the whole app. Use `app.step()`, `app.settle()` or `app.advance(_:)` to move time without input.
 - Find by what the user reads: `tap("Form")`, `type("Ada", into: "Name")`, `toggle("Highlight")`, `control(labelled:)`, `panel(id)`, `shows("…")`. When a query finds nothing, it throws with every text the window shows. `window.describeTree()` prints the whole tree.
 - `self.relaunch()` quits and relaunches: each window reopens from its scene storage, and dock layouts are kept.
 - Docking: `panel(id).drag(toScreen:)` tears a tab out into a `"dock"` window, and dragging it over a group docks it back. Windows sit on a virtual screen; `window.origin` is the top left of the window's content.
 - Snapshots work as above; `assertSnapshot` is shared by a symlink.
-- Library tests of `HeadlessApp` itself are in `MetalGraphicsLibTests/HeadlessAppTests.swift`.
+- Library tests of `HeadlessApp` itself are in `Tests/MetalGraphicsLibTests/HeadlessAppTests.swift`.
 
 ## When to launch the app instead (drive-app skill)
 
