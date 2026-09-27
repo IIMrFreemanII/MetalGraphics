@@ -20,18 +20,16 @@ struct GlyphMetrics {
 
 /// A glyph of a concrete face: the run font CoreText picked, which may be a fallback, as
 /// `FontManager.faceKey` names it.
-private struct GlyphKey: Hashable {
+struct GlyphKey: Hashable {
   var face: Int32
   var glyph: CGGlyph
 }
 
-@MainActor public final class FontManager {
+/// Fonts, faces and baked glyphs, shared by every window. Every window's thread lays out text, so
+/// each cache is read and written under `lock`; each thread also keeps the glyphs it has seen in
+/// its `ThreadState`, so a relayout takes the lock only for glyphs new to it.
+public final class FontManager: @unchecked Sendable {
   public static let shared = FontManager()
-  /// TrueType, so its outlines are quadratic, and present on every Mac. What `SDFFont`s fall back
-  /// to; `.system` text is San Francisco.
-  public static var defaultFontName = "Menlo"
-
-  public lazy var defaultFont: SDFFont = self.font(named: Self.defaultFontName)
 
   /// Resolution of the baked distance field.
   static let texelsPerEm: Float = 64
@@ -44,6 +42,8 @@ private struct GlyphKey: Hashable {
   /// own — so the memo is dropped whole when it grows past this.
   private static let maxFaces = 256
 
+  private let lock = NSLock()
+  private static let fontManagerLock = NSLock()
   private var fonts: [String: SDFFont] = [:]
   private var glyphs: [GlyphKey: GlyphMetrics] = [:]
   private var faces: [TextFont: ResolvedFace] = [:]
@@ -55,6 +55,8 @@ private struct GlyphKey: Hashable {
   private init() {}
 
   public func font(named name: String) -> SDFFont {
+    self.lock.lock()
+    defer { self.lock.unlock() }
     if let font = self.fonts[name] {
       return font
     }
@@ -68,15 +70,21 @@ private struct GlyphKey: Hashable {
 
   /// The CoreText font `font` draws with.
   func face(for font: TextFont) -> ResolvedFace {
-    if let face = self.faces[font] {
+    if let face = self.lock.withLock({ self.faces[font] }) {
       return face
     }
-    if self.faces.count >= Self.maxFaces {
-      self.faces.removeAll(keepingCapacity: true)
-    }
+    // Made outside the lock: two threads making the same face make equal ones.
     let face = Self.makeFace(font)
-    self.faces[font] = face
-    return face
+    return self.lock.withLock {
+      if let existing = self.faces[font] {
+        return existing
+      }
+      if self.faces.count >= Self.maxFaces {
+        self.faces.removeAll(keepingCapacity: true)
+      }
+      self.faces[font] = face
+      return face
+    }
   }
 
   private static func makeFace(_ font: TextFont) -> ResolvedFace {
@@ -95,7 +103,13 @@ private struct GlyphKey: Hashable {
       ctFont = CTFontCreateWithName(face.name as CFString, size, nil)
       if let weight = font.weight {
         let family = CTFontCopyFamilyName(ctFont) as String
-        if let weighted = NSFontManager.shared.font(withFamily: family, traits: [], weight: weight.familyWeight, size: size) {
+        // `NSFontManager` picks a family's nearest weight by rules of its own, which CoreText's
+        // matching does not reproduce. It is not documented as thread-safe, and faces are made
+        // on every window's thread: this is its only use, one at a time.
+        let weighted = Self.fontManagerLock.withLock {
+          NSFontManager.shared.font(withFamily: family, traits: [], weight: weight.familyWeight, size: size)
+        }
+        if let weighted {
           ctFont = weighted as CTFont
         }
       }
@@ -139,6 +153,8 @@ private struct GlyphKey: Hashable {
   /// Names the concrete face `font` draws: its PostScript name, which a variable font shares
   /// between instances, plus its variation, plus the slant. Glyphs are cached by it.
   func faceKey(for font: CTFont, oblique: Bool) -> Int32 {
+    self.lock.lock()
+    defer { self.lock.unlock() }
     let id = ObjectIdentifier(font)
     if let entry = self.runFaces[id] {
       return oblique ? entry.oblique : entry.upright
@@ -174,12 +190,21 @@ private struct GlyphKey: Hashable {
   /// any size; the outline is scaled to em. `face` is `faceKey(for: font, oblique:)`.
   func glyphMetrics(face: Int32, font: CTFont, glyph: CGGlyph, oblique: Bool) -> GlyphMetrics {
     let key = GlyphKey(face: face, glyph: glyph)
-    if let metrics = self.glyphs[key] {
+    let thread = ThreadState.current
+    if let metrics = thread.glyphs[key] {
       return metrics
     }
 
-    let metrics = self.makeGlyph(font: font, glyph: glyph, oblique: oblique)
-    self.glyphs[key] = metrics
+    // Made under the lock, so two threads meeting a new glyph at once bake it once.
+    let metrics = self.lock.withLock {
+      if let metrics = self.glyphs[key] {
+        return metrics
+      }
+      let metrics = self.makeGlyph(font: font, glyph: glyph, oblique: oblique)
+      self.glyphs[key] = metrics
+      return metrics
+    }
+    thread.glyphs[key] = metrics
     return metrics
   }
 
@@ -246,18 +271,18 @@ private struct GlyphKey: Hashable {
 }
 
 /// An installed face, by name. Draw with it through `TextFont.custom(_:size:)`.
-@MainActor public final class SDFFont: nonisolated Hashable, Sendable {
+public final class SDFFont: Hashable, Sendable {
   public let name: String
 
   fileprivate init(name: String) {
     self.name = name
   }
 
-  nonisolated public static func == (lhs: SDFFont, rhs: SDFFont) -> Bool {
+  public static func == (lhs: SDFFont, rhs: SDFFont) -> Bool {
     lhs === rhs
   }
 
-  nonisolated public func hash(into hasher: inout Hasher) {
+  public func hash(into hasher: inout Hasher) {
     hasher.combine(ObjectIdentifier(self))
   }
 }

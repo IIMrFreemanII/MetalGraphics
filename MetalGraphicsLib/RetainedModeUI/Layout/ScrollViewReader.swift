@@ -46,7 +46,6 @@ extension UIElementWrapping where Self: UIElement {
 }
 
 /// Scrolls the scroll views inside a `ScrollViewReader` to the element tagged with an id.
-@MainActor
 public final class ScrollViewProxy {
   fileprivate weak var reader: ScrollViewReader?
 

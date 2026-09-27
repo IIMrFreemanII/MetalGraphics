@@ -80,7 +80,7 @@ open class VectorShape: UIElement, Hittable, PointerHandling {
 
   /// Called before anything else each frame it is drawn, with how many points and pixels one
   /// local unit covers. False when there is nothing to draw.
-  func prepare(pointsPerUnit: Float, pixelsPerUnit: Float) -> Bool { true }
+  func prepare(pointsPerUnit: Float, pixelsPerUnit: Float, baker: VectorBaker) -> Bool { true }
 
   /// Holds the outline, not the stroke around it.
   var localBounds: (min: float2, max: float2)? { nil }
@@ -129,8 +129,11 @@ open class VectorShape: UIElement, Hittable, PointerHandling {
     guard color.w > 0, scale > 0, unitScale > 0 else { return }
 
     let pointsPerUnit = unitScale * scale
-    guard self.prepare(pointsPerUnit: pointsPerUnit, pixelsPerUnit: pointsPerUnit * renderer.pixelsPerPoint),
-          let bounds = self.localBounds
+    guard
+      self.prepare(
+        pointsPerUnit: pointsPerUnit, pixelsPerUnit: pointsPerUnit * renderer.pixelsPerPoint, baker: renderer.vectorBaker
+      ),
+      let bounds = self.localBounds
     else { return }
 
     // local -> canvas: scale about its anchor, turn about its anchor, then offset

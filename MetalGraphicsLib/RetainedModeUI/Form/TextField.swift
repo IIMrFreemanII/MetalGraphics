@@ -157,7 +157,7 @@ public class TextField : FormControl {
       self.moveCaret(to: count, extending: shift)
     default:
       if command {
-        return self.command(press.key.character.lowercased(), shift: shift)
+        return self.command(press.key.character.lowercased(), shift: shift, press)
       } else if press.modifiers.contains(.control) {
         return .ignored
       } else {
@@ -167,7 +167,7 @@ public class TextField : FormControl {
     return .handled
   }
 
-  private func command(_ key: String, shift: Bool) -> KeyPress.Result {
+  private func command(_ key: String, shift: Bool, _ press: KeyPress) -> KeyPress.Result {
     switch key {
     case "a":
       self.select(0 ..< self.text.count)
@@ -178,7 +178,8 @@ public class TextField : FormControl {
       self.copySelection()
       self.replace(self.selection, with: "", kind: .other)
     case "v":
-      if let pasted = NSPasteboard.general.string(forType: .string) {
+      // Read by the view with the key, on the main thread.
+      if let pasted = press.pasteboard {
         self.insert(pasted, kind: .other)
       }
     case "z":
@@ -262,8 +263,12 @@ public class TextField : FormControl {
     guard !self.isSecure, !selection.isEmpty else { return }
     let start = self.text.index(self.text.startIndex, offsetBy: selection.lowerBound)
     let end = self.text.index(start, offsetBy: selection.count)
-    NSPasteboard.general.clearContents()
-    NSPasteboard.general.setString(String(self.text[start ..< end]), forType: .string)
+    // The pasteboard is the main thread's; the window runs on its own.
+    let copied = String(self.text[start ..< end])
+    DispatchQueue.main.async {
+      NSPasteboard.general.clearContents()
+      NSPasteboard.general.setString(copied, forType: .string)
+    }
   }
 
   // MARK: - Caret and selection

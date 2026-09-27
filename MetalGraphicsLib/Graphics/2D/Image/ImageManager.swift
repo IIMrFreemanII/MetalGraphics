@@ -4,10 +4,12 @@ import MetalKit
 // Bitmaps are drawn from textures of their own, one per image, which `compute2D` reaches
 // through a table of texture handles (see `Graphics2D`). Each is uploaded once, with every mip
 // level, so it can be drawn at any size without shimmering. Like the SDF bakes, the upload is
-// queued and encoded into the next frame's command buffer, ahead of `compute2D`.
+// queued, then committed by the next frame's `SharedGPUWork.flush`, which the frame waits for
+// ahead of `compute2D`.
 
-/// A bitmap on the GPU, premultiplied, with every mip level.
-@MainActor public final class BitmapTexture {
+/// A bitmap on the GPU, premultiplied, with every mip level. Immutable once made, and drawn by
+/// every window that loads the same image.
+public final class BitmapTexture: @unchecked Sendable {
   let texture: MTLTexture
   public let pixelSize: SIMD2<Int>
   /// The size it is drawn at unless resized: its pixels over its scale.
@@ -53,7 +55,7 @@ private struct PendingUpload {
   var texture: MTLTexture
 }
 
-@MainActor public final class ImageManager {
+public final class ImageManager: @unchecked Sendable {
   public static let shared = ImageManager()
 
   /// Scale an image without bitmaps of its own, such as a PDF, is drawn at.
@@ -62,6 +64,9 @@ private struct PendingUpload {
   private static let maxPixels = 16384
 
   let device: MTLDevice
+  /// Guards `named`, `missing` and `pendingUploads`: every window's thread loads images. Held
+  /// for lookups and queueing only; images are drawn into their bitmaps outside it.
+  private let lock = NSLock()
   private var named: [String: BitmapTexture] = [:]
   private var missing: Set<String> = []
   private var pendingUploads: [PendingUpload] = []
@@ -75,19 +80,26 @@ private struct PendingUpload {
   /// there is no such image.
   func texture(named name: String, bundle: Bundle) -> BitmapTexture? {
     let key = bundle.bundlePath + "|" + name
-    if let texture = self.named[key] {
-      return texture
+    let known: BitmapTexture?? = self.lock.withLock {
+      if let texture = self.named[key] { return .some(texture) }
+      return self.missing.contains(key) ? .some(nil) : nil
     }
-    guard !self.missing.contains(key) else { return nil }
+    if let known { return known }
 
+    // Two windows loading the same image at once each upload it; the first to finish is kept.
     let image = bundle == .main ? NSImage(named: name) : bundle.image(forResource: name)
     guard let image, let texture = self.texture(for: image) else {
-      self.missing.insert(key)
-      print("Image '\(name)' was not found in \(bundle.bundlePath)")
+      let isNew = self.lock.withLock { self.missing.insert(key).inserted }
+      if isNew {
+        print("Image '\(name)' was not found in \(bundle.bundlePath)")
+      }
       return nil
     }
-    self.named[key] = texture
-    return texture
+    return self.lock.withLock {
+      if let existing = self.named[key] { return existing }
+      self.named[key] = texture
+      return texture
+    }
   }
 
   /// Uploads `image` at the resolution of its largest bitmap. Not cached: whoever holds the
@@ -131,13 +143,22 @@ private struct PendingUpload {
     }
   }
 
-  /// Encodes every upload queued since the last frame, and fills in their mip levels.
+  var hasPendingUploads: Bool {
+    self.lock.withLock { !self.pendingUploads.isEmpty }
+  }
+
+  /// Encodes every upload queued so far, from any window, and fills in their mip levels. Called
+  /// by `SharedGPUWork.flush` only.
   func encodePendingUploads(into commandBuffer: MTLCommandBuffer) {
-    guard !self.pendingUploads.isEmpty, let encoder = commandBuffer.makeBlitCommandEncoder() else {
+    let pendingUploads = self.lock.withLock {
+      defer { self.pendingUploads.removeAll(keepingCapacity: true) }
+      return self.pendingUploads
+    }
+    guard !pendingUploads.isEmpty, let encoder = commandBuffer.makeBlitCommandEncoder() else {
       return
     }
     encoder.label = "Image uploads"
-    for upload in self.pendingUploads {
+    for upload in pendingUploads {
       let texture = upload.texture
       encoder.copy(
         from: upload.staging, sourceOffset: 0,
@@ -151,7 +172,6 @@ private struct PendingUpload {
       }
     }
     encoder.endEncoding()
-    self.pendingUploads.removeAll(keepingCapacity: true)
   }
 
   /// Draws into a premultiplied sRGB RGBA8 bitmap of `pixels`, whose first row is the top of
@@ -188,7 +208,9 @@ private struct PendingUpload {
     }
     texture.label = "Image"
 
-    self.pendingUploads.append(PendingUpload(staging: staging, bytesPerRow: bytesPerRow, texture: texture))
+    self.lock.withLock {
+      self.pendingUploads.append(PendingUpload(staging: staging, bytesPerRow: bytesPerRow, texture: texture))
+    }
     return BitmapTexture(texture: texture, pixelSize: pixels, pointSize: pointSize)
   }
 }

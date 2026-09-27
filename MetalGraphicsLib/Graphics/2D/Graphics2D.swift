@@ -130,7 +130,7 @@ struct GPUClip: Equatable {
   }
 }
 
-public struct DebugData {
+public struct DebugData: Sendable {
   public var drawGrid: Bool = false
   public var showFilledCells: Bool = false
   /// Tints what was shaded again lately, over the frame as it is presented: steady where it
@@ -144,18 +144,37 @@ public struct SceneData {
   public var debug = DebugData()
 }
 
-@MainActor public class Graphics2D {
-  private var renderer: ViewRenderer
+/// Where a frame is presented: the drawable the display link handed the frame, which the frame
+/// is sized and formatted by. Without one this time, the canvas is still shaded, and the next
+/// frame presents it.
+public struct FrameTarget {
+  public var drawable: CAMetalDrawable?
+
+  public init(drawable: CAMetalDrawable?) {
+    self.drawable = drawable
+  }
+
+  var pixelSize: SIMD2<Int>? {
+    self.drawable.map { SIMD2($0.texture.width, $0.texture.height) }
+  }
+}
+
+public class Graphics2D {
   private var depth = Float()
   lazy var grid: GraphicsGrid2D = .init(position: float2(), size: int2(10, 10), cellSize: Float(50), graphics: self)
   var resizeCb: (() -> Void)?
   
-  public var size: float2 {
-    self.renderer.cachedWindowSize
-  }
+  /// This window's frame timings. See `FrameProfiler`.
+  public let profiler = FrameProfiler()
+  /// This window's vector path atlas. See `VectorBaker`.
+  let vectorBaker = VectorBaker()
 
-  public init(renderer: ViewRenderer) {
-    self.renderer = renderer
+  /// The window's size in points, as of the frame's `UIContext.update`.
+  public internal(set) var size = float2()
+  /// Seconds the window has been drawing for, handed to the shaders.
+  public var time: Float = 0
+
+  public init() {
     self.device = GPUDevice.main
     self.commandQueue = self.device.makeCommandQueue()
 
@@ -236,11 +255,10 @@ public struct SceneData {
   }
 
 #if DEBUG
-  /// Hot reload: rebuilds the pipelines from a freshly compiled `.metallib` (see `ShaderReloader`).
-  /// Runs on the main thread between frames; command buffers still in flight keep the old
+  /// Hot reload: rebuilds the pipelines from a freshly compiled library (see `ShaderReloader`).
+  /// Runs on the window's thread between frames; command buffers still in flight keep the old
   /// pipelines alive.
-  func reloadShaders(from url: URL) throws {
-    let library = try self.device.makeLibrary(URL: url)
+  func reloadShaders(from library: MTLLibrary) throws {
     try self.makePipelines(library)
     self.library = library
     // What is on screen was shaded by the old code.
@@ -652,7 +670,7 @@ public struct SceneData {
   }
 
   func endFrame() {
-    let profiler = FrameProfiler.shared
+    let profiler = self.profiler
     let mappingStart = profiler.start()
     if let cb = self.resizeCb {
       cb()
@@ -820,17 +838,20 @@ public struct SceneData {
     shapeArgPointer.pointee.glasses = self.glassBuffer.gpuAddress
     shapeArgPointer.pointee.glassesCount = Int32(self.glasses.count)
     profiler.add(.upload, since: uploadStart)
-
-    self.renderer.input.endFrame()
   }
 
-  /// Shades what changed into `canvas`, then copies all of it into a drawable and presents it.
-  /// When nothing changed, no drawable is taken: the screen keeps showing the last one.
-  func drawData(at view: MTKView) {
-    let profiler = FrameProfiler.shared
+  /// Shades what changed into `canvas`, then copies all of it into the drawable and presents it.
+  /// When nothing changed, the drawable is not presented: the screen keeps showing the last one.
+  func drawData(at target: FrameTarget) {
+    let profiler = self.profiler
     defer { profiler.frameEnded() }
     let encodeStart = profiler.start()
-    let canvas = self.canvas(width: Int(view.drawableSize.width), height: Int(view.drawableSize.height), format: view.colorPixelFormat)
+    guard let drawableTexture = target.drawable?.texture else {
+      // What this frame shaded never reached the canvas.
+      self.needsFullDamage = true
+      return
+    }
+    let canvas = self.canvas(width: drawableTexture.width, height: drawableTexture.height, format: drawableTexture.pixelFormat)
     guard let canvas else { return }
     let damage = self.takeDamage(for: canvas)
     guard let commandBuffer = self.commandQueue.makeCommandBuffer() else {
@@ -839,9 +860,14 @@ public struct SceneData {
     }
     let stamps = self.damageStamps(like: canvas, commandBuffer)
     guard damage != .none || (stamps != nil && self.needsDamageFrames) else {
-      // Bakes and uploads queued for anything not drawn yet still run.
-      self.encodePendingWork(commandBuffer)
-      commandBuffer.commit()
+      // Bakes and uploads queued for anything not drawn yet still run. The vector bakes reuse
+      // their segment buffer next frame, so this one is waited for too.
+      _ = SharedGPUWork.shared.flush()
+      if self.vectorBaker.hasPendingBakes {
+        self.vectorBaker.encodePendingBakes(into: commandBuffer)
+        commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
+      }
       return
     }
     if damage == .none {
@@ -850,9 +876,7 @@ public struct SceneData {
       guard self.encodeFrame(into: canvas, commandBuffer, damage: damage) else { return }
     }
     profiler.add(.encode, since: encodeStart)
-    let drawableStart = profiler.start()
-    let drawable = view.currentDrawable
-    profiler.add(.drawable, since: drawableStart)
+    let drawable = target.drawable
     if let stamps {
       if damage != .none {
         self.lastDamageTime = CACurrentMediaTime()
@@ -988,11 +1012,11 @@ public struct SceneData {
   }
 
   /// Glyphs and icons first laid out this frame are baked, and images first drawn uploaded,
-  /// before `compute2D` samples them.
+  /// before `compute2D` samples them: by any window, on the shared queue this waits for, and
+  /// this window's paths into its own atlas.
   private func encodePendingWork(_ commandBuffer: MTLCommandBuffer) {
-    SDFBaker.shared.encodePendingBakes(into: commandBuffer)
-    VectorBaker.shared.encodePendingBakes(into: commandBuffer)
-    ImageManager.shared.encodePendingUploads(into: commandBuffer)
+    SharedGPUWork.shared.wait(in: commandBuffer)
+    self.vectorBaker.encodePendingBakes(into: commandBuffer)
   }
 
   /// Encodes this frame's bakes and the shading `damage` asks for into `texture`, which needs
@@ -1001,8 +1025,10 @@ public struct SceneData {
   func encodeFrame(into texture: MTLTexture, _ commandBuffer: MTLCommandBuffer, damage: Damage) -> Bool {
     self.encodePendingWork(commandBuffer)
     guard damage != .none, let commandEncoder = commandBuffer.makeComputeCommandEncoder() else {
-      // the bakes are already dequeued, so they still have to run
+      // The bakes are already dequeued, so they still have to run, and the vector bakes'
+      // buffer is reused next frame.
       commandBuffer.commit()
+      commandBuffer.waitUntilCompleted()
       // What the target should hold now was never shaded.
       if damage != .none { self.needsFullDamage = true }
       return false
@@ -1015,11 +1041,11 @@ public struct SceneData {
     }
 
     commandEncoder.setTexture(SDFBaker.shared.atlas.texture, index: 1)
-    commandEncoder.setTexture(VectorBaker.shared.atlas.texture, index: 2)
+    commandEncoder.setTexture(self.vectorBaker.atlas.texture, index: 2)
     commandEncoder.setTexture(self.glassAtlas, index: 3)
 
     self.sceneData.windowSize = SIMD2<Int32>(Int32(self.size.x), Int32(self.size.y))
-    self.sceneData.time = self.renderer.time
+    self.sceneData.time = self.time
 
     commandEncoder.setBytes(&self.sceneData, length: MemoryLayout<SceneData>.stride, index: 0)
     commandEncoder.setBuffer(self.shapeArgBuffer, offset: 0, index: 1)
@@ -1098,8 +1124,8 @@ public struct SceneData {
   func finishFrame(_ commandBuffer: MTLCommandBuffer) {
     commandBuffer.commit()
     commandBuffer.waitUntilCompleted()
-    VectorBaker.shared.frameCompleted(gpuTime: commandBuffer.gpuEndTime - commandBuffer.gpuStartTime)
-    FrameProfiler.shared.addGPUTime(commandBuffer.gpuEndTime - commandBuffer.gpuStartTime)
+    self.vectorBaker.frameCompleted(gpuTime: commandBuffer.gpuEndTime - commandBuffer.gpuStartTime)
+    self.profiler.addGPUTime(commandBuffer.gpuEndTime - commandBuffer.gpuStartTime)
 
     if commandBuffer.status == .error {
       // The target may hold part of this frame; shade all of it next time.
@@ -1262,22 +1288,22 @@ public struct SceneData {
     return origin
   }
 
-  public func context(in view: MTKView, _ cb: (Rect) -> Void) {
+  public func context(in target: FrameTarget, _ cb: (Rect) -> Void) {
     let windowRect = Rect(position: float2(), size: self.size)
-    if self.size.x > 0, view.drawableSize.width > 0 {
-      self.setPixelsPerPoint(Float(view.drawableSize.width) / self.size.x)
+    if self.size.x > 0, let pixels = target.pixelSize, pixels.x > 0 {
+      self.setPixelsPerPoint(Float(pixels.x) / self.size.x)
     }
 
     self.beginFrame()
     cb(windowRect)
     self.endFrame()
 
-    self.drawData(at: view)
+    self.drawData(at: target)
   }
 
   /// `context(in:_:)` without a view: draws one frame into `texture` and waits for it, without
   /// presenting. For rendering headlessly, as tests do; `texture` needs `.shaderWrite` usage
-  /// and `renderer.windowSize * pixelsPerPoint` pixels. See `makeOffscreenTarget`.
+  /// and `size * pixelsPerPoint` pixels. See `makeOffscreenTarget`.
   public func render(into texture: MTLTexture, pixelsPerPoint: Float, _ cb: (Rect) -> Void) {
     let windowRect = Rect(position: float2(), size: self.size)
     self.setPixelsPerPoint(pixelsPerPoint)

@@ -7,3 +7,6 @@
 /// So this stays a bare marker. The `onMount`/`onUnmount` hooks are `open` members of `UIElement`
 /// in MetalGraphicsLib, where `UIContext` exists — components override them like any other.
 public protocol ReactiveComponent: AnyObject {}
+
+/// Marker conformance added by `@Model`. Lives here for the same reasons as `ReactiveComponent`.
+public protocol ReactiveModel: AnyObject {}

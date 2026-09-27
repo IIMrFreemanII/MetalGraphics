@@ -1,5 +1,5 @@
 /// The four edges of a rectangle, as sets: `.padding(.horizontal, 8)`.
-public enum Edge {
+public enum Edge: Sendable {
   public struct Set: OptionSet, Sendable {
     public let rawValue: UInt8
     public init(rawValue: UInt8) { self.rawValue = rawValue }

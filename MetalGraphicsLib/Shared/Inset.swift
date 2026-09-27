@@ -1,4 +1,4 @@
-public struct Inset: Equatable {
+public struct Inset: Equatable, Sendable {
   public var left: Float
   public var top: Float
   public var right: Float

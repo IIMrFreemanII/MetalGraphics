@@ -8,7 +8,6 @@
 // Hand-written trees still use it, and get built exactly once.
 //
 // `for` loops remain unsupported; use `VList` / `HList` for collections.
-@MainActor
 @resultBuilder
 public struct UIElementBuilder {
   public static func buildExpression(_ element: UIElement) -> [UIElement] {

@@ -2,13 +2,19 @@
 ///
 /// A `@State` write runs its generated update synchronously, so whatever is set here while the
 /// write happens is what that update sees. `withAnimation` is the only thing meant to set it.
-@MainActor
 public enum UITransaction {
-  public internal(set) static var animation: UIAnimation? = nil
+  /// Per thread: each window's writes run on its own.
+  public internal(set) static var animation: UIAnimation? {
+    get { ThreadState.current.transactionAnimation }
+    set { ThreadState.current.transactionAnimation = newValue }
+  }
 
   /// The group of the innermost `withAnimation` that has a completion. Every animation started
   /// while it is set joins it.
-  static var group: AnimationGroup? = nil
+  static var group: AnimationGroup? {
+    get { ThreadState.current.transactionGroup }
+    set { ThreadState.current.transactionGroup = newValue }
+  }
 }
 
 /// The animations one `withAnimation(_:_:completion:)` started, and what to run once they are
@@ -17,7 +23,6 @@ public enum UITransaction {
 /// Counts rather than lists: an animation joins when the animator starts it and leaves however it
 /// ends — arriving, replaced by another, cancelled, or snapped by an unmount. A layout pass the
 /// body caused holds the group too, until the slides it starts have joined.
-@MainActor
 final class AnimationGroup {
   private var remaining = 0
   /// True while the body runs: the group cannot be over before everything in it has started.
@@ -65,14 +70,14 @@ final class AnimationGroup {
 ///
 /// Nested calls restore the outer animation on the way out. SwiftUI declares a function with the
 /// same name, so a file importing both must write `MetalGraphicsLib.withAnimation`.
-@MainActor
 @discardableResult
 public func withAnimation<Result>(
   _ animation: UIAnimation? = .default, _ body: () throws -> Result
 ) rethrows -> Result {
-  let previous = UITransaction.animation
-  UITransaction.animation = animation
-  defer { UITransaction.animation = previous }
+  let state = ThreadState.current
+  let previous = state.transactionAnimation
+  state.transactionAnimation = animation
+  defer { state.transactionAnimation = previous }
 
   return try body()
 }
@@ -87,20 +92,20 @@ public func withAnimation<Result>(
 ///
 /// When nothing animates, `completion` runs as soon as the body returns; otherwise it runs from
 /// the frame loop. An animation that repeats forever never completes.
-@MainActor
 @discardableResult
 public func withAnimation<Result>(
   _ animation: UIAnimation? = .default, _ body: () throws -> Result,
   completion: @escaping () -> Void
 ) rethrows -> Result {
-  let previousAnimation = UITransaction.animation
-  let previousGroup = UITransaction.group
+  let state = ThreadState.current
+  let previousAnimation = state.transactionAnimation
+  let previousGroup = state.transactionGroup
   let group = AnimationGroup(completion)
-  UITransaction.animation = animation
-  UITransaction.group = group
+  state.transactionAnimation = animation
+  state.transactionGroup = group
   defer {
-    UITransaction.animation = previousAnimation
-    UITransaction.group = previousGroup
+    state.transactionAnimation = previousAnimation
+    state.transactionGroup = previousGroup
     group.close()
   }
 

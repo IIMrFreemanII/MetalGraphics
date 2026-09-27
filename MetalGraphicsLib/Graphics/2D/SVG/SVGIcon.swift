@@ -6,7 +6,7 @@ import simd
 ///
 /// Its em is the longer side of its view box: em space runs from the view box's top left
 /// corner, x right and y up, so the view box spans `0...viewBoxSize.x` by `-viewBoxSize.y...0`.
-@MainActor public final class SVGIcon {
+public final class SVGIcon: Sendable {
   /// One baked region: a union of fills and strokes that share a paint.
   struct Layer {
     /// Em space bounds of the baked region, y up. The outline plus padding.
@@ -54,13 +54,19 @@ import simd
 
   // MARK: - Loading
 
-  private static var named: [String: SVGIcon] = [:]
-  private static var sources: [String: SVGIcon] = [:]
-  private static var missing: Set<String> = []
+  // Guarded by `lock`.
+  nonisolated(unsafe) private static var named: [String: SVGIcon] = [:]
+  nonisolated(unsafe) private static var sources: [String: SVGIcon] = [:]
+  nonisolated(unsafe) private static var missing: Set<String> = []
+  /// Guards the three caches, and is held while an icon is made, so two windows loading the
+  /// same icon at once bake it once. Icons are made rarely, when an image first names one.
+  private static let lock = NSLock()
 
   /// The SVG named `name` in `bundle`: a data asset in its asset catalog, or a `.svg` file
   /// among its resources. Nil when there is neither, so the name can be looked for as a bitmap.
   static func named(_ name: String, bundle: Bundle) -> SVGIcon? {
+    self.lock.lock()
+    defer { self.lock.unlock() }
     let key = bundle.bundlePath + "|" + name
     if let icon = self.named[key] { return icon }
     guard !self.missing.contains(key) else { return nil }
@@ -84,6 +90,8 @@ import simd
 
   /// The SVG whose markup is `source`, baked once however many images draw it.
   static func source(_ source: String) -> SVGIcon? {
+    self.lock.lock()
+    defer { self.lock.unlock() }
     if let icon = self.sources[source] { return icon }
     guard let icon = self.make(Data(source.utf8), label: "inline source") else { return nil }
     self.sources[source] = icon

@@ -6,9 +6,12 @@ import QuartzCore
 ///
 /// A phase is timed with `start()` and `add(_:since:)`. `update` runs every frame; the other
 /// phases only on frames that are drawn, so their averages are per drawn frame.
-@MainActor public final class FrameProfiler {
-  public static let shared = FrameProfiler()
-
+///
+/// One per window, owned by its `Graphics2D`: each window runs its frames on a thread of its
+/// own, so each reports its own, under `label`.
+public final class FrameProfiler {
+  /// Names the window in the report.
+  public var label = ""
   public var isEnabled = ProcessInfo.processInfo.environment["METALGRAPHICS_PROFILE"] == "1"
 
   public enum Phase: Int, CaseIterable {
@@ -24,8 +27,6 @@ import QuartzCore
     case upload
     /// Deciding the damage and encoding the passes.
     case encode
-    /// Waiting for a drawable.
-    case drawable
     /// Committing and waiting for the GPU to finish.
     case gpuWait
 
@@ -37,7 +38,6 @@ import QuartzCore
       case .gridBuffers: "gridBuffers"
       case .upload: "upload"
       case .encode: "encode"
-      case .drawable: "drawable"
       case .gpuWait: "gpuWait"
       }
     }
@@ -69,7 +69,7 @@ import QuartzCore
   private var lastReport = CACurrentMediaTime()
   private let nanosecondsPerTick: Double
 
-  private init() {
+  public init() {
     var timebase = mach_timebase_info_data_t()
     mach_timebase_info(&timebase)
     self.nanosecondsPerTick = Double(timebase.numer) / Double(timebase.denom)
@@ -128,12 +128,12 @@ import QuartzCore
     for phase in Phase.allCases {
       let n = self.samples[phase.rawValue]
       let average = n == 0 ? 0 : self.milliseconds(self.sums[phase.rawValue]) / Double(n)
-      if phase != .gpuWait, phase != .drawable { cpu += average }
+      if phase != .gpuWait { cpu += average }
       phases.append("\(phase.name) \(format(average)) (max \(format(self.milliseconds(self.maxima[phase.rawValue]))))")
     }
     let gpu = self.gpuSamples == 0 ? 0 : self.gpuSeconds / Double(self.gpuSamples) * 1000
     let sizes = Count.allCases.map { "\($0.name) \(self.counts[$0.rawValue])" }.joined(separator: " ")
-    print("⏱ \(self.drawnFrames) drawn in \(format(seconds)) s | CPU \(format(cpu)) ms | GPU \(format(gpu)) ms | \(sizes)")
+    print("⏱ \(self.label.isEmpty ? "" : "[\(self.label)] ")\(self.drawnFrames) drawn in \(format(seconds)) s | CPU \(format(cpu)) ms | GPU \(format(gpu)) ms | \(sizes)")
     print("⏱   " + phases.joined(separator: " | "))
   }
 }

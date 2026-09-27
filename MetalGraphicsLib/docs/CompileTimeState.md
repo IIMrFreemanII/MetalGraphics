@@ -202,6 +202,82 @@ component. `for: Route.self` types the destination's field `NavigationDestinatio
 giving the armed closure its parameter type. A link with `value:` reads its trailing closure as
 its label, one without as its destination. See `docs/Navigation.md`.
 
+### Shared models
+
+`@State` belongs to one component. State several components read, in any number of windows, lives
+in a `@Model` class, which a component declares `@Bindable`:
+
+```swift
+@Model
+final class AppModel {
+  static let shared = AppModel()
+  var count: Int = 0
+  var message: String = "Hello"
+}
+
+@Component
+final class Counter: SingleChildElement {
+  @Bindable let model: AppModel = .shared
+
+  @UIElementBuilder var body: [UIElement] {
+    VStack {
+      Text("Count: \(self.model.count)")
+      TextField("Message", text: $model.message)
+      if self.model.count > 9 { Text("Big") }
+    }
+  }
+}
+```
+
+`@Model` gives each stored `var` (every one not marked `@ModelIgnored`) a backing field, a
+`ModelObservers` list, and a setter that notifies that list and the model's list for reads of any
+property. It also generates `__observers(named:)`, which maps a property name to its list.
+Writing the value a property already has notifies no one. `@State` has no such check: only its own
+component reads it.
+
+Each window runs on a thread of its own (`Threading.md`), and every one of them reads and writes
+the model. So the class is not `@MainActor` (F20), and `@Model` makes it `Sendable` with a lock:
+- The getter, the setter's compare-and-store, and a `_modify` (an append, `+= 1`) run under the
+  model's `ModelLock`, which is recursive, so a `_modify` body can read the model.
+- Readers are notified after the lock is released.
+- A write from one window and a write from another never interleave within one property. Two
+  writes to different properties are two separate updates; a method writing several properties
+  is not atomic across them.
+
+In the component, `self.model.count` in a body is a dependency like a state read, keyed
+`"model.count"`. It is left as written, so it goes through the model's getter. Each key gets an
+update method, `__modelUpdate_model_count`, built by the same `dependents(for:)` as a state's:
+setter lines, branch swaps, and `.animation(_:value: self.model.count)` scopes. Around those
+methods:
+
+- `mount` subscribes, `self.model.__observers(named: "count").add(self, token: 0)`, after the
+  build. A remount first replays every model key, never animated, because nothing was listening
+  while it was unmounted.
+- `unmount` unsubscribes first.
+- A write calls `__modelDidChange(token, animated)` on each subscriber: an `open` method of
+  `UIElement`, overridden with a switch on the token. So one write is one virtual call per
+  subscriber, with no closure stored anywhere.
+- Subscribers are kept per window. The writer's own window runs its subscribers right away, as
+  for a state. Every other window with subscribers gets one message posted to its thread, which
+  runs them there on its next turn. Writes made before that message runs ride along with it: a
+  slider dragged in one window updates another once per frame, not once per event.
+- Each subscriber runs its setters against its own `__context`, so each window invalidates only
+  what the property feeds there and draws it on its next frame. `withAnimation` around a write
+  animates in every window: the message carries the writer's animation (the last write's, if
+  several ride along), and the receiver runs its subscribers inside it. A `withAnimation`
+  completion only waits for the writer's own window.
+
+`$model.count` lowers like `$state`: a setter line plus the armed write-back
+`{ self.model.count = $0 }`. `$model` alone is F14: a model is bound through one of its properties.
+A method call or computed property, `self.model.summary()`, is keyed by its name. The model maps
+unknown names to the any-property list, so it updates on every write to the model.
+
+Not supported yet:
+- a list over a model array (`items:` must be a `@State` array, F10);
+- nested models, where `self.model.child.value` tracks only `child`;
+- a `var` model (F21), which is subscribed once, at mount;
+- reads in closures, as with states.
+
 ## 6. Composition, not helper methods
 
 The macro cannot see inside a method, so a helper that returns an element is a compile error
@@ -233,14 +309,16 @@ From the outside `RowView(item:onRemove:)` is an ordinary constructor call, opaq
 | F8 | writing `self._color` in a body |
 | F10 | a list's `items:` that is not a direct `@State` array reference |
 | F11 | a generated mutation method colliding with one the component declares |
-| F12 | `.animation(_:value:)` whose `value:` reads no `@State`, or written without `value:` |
+| F12 | `.animation(_:value:)` whose `value:` reads no `@State` or model property, or written without `value:` |
 | F13 | an in-place-only modifier (`.resizable`, `.fill`, `.trim`, `.buttonStyle`, …) called on something other than the element it styles. The text modifiers wrap anything else instead |
-| F14 | a binding argument (`isOn:`, `text:`, `selection:`, …) that is neither `$state[.member…]` nor `.constant(v)` |
+| F14 | a binding argument (`isOn:`, `text:`, `selection:`, …) that is neither `$state[.member…]`, `$model.property[.member…]` nor `.constant(v)` |
 | F15 | an operator other than `+` between texts, or a `+` operand that is not `Text(string)` / `Text(verbatim:)` with run modifiers |
 | F16 | a paragraph modifier (`.lineLimit`, `.multilineTextAlignment`, …) on an operand of `+` |
 | F17 | a literal a text modifier cannot take: `.lineLimit` below 1, `.minimumScaleFactor` outside (0, 1] |
 | F18 | *(warning)* a constant text style over a subtree with no `Text` in it |
 | F19 | a `for:` argument that types an element (`.navigationDestination`, `.onGeometryChange`, `.dropDestination`) not written `<Type>.self` |
+| F20 | `@Model` on a non-class or a `@MainActor` class; a tracked property without a type annotation, with `willSet`/`didSet`, or declaring several properties at once |
+| F21 | `@Bindable` on a `var`, a `static`, or without a type annotation |
 
 F9 is retired, not missing: it warned that a handler capturing `self` strongly leaks, which stopped
 being true once the macro started clearing handlers on unmount. The numbers are not reused.
@@ -271,7 +349,9 @@ mount behaviour, which is what `@Component` generates and why writing one is F7.
 
 ## 8. How it lands on screen
 
-`TestViewRenderer.draw(in:)` calls `UIContext.update` and then `UIContext.render`, which run, in order:
+`RootViewRenderer.frame(drawable:)`, one per window on the window's own thread, applies the input
+that arrived since the last frame, then calls `UIContext.update` and `UIContext.render`, which
+run, in order:
 
 1. **Hit-test** — handlers fire, so generated setters run synchronously here.
 2. **Advance animations** — `Animator.tick` writes each running animation's value through the
@@ -281,8 +361,9 @@ mount behaviour, which is what `@Component` generates and why writing one is F7.
    container start sliding from where they were drawn (§9, *Sliding layout*).
 4. **Render** the registered renderables in paint order: tree pre-order, rebuilt only when
    the tree changed. Layout alone does not rebuild it: moving things never reorders them. When
-   nothing is pending, `TestViewRenderer` skips the GPU pass entirely and the last frame stays
-   on screen.
+   nothing is pending, `RootViewRenderer` skips the GPU pass entirely and the last frame stays
+   on screen; once nothing animates either, it pauses its display link until something is
+   posted to the window.
 
 That order matters: laying out before hit-testing would draw an element mounted by `onTap` once
 before it had a position, and the UI would blink for one frame.

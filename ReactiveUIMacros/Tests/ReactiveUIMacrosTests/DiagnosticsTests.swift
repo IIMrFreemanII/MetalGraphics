@@ -358,7 +358,7 @@ struct DiagnosticsTests {
       diagnostics: [
         DiagnosticSpec(
           message: "'.animation(_:value:)' animates the changes a write to the states 'value:' reads "
-            + "makes, so 'value:' must read a @State property, e.g. 'value: self.isOn'.",
+            + "makes, so 'value:' must read a @State property or a @Bindable model's, e.g. 'value: self.isOn'.",
           line: 6, column: 49
         )
       ],

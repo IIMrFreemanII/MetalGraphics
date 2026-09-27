@@ -40,6 +40,21 @@ private func component(states: String, _ body: String) -> String {
 @Suite("Navigation")
 struct NavigationMacroTests {
 
+  @Test("A dock area is a leaf: its space and host are fixed, what it shows comes from the space")
+  func dockArea() {
+    let (text, diagnostics) = expand(component(
+      states: "  let space: DockSpace",
+      """
+          VStack {
+            Text("Panels")
+            DockArea(self.space, host: "main")
+          }
+      """
+    ))
+    #expect(diagnostics.isEmpty)
+    #expect(text.contains("let n0_1a = DockArea(self.space, host: \"main\")"))
+  }
+
   @Test("path: $path lowers to the value, setPath, and an adapted write-back; the closure is the root")
   func stackPathBinding() {
     let (text, diagnostics) = expand(component(

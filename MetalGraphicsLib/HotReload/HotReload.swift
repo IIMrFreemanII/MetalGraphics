@@ -5,7 +5,7 @@ import Foundation
 /// own watchers. See `docs/HotReload.md`.
 ///
 /// Nothing here runs per frame: every piece waits on a file or injection event, off the main
-/// thread, and the main thread only works once per reload.
+/// thread. Once per reload the main thread posts the rebuild to every window's thread.
 @MainActor enum HotReload {
   /// The repository root, from this file's location at compile time. Missing when the app was
   /// built on another machine, which turns the source watchers off.
@@ -21,7 +21,9 @@ import Foundation
   /// time, about a second apart. The tree is rebuilt once, after the last of them.
   private static var awaitedInjections = 0
 
-  static func start(renderer: ViewRenderer) {
+  /// Installs the injection observer and the source watchers, once for the whole app. Every
+  /// window's renderer calls it; each reload then acts on every window in `WindowRegistry`, on the window's thread.
+  static func startIfNeeded() {
     guard !started else { return }
     started = true
 
@@ -30,15 +32,15 @@ import Foundation
     // Posted once per injected file.
     NotificationCenter.default.addObserver(
       forName: Notification.Name("INJECTION_BUNDLE_NOTIFICATION"), object: nil, queue: .main
-    ) { [weak renderer] _ in
-      MainActor.assumeIsolated { injected(renderer) }
+    ) { _ in
+      MainActor.assumeIsolated { injected() }
     }
 
     guard FileManager.default.fileExists(atPath: repoRoot.appending(path: "MetalGraphicsLib").path) else {
       print("🔥 HotReload: sources not found at \(repoRoot.path); shader and macro reload are off")
       return
     }
-    watchers.append(ShaderReloader.watch(repoRoot.appending(path: "MetalGraphicsLib/Shaders"), renderer: renderer))
+    watchers.append(ShaderReloader.watch(repoRoot.appending(path: "MetalGraphicsLib/Shaders")))
     if injecting, let macros = MacroReloader.watch(repoRoot: repoRoot) {
       watchers.append(macros)
     }
@@ -73,21 +75,24 @@ import Foundation
     awaitedInjections = count
   }
 
-  private static func injected(_ renderer: ViewRenderer?) {
+  private static func injected() {
     if awaitedInjections > 0 { awaitedInjections -= 1 }
     // Mid-batch, wait long enough to cover the next file's compile, so a file that fails to
     // inject cannot hold the rebuild back for good; otherwise rebuild after a short quiet period.
-    scheduleRebuild(renderer, after: awaitedInjections > 0 ? .seconds(5) : .milliseconds(200))
+    scheduleRebuild(after: awaitedInjections > 0 ? .seconds(5) : .milliseconds(200))
   }
 
-  private static func scheduleRebuild(_ renderer: ViewRenderer?, after delay: Duration) {
+  private static func scheduleRebuild(after delay: Duration) {
     pendingRebuild?.cancel()
-    pendingRebuild = Task { [weak renderer] in
+    pendingRebuild = Task {
       try? await Task.sleep(for: delay)
-      guard !Task.isCancelled, let renderer else { return }
+      guard !Task.isCancelled else { return }
       awaitedInjections = 0
-      print("🔥 HotReload: rebuilding the UI tree")
-      renderer.hotReload()
+      let windows = WindowRegistry.live
+      print("🔥 HotReload: rebuilding the UI tree in \(windows.count) window(s)")
+      for window in windows {
+        window.post { $0.hotReload() }
+      }
     }
   }
 

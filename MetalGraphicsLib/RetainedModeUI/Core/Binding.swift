@@ -14,7 +14,7 @@
 /// Outside a component — a hand-built tree, or an `onTap` that calls `self.$wifi` — this is a
 /// real binding, a get/set closure pair, and the control initializers taking one work as in
 /// SwiftUI.
-@MainActor @dynamicMemberLookup
+@dynamicMemberLookup
 public struct Binding<Value> {
   private let get: () -> Value
   private let set: (Value) -> Void

@@ -22,6 +22,7 @@ extension ComponentMacro: MemberMacro {
     }
 
     let states = StateProperty.all(in: classDecl.memberBlock.members)
+    let models = ModelProperty.all(in: classDecl.memberBlock.members)
 
     // A component's tree lives in `body`. Until one exists the macro does not own the
     // lifecycle, so it leaves a hand-written `mount` alone.
@@ -73,7 +74,7 @@ extension ComponentMacro: MemberMacro {
       return stubs(states)
     }
 
-    let parser = BodyParser(stateProperties: states, context: context)
+    let parser = BodyParser(stateProperties: states, modelProperties: models, context: context)
     guard let nodes = parser.parse(statements, path: "") else {
       // The parser already diagnosed the problem. Still emit the stubs so the only errors
       // the user sees are the real ones, not a cascade of "cannot find __update_x".
@@ -88,7 +89,7 @@ extension ComponentMacro: MemberMacro {
     // `onMount`/`onUnmount` are not generated: they are `open` members of `UIElement`, called by
     // its mount traversal. Declaring them there rather than here is what lets Xcode offer them as
     // overrides — a member injected into the class is invisible until the macro has expanded.
-    return CodeGen(states: states, nodes: nodes).generate()
+    return CodeGen(states: states, models: models, nodes: nodes).generate()
   }
 }
 
@@ -107,7 +108,7 @@ extension ComponentMacro {
       }
       """
     }
-    return updates + CodeGen(states: states, nodes: []).mutations()
+    return updates + CodeGen(states: states, models: [], nodes: []).mutations()
   }
 }
 

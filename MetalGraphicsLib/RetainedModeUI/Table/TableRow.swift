@@ -3,7 +3,6 @@ import simd
 // The pieces a `Table` is built from. None of them is public: a table makes its own header and
 // rows from its columns.
 
-@MainActor
 enum TableMetrics {
   /// Between a cell's edges and its content.
   static let cellPadding = float2(6, 3)

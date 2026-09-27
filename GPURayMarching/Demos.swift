@@ -21,6 +21,8 @@ enum Demo : String, Identifiable, CaseIterable {
   case pointer
   case navigation
   case redraw
+  case windows
+  case docking
 
   var id: Self { self }
 
@@ -45,10 +47,12 @@ enum Demo : String, Identifiable, CaseIterable {
     case .pointer: "Pointer"
     case .navigation: "Navigation"
     case .redraw: "Redraw"
+    case .windows: "Windows"
+    case .docking: "Docking"
     }
   }
 
-  @MainActor func make() -> UIElement {
+  func make() -> UIElement {
     switch self {
     case .conditional: ConditionalDemo()
     case .list: ListDemo()
@@ -69,6 +73,8 @@ enum Demo : String, Identifiable, CaseIterable {
     case .pointer: PointerDemo()
     case .navigation: NavigationDemo()
     case .redraw: RedrawDemo()
+    case .windows: WindowsDemo()
+    case .docking: DockingDemo()
     }
   }
 }
@@ -78,11 +84,20 @@ enum Demo : String, Identifiable, CaseIterable {
 // is armed like a handler rather than parsed.
 @Component
 final class Demos : SingleChildElement {
-  // Restored from `UIStorage`, so a hot reload or a relaunch reopens the demo you were on.
+  // Restored from the window's storage, so a hot reload or a relaunch reopens the demo each
+  // window was on, and a new window opens on the one last picked in any.
   static let selectedKey = "Demos.selected"
 
-  @State var selected: Demo = UIStorage.value(Demos.selectedKey, default: Demo.text)
+  let scene: WindowScene
+
+  @State var selected: Demo
   @State var demos: [Demo] = Demo.allCases
+
+  init(scene: WindowScene) {
+    self.scene = scene
+    self.selected = scene.storage.value(Demos.selectedKey, default: Demo.text)
+    super.init()
+  }
 
   @UIElementBuilder var body: [UIElement] {
     NavigationSplitView(selection: $selected) {
@@ -92,7 +107,7 @@ final class Demos : SingleChildElement {
       .navigationDestination(for: Demo.self) { demo in
         // Built each time a demo is selected, the restored one included: the one place every
         // selection passes through, so it is saved here.
-        UIStorage.set(demo, for: Demos.selectedKey)
+        self.scene.storage.set(demo, for: Demos.selectedKey)
         return demo.make()
           .padding(12)
           .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

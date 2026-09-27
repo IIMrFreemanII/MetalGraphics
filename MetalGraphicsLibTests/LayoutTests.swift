@@ -42,7 +42,6 @@ final class LayoutTests: XCTestCase {
     let h = UIHarness(size: float2(200, 50)) { HStack { a; b } }
     XCTAssertEqual(a.size.x, 100)
     // What a window resize does: the next frame's update sees the new size.
-    h.renderer.windowSize = float2(400, 50)
     h.context.update(root: h.root, size: float2(400, 50), input: h.input, graphics: h.graphics)
     XCTAssertEqual(a.size.x, 200)
   }

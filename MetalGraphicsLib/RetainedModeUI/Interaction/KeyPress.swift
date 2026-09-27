@@ -35,7 +35,7 @@ public struct KeyEquivalent: Hashable, Sendable, ExpressibleByExtendedGraphemeCl
   public static let `return` = KeyEquivalent("\r")
 }
 
-/// One key event, as `.onKeyPress` handlers receive it. Queued by `MyMTKView` in
+/// One key event, as `.onKeyPress` handlers receive it. Queued by `RetainedLayerView` in
 /// `Input.keyPresses` and routed by `UIContext` to the focused element and the ones around it.
 public struct KeyPress: Sendable {
   public struct Phases: OptionSet, Sendable {
@@ -67,16 +67,27 @@ public struct KeyPress: Sendable {
   /// The physical key, whatever the keyboard layout prints on it: WASD stays where it is on
   /// AZERTY. Nil for keys outside `GCKeyCode(macKeyCode:)`'s table.
   public let keyCode: GCKeyCode?
+  /// The pasteboard's text when this is ⌘V down, read on the main thread with the key's event,
+  /// since the window handling it runs on a thread of its own.
+  let pasteboard: String?
 
   public init(
     key: KeyEquivalent, characters: String, modifiers: NSEvent.ModifierFlags = [], phase: Phases,
     keyCode: GCKeyCode? = nil
+  ) {
+    self.init(key: key, characters: characters, modifiers: modifiers, phase: phase, keyCode: keyCode, pasteboard: nil)
+  }
+
+  init(
+    key: KeyEquivalent, characters: String, modifiers: NSEvent.ModifierFlags, phase: Phases,
+    keyCode: GCKeyCode?, pasteboard: String?
   ) {
     self.key = key
     self.characters = characters
     self.modifiers = modifiers
     self.phase = phase
     self.keyCode = keyCode
+    self.pasteboard = pasteboard
   }
 }
 

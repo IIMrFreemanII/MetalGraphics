@@ -20,7 +20,7 @@ public struct HittableGridCell {
 /// press goes to the topmost view under it that takes presses, and stays with it until the
 /// button comes up, wherever the pointer goes: its drag, its pointer style and its tap belong
 /// to it until then.
-@MainActor public class HittableGrid2D {
+public class HittableGrid2D {
   public var position: float2
   public var cellCount: int2
   public var cellSize: Float
@@ -281,6 +281,18 @@ public struct HittableGridCell {
     if input.mouseDown, let index = self.topmost(at: input, where: { $0.handlesEvents && $0.onTap != nil }) {
       self.views[index].onTap?(input)
     }
+  }
+
+  /// Moves the press in progress to `view`, which gets its drags and its release from now on:
+  /// for an element that picks something up whose own element may be rebuilt elsewhere as the
+  /// drag goes on — a press ends with the element it belongs to. No tap follows the release.
+  func handOffPress(to view: any Hittable) {
+    guard let old = self.pressedView, old !== view else { return }
+    old.isPressed = false
+    self.pressedView = view
+    view.isPressed = true
+    self.pressChain.removeAll(keepingCapacity: true)
+    self.resolvePointerStyle()
   }
 
   private func endPress(_ input: Input, time: Double) {

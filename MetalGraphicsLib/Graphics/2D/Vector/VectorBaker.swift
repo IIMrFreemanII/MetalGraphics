@@ -5,6 +5,9 @@ import QuartzCore
 // every frame. Each path owns a square tile of a separate atlas and re-bakes into it in place,
 // so an animation allocates nothing; a tile is only swapped when the path outgrows it.
 //
+// One baker and atlas per window, owned by its `Graphics2D`: a path belongs to one window, and
+// tiles are freed and reused as paths come and go, which another window's queue could not see.
+//
 // Only a path's geometry is baked. Where it is drawn, how thick its stroke is and how much of
 // it is trimmed are applied by `compute2D`, so most animations never bake at all.
 
@@ -29,7 +32,7 @@ struct BakedRegion {
 /// Tiles of a few fixed sizes over one rg16Float texture. Pages of the largest size are handed
 /// to a size as it first needs one and cut into tiles of that size; freed tiles go back to their
 /// size's free list, so a tile is reused rather than packed again.
-@MainActor final class DynamicSDFAtlas {
+final class DynamicSDFAtlas {
   static let tileSizes = [64, 128, 256, 512]
   static var maxTileSize: Int { Self.tileSizes.last! }
 
@@ -92,15 +95,13 @@ private struct VectorBakeParams {
   var segmentCount: UInt32 = 0
 }
 
-@MainActor final class VectorBaker {
+final class VectorBaker {
   enum Mode: UInt32 {
     case fillNonZero = 0
     case fillEvenOdd = 1
     /// Distance to the centerline, and the position along the path.
     case stroke = 2
   }
-
-  static let shared = VectorBaker()
 
   /// Distance kept around what is baked, so anti-aliasing has room outside it.
   static let paddingTexels = 2
@@ -111,7 +112,7 @@ private struct VectorBakeParams {
 
   let device: MTLDevice
   let atlas: DynamicSDFAtlas
-  private let pipelineState: MTLComputePipelineState
+  private let pipelineState = VectorBaker.sharedPipeline
   private var pendingParams: [VectorBakeParams] = []
   private var pendingSegments: [VectorSegment] = []
   private var segmentBuffer: MTLBuffer?
@@ -125,19 +126,25 @@ private struct VectorBakeParams {
   private var statsTexels = 0
   private var statsGPUTime: Double = 0
 
-  private init() {
+  init() {
     self.device = GPUDevice.main
     self.atlas = DynamicSDFAtlas(device: self.device)
+  }
+
+  /// Compiled once, for every window's baker.
+  private static let sharedPipeline: MTLComputePipelineState = {
+    let device = GPUDevice.main
     do {
-      let library = try self.device.makeDefaultLibrary(bundle: Bundle(for: VectorBaker.self))
+      let library = try device.makeDefaultLibrary(bundle: Bundle(for: VectorBaker.self))
       guard let kernel = library.makeFunction(name: "bakeVectorSDF") else {
         fatalError("bakeVectorSDF kernel is missing from the Metal library")
       }
-      self.pipelineState = try self.device.makeComputePipelineState(function: kernel)
+      return try device.makeComputePipelineState(function: kernel)
     } catch {
       fatalError("Could not create the vector bake pipeline: \(error)")
     }
-  }
+  }()
+
 
   /// Queues a bake of `segments`, local units y down, into `slot` — reusing it when the region
   /// fits, replacing it otherwise. `boundsMin`...`boundsMax` must hold everything that should
@@ -211,8 +218,11 @@ private struct VectorBakeParams {
     self.atlas.free(slot)
   }
 
+  var hasPendingBakes: Bool { !self.pendingParams.isEmpty }
+
   /// Encodes the bakes queued this frame, before `compute2D` samples the atlas. The segment
-  /// buffer is reused from frame to frame: `Graphics2D` waits for each frame to complete.
+  /// buffer is reused from frame to frame: the window's `Graphics2D` waits for every command
+  /// buffer that carries bakes to complete.
   func encodePendingBakes(into commandBuffer: MTLCommandBuffer) {
     guard !self.pendingParams.isEmpty else { return }
     defer {

@@ -362,6 +362,8 @@ enum ElementCatalog {
       arity: .leaf, takesContent: false
     ),
     "Divider": TypeSpec(name: "Divider", args: [ArgSpec("color", nil), ArgSpec("thickness", nil)], arity: .leaf),
+    // Its space and host are its for life; what it shows comes from the space, not the body.
+    "DockArea": TypeSpec(name: "DockArea", args: [ArgSpec(nil, nil), ArgSpec("host", nil)], arity: .leaf),
     "Spacer": TypeSpec(name: "Spacer", args: [ArgSpec("minLength", "setMinLength", animatable: true)], arity: .leaf),
     "FlexFrame": TypeSpec(name: "FlexFrame", args: flexFrameArgs, arity: .single),
     "EmptyElement": TypeSpec(name: "EmptyElement", args: [], arity: .leaf),

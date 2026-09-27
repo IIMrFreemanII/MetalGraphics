@@ -15,7 +15,7 @@ import simd
 // element of its own.
 
 /// The drag in progress. Held by `UIContext.drag`.
-@MainActor final class DragSession {
+final class DragSession {
   /// How far the pointer moves with the button down before a press becomes a drag, in points.
   /// Less is a click.
   static let threshold: Float = 3

@@ -12,16 +12,26 @@ real code: read the cited symbol when a rule applies.
 ## 1. The frame
 
 At 60–120 Hz the whole frame is 8–16 ms, CPU and GPU. One frame
-(`GPURayMarching/TestViewRenderer.swift`, `draw(in:)`):
+(`MetalGraphicsLib/RootViewRenderer.swift`, `frame(drawable:)`, run by each open window on its own
+thread, in parallel — `MetalGraphicsLib/docs/Threading.md`):
 
-1. `UIContext.update` — hit-test (only on mouse input), `animator.tick`, layout (only if
+1. The input events queued since the last frame are applied to `Input`.
+2. `UIContext.update` — hit-test (only on mouse input), `animator.tick`, layout (only if
    `.layout` is pending).
-2. If `!uiContext.needsRender`, stop: nothing is encoded or presented.
-3. `UIContext.render` walks `paintOrder` into `Graphics2D`, which bins shapes into a grid and
+3. If `!uiContext.needsRender`, stop: nothing is encoded or presented.
+4. `UIContext.render` walks `paintOrder` into `Graphics2D`, which bins shapes into a grid and
    runs one compute pass (`compute2D` in `Shaders/Shaders.metal`).
+5. Nothing to draw and nothing animating (`UIContext.isIdle`): the window pauses its display
+   link until something is posted to it.
 
 **An idle app must do ~nothing.** Anything that invalidates `.render` every frame without a
-visible change (a timer, a no-op setter, an animation that never ends) breaks this.
+visible change (a timer, a no-op setter, an animation that never ends) breaks this, and keeps
+its window's display link running.
+
+**Shared state is contended.** Windows run at once, so anything two windows touch per frame —
+a static, a shared cache, a lock, a shared object's reference count — makes each slower the more
+windows animate. Keep per-frame state in the window (`UIContext`, `Graphics2D`) or in
+`ThreadState`; read shared caches through a per-thread front cache, as `FontManager` does.
 
 ## 2. Invalidation — name the narrowest effect
 
@@ -36,6 +46,12 @@ effect.
   existing pattern: a capture-free closure with `unsafeDowncast`, so generated code stays one
   direct call with no allocation. Register its argument spelling in `ElementCatalog.swift`.
 - Skip the write when the value is unchanged, if the setter can be hit repeatedly (hover, drag).
+- A `@Model` write reaches every subscribed component in every window, each through one
+  `__modelDidChange` call, and it notifies no one when the value is unchanged. Another window
+  gets one posted message per burst of writes, not one per write. Each read and write takes the
+  model's lock. Keep model writes out of per-frame code, as with `@State`. A read of a computed property or method
+  (`self.model.summary()`) subscribes to every write to the model: prefer reading stored
+  properties in hot components.
 
 ## 3. Hot paths — per frame, or per element per frame
 
@@ -54,6 +70,10 @@ effect.
 - **Cull early.** Empty clips skip their draws; `Graphics2D.mapToGrid` does not file shapes
   clipped away entirely, which is what keeps long scrolled content cheap. New drawables must
   report tight bounds and respect the clip.
+- **Drags move by offset, commit once.** Something that follows the pointer is drawn there by
+  an effect offset and laid out when the drag ends (`DockFloatView.dragOrigin`), so a move is
+  `.render` only. Shared state — a `@Model`, a `DockSpace` — is written on release, never per
+  move.
 - ARC: don't shuffle element references through temporaries or arrays in tight loops;
   `unowned` or indices where lifetime is guaranteed (`ListRows.stack`, `LayoutPass.context`).
 
@@ -90,9 +110,17 @@ effect.
 - **Micro:** wrap a suspect call in `benchmark(title:mean:)` (`MetalGraphicsLib/Benchmark.swift`)
   — prints µs, averaged with `mean: true`. Remove it before finishing.
 - **Whole app:** build Release and launch it the way the `drive-app` skill does
-  (`-configuration Release`). Idle CPU (`top -pid $(pgrep -x GPURayMarching) -l 3`) should be
-  ~0%; then drive the feature and compare. For deeper work: Instruments (Time Profiler,
-  Allocations, Metal System Trace) or an Xcode Metal frame capture.
+  (`-configuration Release`). Never measure a build instrumented for code coverage (`xcodebuild
+  test -enableCodeCoverage YES`, or coverage turned back on in the scheme): every function call
+  writes its counters, and with several windows animating their threads contend for them, so each
+  frame slows down several times over. The scheme keeps coverage off, so a plain build is clean;
+  `nm <app>/Contents/Frameworks/MetalGraphicsLib.framework/MetalGraphicsLib | grep -c ___profc_`
+  prints 0. Idle CPU (`top -pid $(pgrep -x GPURayMarching) -l 3`) should be ~0%; then drive the
+  feature and compare. `METALGRAPHICS_PROFILE=1` prints each window's frame phases every two
+  seconds. For deeper work: Instruments (Time Profiler, Allocations, Metal System Trace) or an
+  Xcode Metal frame capture.
+- **Several windows:** check a per-frame change with 3–6 windows animating at once (⌘N, and the
+  Redraw demo's stress rows), not just one: shared state shows up only then.
 - **Scale:** try a new element or shape with many instances — hundreds of rows in
   `ScrollDemo`, many shapes on screen — before calling it done.
 

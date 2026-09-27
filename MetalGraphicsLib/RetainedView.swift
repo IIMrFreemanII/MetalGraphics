@@ -1,0 +1,144 @@
+import MetalKit
+import SwiftUI
+
+/// A window's content: a Metal layer the window's own thread runs the retained tree `root` builds
+/// in. One thread and renderer per window, made once and kept for the window's life however often
+/// SwiftUI rebuilds this struct.
+///
+/// Usually reached through `RetainedWindowGroup` or `RetainedWindow` rather than directly.
+public struct RetainedView: View {
+  let sceneID: String
+  let root: @Sendable (WindowScene) -> UIElement
+
+  /// Created once per window. Holds the window's handle but publishes nothing, so a resize or a
+  /// frame never re-runs this body.
+  @StateObject private var host = RetainedWindowHost()
+  /// This window's `UISceneStorage`, saved and restored with the window by SwiftUI.
+  @SceneStorage("MetalGraphics.UISceneStorage") private var persisted = ""
+  @Environment(\.openWindow) private var openWindowAction
+
+  public init(sceneID: String, root: @escaping @Sendable (WindowScene) -> UIElement) {
+    self.sceneID = sceneID
+    self.root = root
+  }
+
+  public var body: some View {
+    RetainedMetalView(host: self.host, sceneID: self.sceneID, root: self.root, persisted: self.$persisted)
+      .onAppear { Windows.register(self.openWindowAction) }
+  }
+}
+
+@MainActor final class RetainedWindowHost: ObservableObject {
+  var handle: WindowHandle?
+  /// The window's `@SceneStorage`, refreshed on every update: the binding SwiftUI hands out
+  /// belongs to the body that made it.
+  var persist: SwiftUI.Binding<String>?
+  /// What the window's `@SceneStorage` holds, as far as this window knows: the last value it
+  /// saved, or the last it restored.
+  private var known = ""
+  /// Counts saves and restores, so a save still waiting to be written knows when a later one
+  /// replaced it.
+  private var generation = 0
+
+  init() {}
+
+  func start(restoring persisted: String) {
+    self.known = persisted
+  }
+
+  /// The window's `UISceneStorage` changed, on its thread. Written once the current view update
+  /// is over: SwiftUI drops a state write made during one.
+  func save(_ encoded: String) {
+    self.known = encoded
+    self.generation += 1
+    let generation = self.generation
+    DispatchQueue.main.async { [weak self] in
+      guard let self, self.generation == generation else { return }
+      self.persist?.wrappedValue = encoded
+    }
+  }
+
+  /// The window's `@SceneStorage` as SwiftUI has it now. SwiftUI restores a window's scene
+  /// storage only after its view is made, so a restored window's tree was first built from the
+  /// fallback values: the restored ones are handed to the window's thread, which rebuilds from
+  /// them if they differ.
+  func sync(_ persisted: String) {
+    guard !persisted.isEmpty, persisted != self.known else { return }
+    self.known = persisted
+    self.generation += 1
+    self.handle?.post { $0.restoreStorage(persisted) }
+  }
+}
+
+struct RetainedMetalView: NSViewRepresentable {
+  let host: RetainedWindowHost
+  let sceneID: String
+  let root: @Sendable (WindowScene) -> UIElement
+  let persisted: SwiftUI.Binding<String>
+
+  final class Coordinator {
+    let host: RetainedWindowHost
+    init(host: RetainedWindowHost) { self.host = host }
+  }
+
+  func makeCoordinator() -> Coordinator {
+    Coordinator(host: self.host)
+  }
+
+  func makeNSView(context: Context) -> RetainedLayerView {
+    let host = self.host
+    host.persist = self.persisted
+    let restoring = self.persisted.wrappedValue
+    host.start(restoring: restoring)
+
+    let (view, handle) = RetainedWindowContent.make(
+      sceneID: self.sceneID, root: self.root, restoring: restoring,
+      // On the window's thread; SwiftUI is the main thread's.
+      persist: { [weak host] encoded in
+        DispatchQueue.main.async { MainActor.assumeIsolated { host?.save(encoded) } }
+      }
+    )
+    host.handle = handle
+    return view
+  }
+
+  func updateNSView(_ nsView: RetainedLayerView, context: Context) {
+    self.host.persist = self.persisted
+    self.host.sync(self.persisted.wrappedValue)
+  }
+
+  static func dismantleNSView(_ nsView: RetainedLayerView, coordinator: Coordinator) {
+    if let handle = coordinator.host.handle {
+      WindowRegistry.remove(handle)
+      handle.close()
+    }
+    coordinator.host.handle = nil
+  }
+}
+
+/// A window's content view and the thread its tree runs on: what `RetainedView` shows, and what
+/// `DockWindows` puts in the windows it opens itself.
+@MainActor enum RetainedWindowContent {
+  static func make(
+    sceneID: String, root: @escaping @Sendable (WindowScene) -> UIElement,
+    restoring: String = "", persist: (@Sendable (String) -> Void)? = nil
+  ) -> (RetainedLayerView, WindowHandle) {
+    let handle = WindowHandle(name: "Window \(sceneID)")
+    let view = RetainedLayerView(handle: handle)
+    WindowRegistry.add(handle, view: view)
+
+    nonisolated(unsafe) let layer = view.metalLayer
+    // On the window's thread; the cursor is the main thread's.
+    let showPointerStyle: @Sendable (PointerStyle) -> Void = { [weak view] style in
+      DispatchQueue.main.async { MainActor.assumeIsolated { view?.pointerStyle = style } }
+    }
+    handle.start {
+      let scene = WindowScene(sceneID: sceneID, storage: UISceneStorage(restoring: restoring, persist: persist), handle: handle)
+      return RootViewRenderer(scene: scene, layer: layer, root: root, showPointerStyle: showPointerStyle)
+    }
+#if DEBUG
+    HotReload.startIfNeeded()
+#endif
+    return (view, handle)
+  }
+}

@@ -376,4 +376,19 @@ final class PointerTests: XCTestCase {
     }
     XCTAssertEqual(wrapped.all(HittableView.self).count, 2)
   }
+
+  // The pointer arriving in the frame that first lays out a tree — a window's first frame,
+  // whose become-key event carries the pointer — hit-tests before that layout: the grid built
+  // then is stale once the layout has run, and must not stay in use.
+  func testAPointerEventBeforeTheFirstLayoutLeavesNoStaleGrid() {
+    var taps = 0
+    let h = UIHarness { EmptyElement() }
+    h.root.setChild(
+      Rectangle(float4(1, 0, 0, 1)).frame(width: 50, height: 50).onTap { _ in taps += 1 },
+      h.context
+    )
+    h.move(to: float2(10, 10))
+    h.click(at: float2(160, 120))
+    XCTAssertEqual(taps, 1)
+  }
 }

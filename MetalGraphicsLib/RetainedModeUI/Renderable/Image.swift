@@ -2,7 +2,7 @@ import AppKit
 import simd
 
 /// How `aspectRatio(_:contentMode:)` fits an image into the space it is offered.
-public enum ContentMode {
+public enum ContentMode: Sendable {
   /// As large as fits entirely.
   case fit
   /// As small as covers it all. The image is cropped to the space offered, as though

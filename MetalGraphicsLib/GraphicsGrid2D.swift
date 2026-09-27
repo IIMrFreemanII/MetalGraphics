@@ -47,7 +47,7 @@ struct GridArgBuffer {
   var gridPosition = float2()
 }
 
-@MainActor class GraphicsGrid2D {
+class GraphicsGrid2D {
   public var size: int2
   public var cellSize: Float
   public var position: float2
@@ -61,7 +61,7 @@ struct GridArgBuffer {
   public var shapeBuffer: MTLBuffer!
   public var shapeBufferCount: Int = 0
 
-  public var graphics: Graphics2D
+  public unowned let graphics: Graphics2D
 
   /// Each cell's hash of its shapes, topmost first, as of the last `updateBuffers`; false until
   /// there has been one, when every cell counts as changed.
@@ -110,9 +110,7 @@ struct GridArgBuffer {
     }
   }
 
-  // Nonisolated: a closure written in this `@MainActor` class checks it is on the main actor
-  // every time it is called, which for a sort's comparisons cost more than the sort itself.
-  nonisolated private static func isAbove(_ a: FiledShape, _ b: FiledShape) -> Bool {
+  private static func isAbove(_ a: FiledShape, _ b: FiledShape) -> Bool {
     a.shape.depth > b.shape.depth
   }
 

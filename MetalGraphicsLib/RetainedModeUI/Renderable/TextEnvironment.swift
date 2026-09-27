@@ -180,20 +180,23 @@ public struct TextEnvironment: Equatable, Sendable {
 /// Anything that lays out a subtree outside its ancestors' calls — a scroll view placing rows as
 /// it scrolls, a popover, a drag preview — must capture `current` where the subtree belongs and
 /// lay it out under that. `depth` is back to 0 after every pass.
-@MainActor
 enum TextScope {
-  static var current = TextEnvironment()
-  static var depth = 0
+  static var current: TextEnvironment {
+    get { ThreadState.current.textScope }
+    set { ThreadState.current.textScope = newValue }
+  }
+  static var depth: Int { ThreadState.current.textDepth }
 
   /// Runs `body` with `environment` as the current style.
   @inline(__always)
   static func with<R>(_ environment: TextEnvironment, _ body: () -> R) -> R {
-    let outer = self.current
-    self.current = environment
-    self.depth += 1
+    let state = ThreadState.current
+    let outer = state.textScope
+    state.textScope = environment
+    state.textDepth += 1
     defer {
-      self.current = outer
-      self.depth -= 1
+      state.textScope = outer
+      state.textDepth -= 1
     }
     return body()
   }

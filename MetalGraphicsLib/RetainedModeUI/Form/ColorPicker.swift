@@ -196,7 +196,7 @@ func rgbFromHSB(_ hsb: float3, alpha: Float) -> float4 {
 }
 
 /// Drawn under a translucent colour, so its opacity shows.
-@MainActor func drawCheckerboard(_ renderer: Graphics2D, origin: float2, size: float2, cell: Float, opacity: Float) {
+func drawCheckerboard(_ renderer: Graphics2D, origin: float2, size: float2, cell: Float, opacity: Float) {
   let columns = Int((size.x / cell).rounded(.up))
   let rows = Int((size.y / cell).rounded(.up))
   for row in 0 ..< rows {

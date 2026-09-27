@@ -1,6 +1,6 @@
 import simd
 
-@MainActor open class UIElement {
+open class UIElement {
   public var mounted = false
 
   /// True while this element plays its removal transition. Its parent still holds and lays it
@@ -64,6 +64,10 @@ import simd
 
   /// Called just before this element unmounts, before its children do.
   open func onUnmount(_ context: UIContext) -> Void {}
+
+  /// A `@Model` property this element subscribed to with `token` changed. `@Component`
+  /// generates it for a component whose body reads a `@Bindable` model; see `ModelObservers`.
+  open func __modelDidChange(_ token: Int, _ animated: Bool) -> Void {}
 
   internal final func handleUnmount(_ context: UIContext) -> Void {
     guard self.mounted else { return }
@@ -402,13 +406,18 @@ public struct ClipRect: Equatable, Sendable {
 
 /// The animated layout pass under way, if any. Set by `UIContext.update` only around the
 /// positioning of a pass that an animated change caused, which is what `place` checks.
-@MainActor
 struct LayoutPass {
-  static var current: LayoutPass? = nil
+  static var current: LayoutPass? {
+    get { ThreadState.current.layoutPass }
+    set { ThreadState.current.layoutPass = newValue }
+  }
 
-  /// Which layout pass is under way, or last ran. What `measure` remembers is valid for one
-  /// generation only.
-  static var generation: UInt32 = 0
+  /// Which layout pass is under way, or last ran, on this thread. What `measure` remembers is
+  /// valid for one generation only.
+  static var generation: UInt32 {
+    get { ThreadState.current.layoutGeneration }
+    set { ThreadState.current.layoutGeneration = newValue }
+  }
 
   unowned let context: UIContext
   let animation: UIAnimation
@@ -416,7 +425,6 @@ struct LayoutPass {
 }
 
 /// The layout values of one element that modifiers set in place. See `UIElement.traits`.
-@MainActor
 final class LayoutTraits {
   var tag: AnyHashable? = nil
   var layoutPriority: Float? = nil

@@ -72,7 +72,6 @@ public struct NavigationPath: Equatable, NavigationPathRepresentable {
 }
 
 /// How navigation looks and moves: one place, like `FormMetrics`.
-@MainActor
 public enum NavigationMetrics {
   public static let barHeight: Float = 38
   public static let barColor = float4(0.97, 0.97, 0.97, 1)

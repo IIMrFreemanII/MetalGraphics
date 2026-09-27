@@ -2,7 +2,7 @@ import simd
 
 /// Something the pointer can hover, press and tap: a `HittableView`, which is hit anywhere in
 /// its laid-out rect, or a `VectorCanvas` shape, which is hit only inside its own outline.
-@MainActor public protocol Hittable: AnyObject {
+public protocol Hittable: AnyObject {
   var mounted: Bool { get }
   /// Top left corner and size of the rect the hit grid files it under, in points, window top
   /// left origin, y down. Nothing outside it can hit.

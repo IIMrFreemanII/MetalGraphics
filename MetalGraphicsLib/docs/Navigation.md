@@ -28,7 +28,7 @@ NavigationStack(path: $path) {
 | `.navigationTitle(_:)` | The page's title in the bar, and the back button's label on the page over it. Reactive. |
 | Back | The bar's back button, Escape (no modifiers) and ⌘[. At the root they pass the key on. |
 | `NavigationSplitView { sidebar } detail: { placeholder }` | A value or view link in the sidebar selects what the detail column shows, and is highlighted. The detail column is a stack. |
-| `NavigationSplitView(selection: $selected) { … } detail: { … }` | The selection is the state's: a value link reports to it, and the value comes back through `setSelection`. It is also how the split view starts on a selection, restored from `UIStorage` in `Demos`. A nil selection shows the placeholder. |
+| `NavigationSplitView(selection: $selected) { … } detail: { … }` | The selection is the state's: a value link reports to it, and the value comes back through `setSelection`. It is also how the split view starts on a selection, restored from the window's `UISceneStorage` in `Demos`. A nil selection shows the placeholder. |
 
 Links are `Button`s, so `.buttonStyle`, `.disabled` and `.pointerStyle` work on them.
 

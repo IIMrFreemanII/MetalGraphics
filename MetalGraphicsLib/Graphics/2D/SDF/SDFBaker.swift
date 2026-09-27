@@ -189,8 +189,10 @@ struct SDFPathBuilder {
   }
 }
 
-/// A shelf packer over one r16Float texture holding every baked region.
-@MainActor final class SDFAtlas {
+/// A shelf packer over one r16Float texture holding every baked region. Regions are never freed,
+/// so a baked one never changes: any window can sample it once its bake has run. Allocated from
+/// under `SDFBaker`'s lock only.
+final class SDFAtlas {
   let texture: MTLTexture
   let size: Int
 
@@ -232,7 +234,7 @@ struct SDFPathBuilder {
   }
 }
 
-@MainActor final class SDFBaker {
+final class SDFBaker: @unchecked Sendable {
   static let shared = SDFBaker()
 
   /// Distance field kept around the outline, so anti-aliasing has room outside it.
@@ -241,12 +243,11 @@ struct SDFPathBuilder {
   let device: MTLDevice
   let atlas: SDFAtlas
   private let bakePipelineState: MTLComputePipelineState
+  /// Guards `atlas`'s allocator, `pendingBakes` and `reportedAtlasFull`: every window's thread
+  /// bakes, and whichever flushes first encodes them all (see `SharedGPUWork`).
+  private let lock = NSLock()
   private var pendingBakes: [PendingBake] = []
   private var reportedAtlasFull = false
-  // Reused from bake to bake, and only grown: `Graphics2D` waits for each frame to complete.
-  private var pathElementBuffer: MTLBuffer?
-  private var subPathBuffer: MTLBuffer?
-  private var shapeBuffer: MTLBuffer?
 
   private init() {
     self.device = GPUDevice.main
@@ -290,6 +291,23 @@ struct SDFPathBuilder {
       print("Skipping \(label): \(regionSize.x)x\(regionSize.y) texels is too large to bake")
       return nil
     }
+    // Built before the allocation, so the lock is held only for the allocation and the queueing.
+    var bakeShapes: [SDFShape] = []
+    var pathElements: [PathElement] = []
+    var subPaths: [SubPath] = []
+    for shape in shapes {
+      let elementBase = UInt32(pathElements.count)
+      let subPathBase = UInt32(subPaths.count)
+      pathElements += shape.pathElements
+      subPaths += shape.subPaths.map { SubPath(start: $0.start + elementBase, end: $0.end + elementBase) }
+      bakeShapes.append(SDFShape(
+        subPathStart: subPathBase, subPathEnd: UInt32(subPaths.count),
+        mode: shape.mode.rawValue, halfWidth: shape.halfWidth
+      ))
+    }
+
+    self.lock.lock()
+    defer { self.lock.unlock() }
     guard let origin = self.atlas.allocate(regionSize) else {
       if !self.reportedAtlasFull {
         self.reportedAtlasFull = true
@@ -306,20 +324,6 @@ struct SDFPathBuilder {
     region.uvMin = (float2(Float(origin.x), Float(origin.y)) + 0.5) / atlasSize
     region.uvMax = (float2(Float(origin.x + regionSize.x), Float(origin.y + regionSize.y)) - 0.5) / atlasSize
 
-    var bakeShapes: [SDFShape] = []
-    var pathElements: [PathElement] = []
-    var subPaths: [SubPath] = []
-    for shape in shapes {
-      let elementBase = UInt32(pathElements.count)
-      let subPathBase = UInt32(subPaths.count)
-      pathElements += shape.pathElements
-      subPaths += shape.subPaths.map { SubPath(start: $0.start + elementBase, end: $0.end + elementBase) }
-      bakeShapes.append(SDFShape(
-        subPathStart: subPathBase, subPathEnd: UInt32(subPaths.count),
-        mode: shape.mode.rawValue, halfWidth: shape.halfWidth
-      ))
-    }
-
     self.pendingBakes.append(PendingBake(
       params: SDFBakeParams(
         origin: SIMD2(UInt32(origin.x), UInt32(origin.y)),
@@ -335,10 +339,18 @@ struct SDFPathBuilder {
     return region
   }
 
-  /// Encodes every region queued since the last frame. Called on the frame's command buffer
-  /// before anything samples the atlas; the atlas is hazard tracked, so the bakes finish first.
+  var hasPendingBakes: Bool {
+    self.lock.withLock { !self.pendingBakes.isEmpty }
+  }
+
+  /// Encodes every region queued so far, from any window. Called by `SharedGPUWork.flush` only,
+  /// on the bake queue; frames wait for it through its event before sampling the atlas.
   func encodePendingBakes(into commandBuffer: MTLCommandBuffer) {
-    guard !self.pendingBakes.isEmpty else {
+    let pendingBakes = self.lock.withLock {
+      defer { self.pendingBakes.removeAll(keepingCapacity: true) }
+      return self.pendingBakes
+    }
+    guard !pendingBakes.isEmpty else {
       return
     }
 
@@ -346,7 +358,7 @@ struct SDFPathBuilder {
     var subPaths: [SubPath] = []
     var shapes: [SDFShape] = []
     var params: [SDFBakeParams] = []
-    for bake in self.pendingBakes {
+    for bake in pendingBakes {
       let elementBase = UInt32(pathElements.count)
       let subPathBase = UInt32(subPaths.count)
       let shapeBase = UInt32(shapes.count)
@@ -364,7 +376,6 @@ struct SDFPathBuilder {
       bakeParams.shapeEnd = shapeBase + UInt32(bake.shapes.count)
       params.append(bakeParams)
     }
-    self.pendingBakes.removeAll(keepingCapacity: true)
 
     // A region with nothing in it still bakes, as all outside; Metal rejects empty buffers.
     if pathElements.isEmpty { pathElements.append(PathElement()) }
@@ -372,9 +383,9 @@ struct SDFPathBuilder {
     if shapes.isEmpty { shapes.append(SDFShape()) }
 
     guard
-      let pathElementBuffer = self.upload(pathElements, into: &self.pathElementBuffer, label: "SDF path elements"),
-      let subPathBuffer = self.upload(subPaths, into: &self.subPathBuffer, label: "SDF subpaths"),
-      let shapeBuffer = self.upload(shapes, into: &self.shapeBuffer, label: "SDF shapes"),
+      let pathElementBuffer = self.upload(pathElements, label: "SDF path elements"),
+      let subPathBuffer = self.upload(subPaths, label: "SDF subpaths"),
+      let shapeBuffer = self.upload(shapes, label: "SDF shapes"),
       let encoder = commandBuffer.makeComputeCommandEncoder()
     else {
       fatalError("Could not encode the SDF bakes")
@@ -403,17 +414,13 @@ struct SDFPathBuilder {
     encoder.endEncoding()
   }
 
-  /// Copies `values` into `buffer`, growing it first when they do not fit.
-  private func upload<T>(_ values: [T], into buffer: inout MTLBuffer?, label: String) -> MTLBuffer? {
-    let byteCount = values.byteCount
-    if (buffer?.length ?? 0) < byteCount {
-      buffer = self.device.makeBuffer(length: max(byteCount * 2, 4096), options: .storageModeShared)
-      buffer?.label = label
+  /// A buffer holding `values`, made for this flush: nothing waits for a flush to complete, so
+  /// the next one can't reuse it.
+  private func upload<T>(_ values: [T], label: String) -> MTLBuffer? {
+    let buffer = values.withUnsafeBytes { bytes in
+      self.device.makeBuffer(bytes: bytes.baseAddress!, length: bytes.count, options: .storageModeShared)
     }
-    guard let buffer else { return nil }
-    values.withUnsafeBytes { bytes in
-      buffer.contents().copyMemory(from: bytes.baseAddress!, byteCount: bytes.count)
-    }
+    buffer?.label = label
     return buffer
   }
 }

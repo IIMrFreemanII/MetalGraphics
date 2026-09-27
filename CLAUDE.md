@@ -16,6 +16,14 @@ Before implementing or changing any feature in MetalGraphicsLib, GPURayMarching 
 
 Debug builds reload Swift (via InjectionNext), shaders and the ReactiveUI macros live, and restore the selected tab from `UIStorage`. Setup, limits and what still needs a relaunch: `MetalGraphicsLib/docs/HotReload.md`.
 
+## Threading
+
+Every window runs its frames on a thread of its own; the main thread does AppKit and SwiftUI only. What runs where, how the two post to each other, and the rules for code in a tree: `MetalGraphicsLib/docs/Threading.md`.
+
+## Docking
+
+Panels dock, split, tab and float in a `DockArea`, and become windows of their own when dragged out (`DockSpace`, `DockWindows`). The model, what runs where, what survives a move between windows, and the two window looks: `MetalGraphicsLib/docs/Docking.md`.
+
 ## UI tests
 
 Check UI changes with the headless tests in `MetalGraphicsLibTests` (the `ui-tests` skill, `.claude/skills/ui-tests/SKILL.md`): no window, synthetic input, fake clock, golden PNGs, seconds per run. Launch the app with `drive-app` only for what the harness does not cover (real `NSEvent`s, windowing, hot reload, frame pacing) and for a final end-to-end check.

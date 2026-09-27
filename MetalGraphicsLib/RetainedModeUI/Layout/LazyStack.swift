@@ -354,9 +354,14 @@ extension LazyStack {
 
 /// What the scroll views around the content being positioned show, in window coordinates: set
 /// by each `ScrollView` around positioning its content, and read by lazy stacks.
-@MainActor
 enum LazyStackViewport {
-  static var current: ClipRect? = nil
+  static var current: ClipRect? {
+    get { ThreadState.current.lazyViewport }
+    set { ThreadState.current.lazyViewport = newValue }
+  }
   /// True while a scroll view's content is being sized, before it has a place.
-  static var inScrollView = false
+  static var inScrollView: Bool {
+    get { ThreadState.current.inScrollView }
+    set { ThreadState.current.inScrollView = newValue }
+  }
 }

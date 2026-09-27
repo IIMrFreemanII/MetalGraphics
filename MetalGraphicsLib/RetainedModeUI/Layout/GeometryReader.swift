@@ -9,7 +9,6 @@ public enum CoordinateSpace: Sendable {
 }
 
 /// Where an element was laid out and how large it is, as of the last layout pass.
-@MainActor
 public final class GeometryProxy {
   public fileprivate(set) var size: float2 = .zero
   /// The top left, in the window.
