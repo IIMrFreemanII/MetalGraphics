@@ -12,8 +12,8 @@ real code: read the cited symbol when a rule applies.
 ## 1. The frame
 
 At 60–120 Hz the whole frame is 8–16 ms, CPU and GPU. One frame
-(`MetalGraphicsLib/RootViewRenderer.swift`, `frame(drawable:)`, run by each open window on its own
-thread, in parallel — `MetalGraphicsLib/docs/Threading.md`):
+(`Sources/MetalGraphicsLib/RootViewRenderer.swift`, `frame(drawable:)`, run by each open window on its own
+thread, in parallel — `docs/Threading.md`):
 
 1. The input events queued since the last frame are applied to `Input`.
 2. `UIContext.update` — hit-test (only on mouse input), `animator.tick`, layout (only if
@@ -107,15 +107,15 @@ effect.
 
 ## 7. Measure, don't guess
 
-- **Micro:** wrap a suspect call in `benchmark(title:mean:)` (`MetalGraphicsLib/Benchmark.swift`)
+- **Micro:** wrap a suspect call in `benchmark(title:mean:)` (`Sources/MetalGraphicsLib/Benchmark.swift`)
   — prints µs, averaged with `mean: true`. Remove it before finishing.
 - **Whole app:** build Release and launch it the way the `drive-app` skill does
-  (`-configuration Release`). Never measure a build instrumented for code coverage (`xcodebuild
-  test -enableCodeCoverage YES`, or coverage turned back on in the scheme): every function call
+  (`swift build -c release --product Demo`, then `.build/release/Demo`). Never measure a build
+  instrumented for code coverage (`swift test --enable-code-coverage`): every function call
   writes its counters, and with several windows animating their threads contend for them, so each
-  frame slows down several times over. The scheme keeps coverage off, so a plain build is clean;
-  `nm <app>/Contents/Frameworks/MetalGraphicsLib.framework/MetalGraphicsLib | grep -c ___profc_`
-  prints 0. Idle CPU (`top -pid $(pgrep -x GPURayMarching) -l 3`) should be ~0%; then drive the
+  frame slows down several times over. A plain `swift build` leaves coverage off, so it is clean;
+  `nm .build/release/Demo | grep -c ___profc_` prints 0 (MetalGraphicsLib is linked in
+  statically). Idle CPU (`top -pid $(pgrep -x Demo) -l 3`) should be ~0%; then drive the
   feature and compare. `METALGRAPHICS_PROFILE=1` prints each window's frame phases every two
   seconds. For deeper work: Instruments (Time Profiler, Allocations, Metal System Trace) or an
   Xcode Metal frame capture.

@@ -2,11 +2,8 @@
 // positions SwiftUI gives the same trees as the expected values (see Tools/layoutchecks/oracle.swift
 // for how those were measured).
 //
-//   xcodebuild -project MetalGraphics.xcodeproj -scheme GPURayMarching -derivedDataPath "$DD" build
-//   swiftc -swift-version 6 -F "$DD/Build/Products/Debug" Tools/layoutchecks/main.swift -o /tmp/layoutchecks \
-//     -Xlinker -rpath -Xlinker "$DD/Build/Products/Debug"
-//   /tmp/layoutchecks            # fast path for fraction alignment guides
-//   /tmp/layoutchecks general    # the same checks with explicit guides turned on
+//   swift run layoutchecks            # fast path for fraction alignment guides
+//   swift run layoutchecks general    # the same checks with explicit guides turned on
 //
 import MetalGraphicsLib
 import simd
