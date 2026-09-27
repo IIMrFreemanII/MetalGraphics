@@ -9,7 +9,9 @@ import SwiftCodeModel
 /// status line under it.
 ///
 /// ⌘S saves it. A tab showing unsaved edits reads "● name", and closing it asks first. ⌘F finds
-/// (⌘G, ⇧⌘G next and previous, Escape in the text closes the bar), ⌘L goes to a line. Moved to
+/// (⌘G, ⇧⌘G next and previous, Escape in the text closes the bar), ⌘L goes to a line. A Swift
+/// file is kept in sync with the language server: completions, hovers, ⌘-click and ⌃⌘J to a
+/// definition (`LanguageAssist`), and its diagnostics underlined with the build's. Moved to
 /// another window, the panel is made anew there; its unsaved text goes with it (`OpenFiles`),
 /// its undo history does not.
 @Component
@@ -18,6 +20,10 @@ final class FileEditorPanel : SingleChildElement {
   private static let statusColor = float4(0.42, 0.42, 0.45, 1)
   private static let errorColor = float4(0.8, 0.2, 0.15, 1)
   private static let barColor = float4(0.955, 0.955, 0.96, 1)
+  private static let popupColor = float4(0.985, 0.985, 0.99, 1)
+  private static let popupBorder = float4(0, 0, 0, 0.18)
+  private static let tooltipColor = float4(1, 0.99, 0.9, 1)
+  private static let tooltipFont = TextFont.system(size: 12)
 
   let panel: DockPanel
   let file: FileBinding
@@ -27,6 +33,10 @@ final class FileEditorPanel : SingleChildElement {
   let pairs: [AutoClosingPair]
   /// Parses a Swift file after each pause in typing: the outline, and what folds.
   let codeModel: CodeModelSession?
+  /// The file as the language server sees it, and what it answers; nil for other files, or
+  /// without a server.
+  let language: LanguageDocument?
+  let assist: LanguageAssist?
 
   @State var dirty: Bool
   // The find bar.
@@ -43,6 +53,13 @@ final class FileEditorPanel : SingleChildElement {
   @State var diagnostics: [TextDiagnostic] = []
   /// What can fold, from the last parse.
   @State var foldable: [Range<Int>] = []
+  // The completion list and the hover's tooltip, over the text.
+  @State var completing: Bool = false
+  @State var completionRows: [CompletionRow] = []
+  @State var completionInset: Inset = Inset()
+  @State var hovering: Bool = false
+  @State var hoverText: String = ""
+  @State var hoverInset: Inset = Inset()
   @State var confirmingClose: Bool = false
   @State var status: String = "Ln 1, Col 1"
   /// What went wrong reading or saving the file; "" when nothing did.
@@ -56,6 +73,16 @@ final class FileEditorPanel : SingleChildElement {
     self.styler = Self.styler(for: path)
     self.pairs = self.styler is SwiftStyler ? AutoClosingPair.code : []
     self.codeModel = self.styler is SwiftStyler && file.loadError == nil ? CodeModelSession(document: file.document) : nil
+    let root = WorkspaceModel.shared.rootPath
+    if self.styler is SwiftStyler, file.loadError == nil, !root.isEmpty,
+       let service = LanguageClient.shared.service(for: root) {
+      let language = LanguageDocument(path: path, document: file.document, service: service)
+      self.language = language
+      self.assist = LanguageAssist(language: language, controller: self.controller)
+    } else {
+      self.language = nil
+      self.assist = nil
+    }
     self.dirty = file.isDirty
     self.problem = file.loadError ?? ""
     super.init()
@@ -67,6 +94,26 @@ final class FileEditorPanel : SingleChildElement {
     }
     file.onDiskChange = { [unowned self] reason in
       self.problem = reason ?? ""
+    }
+    file.onEdit = { [unowned self] origin in self.assist?.edited(origin) }
+    file.onSaved = { [unowned self] in self.language?.saved() }
+    self.assist?.onCompletion = { [unowned self] shown in
+      if let (rows, inset) = shown {
+        self.completionRows = rows
+        self.completionInset = inset
+        if !self.completing { self.completing = true }
+      } else if self.completing {
+        self.completing = false
+      }
+    }
+    self.assist?.onHover = { [unowned self] shown in
+      if let (text, inset) = shown {
+        self.hoverText = text
+        self.hoverInset = inset
+        if !self.hovering { self.hovering = true }
+      } else if self.hovering {
+        self.hovering = false
+      }
     }
     self.codeModel?.onAnalysis = { [unowned self] analysis in
       self.foldable = analysis.foldingRanges
@@ -108,21 +155,46 @@ final class FileEditorPanel : SingleChildElement {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Self.barColor)
       }
-      TextEditor(document: self.file.document)
-        .styler(self.styler)
-        .lineNumbers(true)
-        .bracketMatching(true)
-        .autoClosingPairs(self.pairs)
-        .searchQuery(self.finding ? self.query : "")
-        .searchOptions(TextSearchOptions(caseSensitive: self.caseSensitive, wholeWord: self.wholeWord, regex: self.regex))
-        .diagnostics(self.diagnostics)
-        .foldingRanges(self.foldable)
-        .editable(self.file.loadError == nil)
-        .controller(self.controller)
-        .onSelectionChange { selection in self.showStatus(selection) }
-        .onSearchChange { current, count in self.showMatches(current, count) }
-        .onCommand { command in self.command(command) }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+      ZStack(alignment: .topLeading) {
+        TextEditor(document: self.file.document)
+          .styler(self.styler)
+          .lineNumbers(true)
+          .bracketMatching(true)
+          .autoClosingPairs(self.pairs)
+          .searchQuery(self.finding ? self.query : "")
+          .searchOptions(TextSearchOptions(caseSensitive: self.caseSensitive, wholeWord: self.wholeWord, regex: self.regex))
+          .diagnostics(self.diagnostics)
+          .foldingRanges(self.foldable)
+          .editable(self.file.loadError == nil)
+          .controller(self.controller)
+          .onSelectionChange { selection in self.selectionChanged(selection) }
+          .onSearchChange { current, count in self.showMatches(current, count) }
+          .onCommand { command in self.command(command) }
+          .onTextHover { offset, point in self.assist?.hover(offset, at: point) }
+          .onCommandClick { offset in self.assist?.goToDefinition(at: offset) }
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+        if self.completing {
+          VList(alignment: .leading, spacing: 0, items: self.completionRows) { [weak self] row in
+            CompletionRowView(row: row) { index in self?.assist?.accept(index) }
+          }
+          .background(Self.popupColor)
+          .padding(1)
+          .background(Self.popupBorder)
+          .padding(self.completionInset)
+        }
+        if self.hovering {
+          Text(self.hoverText)
+            .font(Self.tooltipFont)
+            .padding(Inset(vertical: 6, horizontal: 8))
+            .frame(maxWidth: 420, alignment: .leading)
+            .background(Self.tooltipColor)
+            .padding(1)
+            .background(Self.popupBorder)
+            .allowsHitTesting(false)
+            .padding(self.hoverInset)
+        }
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
       HStack(spacing: 12) {
         Text(self.status)
           .font(Self.statusFont)
@@ -164,6 +236,9 @@ final class FileEditorPanel : SingleChildElement {
     // as they are turned into this document's ranges, which a body cannot do.
     BuildModel.shared.__observers(named: "problems").add(self, token: Self.problemsToken)
     WorkspaceModel.shared.__observers(named: "reveal").add(self, token: Self.revealToken)
+    if self.language != nil {
+      LanguageModel.shared.__observers(named: "diagnostics").add(self, token: Self.problemsToken)
+    }
     self.showProblems()
     // Shown, so it takes the keyboard: a file just opened, a tab picked.
     context.afterLayout { [weak self] in
@@ -187,6 +262,9 @@ final class FileEditorPanel : SingleChildElement {
   override func onUnmount(_ context: UIContext) {
     BuildModel.shared.__observers(named: "problems").remove(self)
     WorkspaceModel.shared.__observers(named: "reveal").remove(self)
+    LanguageModel.shared.__observers(named: "diagnostics").remove(self)
+    self.assist?.dismiss()
+    self.assist?.hover(nil, at: .zero)
     // Still in the layout: moving, or another tab picked. Not when it was closed.
     if self.file.isDirty && self.panel.space.layout.panels[self.panel.id] != nil {
       OpenFiles.shared.keepUnsaved(self.file.document.stringWithOriginalLineEndings, panel: self.panel.id)
@@ -216,17 +294,26 @@ final class FileEditorPanel : SingleChildElement {
       self.controller.findNext(forward: !press.modifiers.contains(.shift))
     case "l":
       self.goingToLine = true
+    case "j" where press.modifiers.contains(.control):
+      guard let caret = self.controller.editor?.state.selection.primary.head else { return .ignored }
+      self.assist?.goToDefinition(at: caret)
     default:
       return .ignored
     }
     return .handled
   }
 
-  /// Escape in the text closes the find bar.
+  /// The completion list's keys first; then Escape in the text closes the find bar.
   private func command(_ command: EditorCommand) -> Bool {
+    if self.assist?.command(command) == true { return true }
     guard command == .cancel, self.finding, self.controller.editor?.state.selection.ranges.count == 1 else { return false }
     self.closeFind()
     return true
+  }
+
+  private func selectionChanged(_ selection: EditorSelection) {
+    self.showStatus(selection)
+    self.assist?.selectionChanged()
   }
 
   /// Shows the find bar with the keyboard in its field, looking for the selection when it is on
@@ -289,13 +376,29 @@ final class FileEditorPanel : SingleChildElement {
       : "Ln \(line + 1), Col \(column + 1)"
   }
 
-  /// The build's problems in this file, as ranges of its text: each underlines the word at its
-  /// column, or the character.
+  /// The build's problems in this file and the language server's, as ranges of its text: a
+  /// build's underlines the word at its column, or the character.
   private func showProblems() {
     let document = self.file.document
     let problems = BuildModel.shared.problems.filter { $0.path == self.file.path }
-    guard !problems.isEmpty || !self.diagnostics.isEmpty else { return }
-    self.diagnostics = problems.map { problem in
+    var live: [TextDiagnostic] = []
+    if let language = self.language, let published = LanguageModel.shared.diagnostics[self.file.path],
+       language.isCurrent(published.version) {
+      live = published.items.map { item in
+        let start = LanguageDocument.offset(item.range.start, in: document)
+        var end = LanguageDocument.offset(item.range.end, in: document)
+        if end <= start { end = min(start + 1, document.length) }
+        let severity: DiagnosticSeverity = switch item.severity {
+        case .error: .error
+        case .warning: .warning
+        case .information: .info
+        case .hint: .hint
+        }
+        return TextDiagnostic(start ..< max(end, start), severity, item.message)
+      }
+    }
+    guard !problems.isEmpty || !live.isEmpty || !self.diagnostics.isEmpty else { return }
+    self.diagnostics = live + problems.map { problem in
       let offset = Self.offset(of: problem.line, problem.column, in: document)
       let line = document.line(containing: offset)
       let lineEnd = document.lineRange(line).upperBound
@@ -336,8 +439,10 @@ final class FileEditorPanel : SingleChildElement {
     let model = WorkspaceModel.shared
     guard let request = model.reveal, request.path == self.file.path, self.mounted else { return }
     model.reveal = nil
-    let offset = request.offset.map { min($0, self.file.document.length) }
-      ?? Self.offset(of: request.line, request.column, in: self.file.document)
+    let document = self.file.document
+    let offset = request.offset.map { min($0, document.length) }
+      ?? request.character.map { LanguageDocument.offset(LSPPosition(line: request.line - 1, character: $0), in: document) }
+      ?? Self.offset(of: request.line, request.column, in: document)
     self.controller.select(offset ..< offset, reveal: .center)
     self.controller.focus()
   }

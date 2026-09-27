@@ -190,6 +190,14 @@ enum IDE {
     WorkspaceModel.shared.reveal = RevealRequest(path: path, offset: offset, serial: serial)
   }
 
+  /// Shows `path` in a tab with the caret at `line` and UTF-16 `character`, from 0: a
+  /// definition, as a language server gives it.
+  static func reveal(_ path: String, line: Int, character: Int) {
+    self.openFile(path)
+    let serial = (WorkspaceModel.shared.reveal?.serial ?? 0) + 1
+    WorkspaceModel.shared.reveal = RevealRequest(path: path, line: line + 1, character: character, serial: serial)
+  }
+
   /// Adds the Outline to a layout saved before there was one: a tab beside the navigator, which
   /// can be dragged under it.
   static func ensureOutlinePanel() {

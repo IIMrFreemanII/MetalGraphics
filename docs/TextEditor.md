@@ -56,6 +56,23 @@ A regular expression is matched within each line, and a replacement may use `$1`
 `.onSearchChange { current, count in }` reports `matchPosition` at the end of a frame in which it
 may have changed: a new query or options, a find, or an edit or a move while searching.
 
+## For a language's features
+
+What an app draws over the editor, and what it asks a language about:
+
+- **Geometry.** `caretRect(for:)` (also on `EditorController`) gives where the caret at an
+  offset is, in the editor's own coordinates: its top left is the origin (`origin` and `bounds`
+  say where the editor is and how big). `offset(atLocal:)` goes back. A completion list is
+  placed this way, in a `ZStack` over the editor.
+- **Hover.** `.onTextHover { offset, point in }` is called once the pointer has rested on text for
+  half a second: a wake, not a timer per frame. It is called again with nil when the pointer
+  moves on or leaves. Past a line's end nothing is reported.
+- **⌘-click.** `.onCommandClick { offset in }` takes a click made with ⌘ instead of placing the
+  caret: go to a definition.
+- **Commands.** `EditorController.perform(_:)` runs a command as a key would: typing a completion
+  over what was typed of it, as one step to undo. `onCommand` sees ↑ ↓ Return Tab Escape first,
+  which is how a list by the caret takes them while it shows.
+
 ## Typing code
 
 - **`.bracketMatching()`** highlights the bracket beside the caret and its partner, in the

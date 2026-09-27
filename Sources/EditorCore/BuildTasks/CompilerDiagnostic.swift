@@ -41,7 +41,7 @@ public struct CompilerDiagnostic: Sendable, Hashable, Identifiable {
 public enum CompilerDiagnosticParser {
   // `path:line:column: severity: message`, or without the column, as the linker and some tools
   // print. The path is absolute; it may hold colons, so the numbers anchor the match.
-  nonisolated(unsafe) private static let pattern = try! NSRegularExpression(
+  private static let pattern = try! NSRegularExpression(
     pattern: #"^(/.+?):(\d+)(?::(\d+))?: (error|warning|note|remark): (.*)$"#
   )
 

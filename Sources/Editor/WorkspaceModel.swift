@@ -38,6 +38,8 @@ struct RevealRequest: Equatable, Sendable {
   /// A UTF-16 offset in the text, which wins over the line and column when set: a symbol from
   /// the outline.
   var offset: Int? = nil
+  /// A UTF-16 column, which wins over `column` when set: a language server's position.
+  var character: Int? = nil
   let serial: Int
 }
 
@@ -85,6 +87,14 @@ enum Services {
   }
   /// How long a pause in typing is before the file is parsed again; 0 parses at once.
   nonisolated(unsafe) static var parseDelay: Double = 0.3
+
+  /// The language server for a folder: sourcekit-lsp in the app; nil for none.
+  nonisolated(unsafe) static var makeLanguageService: @Sendable (String) -> (any LanguageService)? = { root in
+    SourceKitLSP.start(root: root)
+  }
+  /// How long a completion list waits after `.` or a word's second letter before asking the
+  /// server; 0 asks at once.
+  nonisolated(unsafe) static var completionDelay: Double = 0
 
   /// How long build output waits to reach the windows, so a burst of lines is one update. 0
   /// delivers each piece at once, as tests want.

@@ -18,6 +18,8 @@ enum EditorScenes {
     WorkspaceModel.shared.reset()
     BuildModel.shared.reset()
     OutlineModel.shared.reset()
+    LanguageModel.shared.reset()
+    LanguageClient.shared.shutdown()
     BuildController.shared.log.reset()
     OpenFiles.shared.reset()
     IDE.stopWatching()

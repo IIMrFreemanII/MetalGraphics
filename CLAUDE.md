@@ -34,7 +34,7 @@ Check UI changes with the headless tests (the `ui-tests` skill, `.claude/skills/
 
 ## Editor app
 
-`Editor` (`swift run Editor [folder]`) is a Swift code editor on the library: a navigator, a tab per file (dock panels), open and save, find and replace, quick open, go to line, brackets, pairs and indentation, build/run/test with a console and a Problems list, files reloaded as they change on disk, and an outline and folding from swift-syntax (`SwiftCodeModel`, the only target linking its parser). `EditorCore` holds its UI-free model (Foundation only, `EditorCoreTests`); `EditorTests` drives the app headlessly over a temporary package. `uidrive --app Editor` drives the real one. Structure, keys, limits: `docs/Editor.md`.
+`Editor` (`swift run Editor [folder]`) is a Swift code editor on the library: a navigator, a tab per file (dock panels), open and save, find and replace, quick open, go to line, brackets, pairs and indentation, build/run/test with a console and a Problems list, files reloaded as they change on disk, an outline and folding from swift-syntax (`SwiftCodeModel`, the only target linking its parser), and sourcekit-lsp: completion, hover, go to definition, live diagnostics (`EditorCore/LSP`, `EDITOR_SLOW_TESTS=1` runs it against the real server). `EditorCore` holds its UI-free model (Foundation only, `EditorCoreTests`); `EditorTests` drives the app headlessly over a temporary package. `uidrive --app Editor` drives the real one. Structure, keys, limits: `docs/Editor.md`.
 
 ## Text editor
 

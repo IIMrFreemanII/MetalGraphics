@@ -14,6 +14,10 @@ final class FileBinding: TextDocumentListener {
   var onDirtyChange: ((Bool) -> Void)?
   /// Told when the file on disk changed: nil when the text was read again, else why it was not.
   var onDiskChange: ((String?) -> Void)?
+  /// Told of every edit, with who made it: a completion list follows typing.
+  var onEdit: ((EditOrigin) -> Void)?
+  /// Told when it was saved, from its tab or with the others.
+  var onSaved: (() -> Void)?
 
   private var encoding: String.Encoding = .utf8
   private var hasBOM = false
@@ -74,6 +78,7 @@ final class FileBinding: TextDocumentListener {
   var name: String { (self.path as NSString).lastPathComponent }
 
   func document(_ document: TextDocument, didApply changes: ChangeSet, origin: EditOrigin) {
+    self.onEdit?(origin)
     // An app's own edit (a reload) leaves the file as it is on disk.
     guard origin != .program, !self.isDirty else { return }
     self.isDirty = true
@@ -88,6 +93,7 @@ final class FileBinding: TextDocumentListener {
     )
     try TextFileIO.write(contents, to: URL(fileURLWithPath: self.path))
     self.modified = Self.modificationDate(self.path)
+    self.onSaved?()
     guard self.isDirty else { return }
     self.isDirty = false
     self.onDirtyChange?(false)

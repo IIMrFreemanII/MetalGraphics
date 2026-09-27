@@ -1,5 +1,6 @@
-import SwiftUI
+import EditorCore
 import MetalGraphicsLib
+import SwiftUI
 
 /// The Swift editor: `swift run Editor [folder]`. One window, a dock area of panels: the files
 /// of the folder open, and a tab per file. See docs/Editor.md.
@@ -15,6 +16,11 @@ struct EditorApp: App {
     IDE.ensureOutlinePanel()
     DockWindows.manage(IDE.space)
     IDE.openFolderAtLaunch(arguments: CommandLine.arguments, environment: ProcessInfo.processInfo.environment)
+    // Found now, off the main thread, so the first Swift file opened does not wait for xcrun.
+    DispatchQueue.global(qos: .utility).async { _ = SourceKitLSP.locate() }
+    NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: nil) { _ in
+      LanguageClient.shared.shutdown()
+    }
   }
 
   var body: some Scene {

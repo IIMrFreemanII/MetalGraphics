@@ -78,6 +78,18 @@ public final class EditorController {
     self.editor?.focus()
   }
 
+  /// Runs `command` as a key would: typing a completion over what was typed of it. Returns
+  /// whether anything took it.
+  @discardableResult
+  public func perform(_ command: EditorCommand) -> Bool {
+    self.editor?.perform(command) ?? false
+  }
+
+  /// See `TextEditor.caretRect(for:)`.
+  public func caretRect(for offset: Int) -> (origin: float2, height: Float)? {
+    self.editor?.caretRect(for: offset)
+  }
+
   /// Selects the next match of the search after the selection, or the one before it, wrapping
   /// around. Returns whether there was one.
   @discardableResult
@@ -171,6 +183,22 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   public internal(set) var foldingRanges: [Range<Int>] = []
   /// What is folded, moving with edits. An edit inside one unfolds it.
   let folds = TextMarks<Void>(removesEmptied: true)
+  /// Called when the pointer has rested over the text for `hoverDelay`, with the offset under it
+  /// and the point, in the editor's own coordinates; with nil when it moves on or leaves, after
+  /// a call with an offset. A tooltip shows and hides this way.
+  public var onTextHover: ((_ offset: Int?, _ point: float2) -> Void)?
+  /// Called instead of placing the caret when the text is clicked with ⌘ held, with the offset
+  /// clicked: go to a definition.
+  public var onCommandClick: ((_ offset: Int) -> Void)?
+  static let hoverDelay: Double = 0.5
+  /// Where the pointer rests, in the window, and when it will have rested long enough.
+  private var hoverPoint: float2? = nil
+  private var hoverDeadline: Double? = nil
+  private var hoverReported = false
+  /// Where the editor is in the window, and its size, as last laid out: what its own
+  /// coordinates are from.
+  public private(set) var origin: float2 = .zero
+  public private(set) var bounds: float2 = .zero
   /// Whether the view stays at the end as text is added there, when it was at the end: a log's.
   public private(set) var followsTail = false
   /// Set by an app's edit made while the view was at the end, with `followsTail`.
@@ -273,7 +301,10 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     keys.action = { [unowned self] press in self.handle(press) }
     focusable.onFocusChange = { [unowned self] focused in self.focusChanged(focused) }
     pointer.onPress = { [unowned self] down, input in
-      if down {
+      if down, input.commandPressed, let action = self.onCommandClick {
+        self.context?.focus(self.focusable)
+        action(self.offset(at: input.mousePosition).0)
+      } else if down {
         self.pressed(at: input.mousePosition, clicks: input.clickCount, extending: input.shiftPressed)
       } else {
         self.autoscrollPoint = nil
@@ -281,6 +312,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     }
     pointer.onDrag = { [unowned self] input in self.dragged(to: input.mousePosition) }
     pointer.pointerStyle = .horizontalText
+    pointer.setContinuousHover(.global) { [unowned self] phase in self.hovered(phase) }
     gutterPointer.onPress = { [unowned self] down, input in
       if down {
         self.pressedGutter(at: input.mousePosition, extending: input.shiftPressed)
@@ -314,6 +346,9 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
 
   public override func unmount(_ context: UIContext) {
     self.isFocused = false
+    self.hoverPoint = nil
+    self.hoverDeadline = nil
+    self.hoverReported = false
     self.autoscrollPoint = nil
     self.nextBlink = nil
     context.cancelWake(for: self)
@@ -332,7 +367,64 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     self.font = scope.font != nil || scope.design != nil || scope.weight != nil ? scope.resolvedFont : self.theme.font
     let size = Self.resolve(proposal)
     _ = self.child?.calcSize(ProposedSize(size))
+    self.bounds = size
     return size
+  }
+
+  public override func calcPosition(_ position: float2) {
+    self.origin = position
+    super.calcPosition(position)
+  }
+
+  // MARK: - Geometry
+
+  /// The caret at `offset`, in the editor's own coordinates (its top left is the origin): where
+  /// its row starts, and the row's height. For what an app shows by the caret: a completion
+  /// list. Nil before the editor is laid out.
+  public func caretRect(for offset: Int) -> (origin: float2, height: Float)? {
+    guard self.mounted, self.bounds != .zero else { return nil }
+    let offset = offset.clamped(to: 0 ... self.document.length)
+    let caret = self.layout.caretRect(offset, affinity: .downstream)
+    let point = self.content.textOrigin + float2(caret.x, Float(caret.top))
+    return (point - self.origin, caret.height)
+  }
+
+  /// The offset nearest `point`, in the editor's own coordinates.
+  public func offset(atLocal point: float2) -> Int {
+    self.offset(at: self.origin + point).0
+  }
+
+  /// The pointer moved over the editor, or left it: a hover starts over, and one reported ends.
+  private func hovered(_ phase: HoverPhase) {
+    guard self.onTextHover != nil, let context = self.context else { return }
+    if self.hoverReported {
+      self.hoverReported = false
+      self.onTextHover?(nil, .zero)
+    }
+    switch phase {
+    case .active(let point):
+      // Over the text, not the gutter.
+      guard point.x >= self.content.textOrigin.x - self.theme.textInset.x else { fallthrough }
+      self.hoverPoint = point
+      self.hoverDeadline = context.clock() + Self.hoverDelay
+    case .ended:
+      self.hoverPoint = nil
+      self.hoverDeadline = nil
+    }
+    self.scheduleWake(context, now: context.clock())
+  }
+
+  /// The pointer rested long enough: reports what is under it, when it is text.
+  private func hoverRested() {
+    guard let point = self.hoverPoint, let report = self.onTextHover else { return }
+    let (offset, _) = self.offset(at: point)
+    // Past a line's end, or below the text, is not over anything.
+    let caret = self.layout.caretRect(offset, affinity: .downstream)
+    let top = self.content.textOrigin.y + Float(caret.top)
+    let x = self.content.textOrigin.x + caret.x
+    guard point.y >= top, point.y <= top + caret.height, abs(point.x - x) <= self.layout.averageAdvance * 1.5 else { return }
+    self.hoverReported = true
+    report(offset, point - self.origin)
   }
 
   /// The proposal's lengths, the ideal ones where it gives none, or no finite one.
@@ -826,6 +918,9 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
 
   private func scheduleWake(_ context: UIContext, now: Double) {
     var next = self.nextBlink
+    if let hover = self.hoverDeadline {
+      next = min(next ?? .infinity, hover)
+    }
     if self.autoscrollPoint != nil {
       next = min(next ?? .infinity, now + 1.0 / 60)
     }
@@ -841,6 +936,10 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   }
 
   public func wake(_ context: UIContext, now: Double) {
+    if let deadline = self.hoverDeadline, now >= deadline {
+      self.hoverDeadline = nil
+      self.hoverRested()
+    }
     if let point = self.autoscrollPoint {
       self.autoscroll(to: point, context)
     }
@@ -1166,6 +1265,16 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
 
   public func onCommand(_ action: @escaping (EditorCommand) -> Bool) -> Self {
     self.onCommand = action
+    return self
+  }
+
+  public func onTextHover(_ action: @escaping (_ offset: Int?, _ point: float2) -> Void) -> Self {
+    self.onTextHover = action
+    return self
+  }
+
+  public func onCommandClick(_ action: @escaping (_ offset: Int) -> Void) -> Self {
+    self.onCommandClick = action
     return self
   }
 

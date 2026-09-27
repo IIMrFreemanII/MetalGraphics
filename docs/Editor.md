@@ -11,7 +11,7 @@ It opens the folder named on the command line, else `EDITOR_OPEN`, else the one 
 
 | Target | What it holds |
 |---|---|
-| `EditorCore` (`Sources/EditorCore/`) | Foundation only, no UI: scanning and watching a folder (`WorkspaceScanner`, `FileNode`, `DirectoryWatcher`), the navigator's rows (`FileNode.rows`), reading and writing text files (`TextFileIO`), column conversions (`TextPositions`), fuzzy matching (`FuzzyMatcher`), and builds: running `swift build`/`run`/`test` (`SwiftPMBuildService`, `ProcessRunner`), their output (`BuildLog`), compiler diagnostics in it (`CompilerDiagnosticParser`), a package's executables (`PackageInfo`). Tested by `EditorCoreTests`. |
+| `EditorCore` (`Sources/EditorCore/`) | Foundation only, no UI: scanning and watching a folder (`WorkspaceScanner`, `FileNode`, `DirectoryWatcher`), the navigator's rows (`FileNode.rows`), reading and writing text files (`TextFileIO`), column conversions (`TextPositions`), fuzzy matching (`FuzzyMatcher`), a language server client (`LSP/`: `JSON`, `LSPFraming`, `LSPConnection`, `LSPLanguageService` behind the `LanguageService` protocol, `SourceKitLSP`), and builds: running `swift build`/`run`/`test` (`SwiftPMBuildService`, `ProcessRunner`), their output (`BuildLog`), compiler diagnostics in it (`CompilerDiagnosticParser`), a package's executables (`PackageInfo`). Tested by `EditorCoreTests`. |
 | `SwiftCodeModel` (`Sources/SwiftCodeModel/`) | The one target linking swift-syntax's parser: `CodeModel.analyze(source)` gives a file's outline (types, members, `// MARK:`s, with their depth) and what can fold (braces and block comments spanning lines), in UTF-16 offsets. A pure function, run in the background. Tested by `EditorCoreTests`. Linking it costs about a second on a clean build, since the macro plugin compiles swift-syntax from source anyway. |
 | `Editor` (`Sources/Editor/`) | The app: its scene, dock space, panels and the glue between them. Tested end to end by `EditorTests`, in a `HeadlessApp` (`docs/HeadlessApp.md`). |
 
@@ -47,6 +47,8 @@ host would both take its drags. AppKit is told not to treat the folder argument 
 | Escape | Close the find bar | `FileEditorPanel` |
 | ⌘L | Go to a line, or `line:column` (`GoToLineSheet`) | `FileEditorPanel` |
 | ⌥⌘←, ⌥⌘→ | Fold the innermost block around the caret, unfold it | the editor (`EditorKeyBindings`) |
+| ⌃⌘J, ⌘-click | Go to the definition of the symbol at the caret, or clicked | `FileEditorPanel`, `LanguageAssist` |
+| ↑ ↓, Return, Tab, Escape | In a completion list: pick, accept, close | `LanguageAssist` (through `onCommand`) |
 | ⌘B, ⌘R, ⌘U | Build, run the chosen executable, test | `IDERoot` |
 | ⌘. | Stop the build or run | `IDERoot` |
 
@@ -97,6 +99,46 @@ Closing it clears the highlights. A Swift file's editor also matches brackets, t
     `shouldClose`.
 - **Across windows.** A tab dragged to another window is made anew there. Its unsaved text goes
   with it through `OpenFiles`; its undo history does not.
+
+## The language server
+
+sourcekit-lsp, from the selected Xcode (`xcrun --find sourcekit-lsp`, looked up at launch), runs
+one per open folder (`LanguageClient`, `Sources/Editor/Language.swift`):
+
+- **Lifetime.** Started when the first Swift file opens. Started again if it stops, up to three
+  times. Shut down when another folder opens, and when the app quits.
+- **Transport.** The protocol is `EditorCore`'s own: JSON-RPC over the process's pipes, one serial
+  queue per connection, messages held back until `initialize` is answered. Positions are
+  negotiated as UTF-16, which is what `TextDocument` counts in.
+- **Sync.** Each Swift tab keeps a `LanguageDocument`: `didOpen` with its text, then each change set
+  as `didChange` edits:
+  - worked out in `willApply`, while the text is still as the ranges describe it;
+  - sent last change first, so each range is still where it was;
+  - past 50 changes at once, the whole text is sent instead.
+
+  Saving sends `didSave`; closing the tab sends `didClose`.
+- **Diagnostics.** They arrive on the server's queue and go into `LanguageModel`. The tab
+  underlines them with the build's problems, with a dot in the gutter. Ones published for an
+  older version than the text now are dropped: fresh ones follow every change.
+
+`LanguageAssist` (`Sources/Editor/LanguageAssist.swift`) turns answers into what the tab shows,
+over the text, in a `ZStack`:
+
+- **Completion.**
+  - It opens after `.`, or on a word's second letter, and asks once.
+  - It then narrows what came back as typing goes on: what starts with the word first, then
+    what matches it loosely, each in the server's order.
+  - ↑ ↓ pick, Return or Tab accepts (one step to undo), Escape closes, a click accepts a row.
+  - Typing past the word or moving out of it closes the list, and what was typed (a `.`) may open
+    the next.
+  - The list sits under the word, or above it at the bottom of the view.
+- **Hover.** When the pointer rests on text for half a second, a tooltip shows the problem there,
+  else what the server says of the symbol. It goes when the pointer moves.
+- **Definitions.** ⌘-click or ⌃⌘J selects the definition, in this file or in its own tab
+  (`IDE.reveal(_:line:character:)`).
+
+Answers reach the tab through its window's executor. An answer older than the last question is
+dropped.
 
 ## Outline and folding
 
@@ -160,9 +202,14 @@ folder opens; Product ▾ in the console picks which one ⌘R runs.
 `EditorTests/Support/EditorAppTestCase.swift` launches the app over a small package it writes to
 a temporary folder. The folder picker returns that folder, and scans run at once.
 Builds are a `FakeBuildService` printing canned compiler output, and the folder is not watched:
-`IDE.filesChanged` is called instead. `NavigatorE2ETests`, `SaveE2ETests`, `EditingE2ETests`,
-`KeysE2ETests`, `BuildE2ETests` and `OutlineE2ETests` (parsing at once, on the test's thread) drive
-it by label, as the user would: ⌘O, a tap on
+`IDE.filesChanged` is called instead. The language server is a `FakeLanguageService` that answers
+at once, or holds completions back as a real one would, and keeps each file as the edits it was
+sent make it. `LanguageE2ETests` compares that with the document after typing, many carets, and
+300 random multi-change edits. `EditorCoreTests` runs the protocol client against a scripted
+server in the process. With `EDITOR_SLOW_TESTS=1` it also runs against the real sourcekit-lsp
+(`SourceKitLSPTests`, a few seconds): diagnostics, completion, hover, definition. `NavigatorE2ETests`, `SaveE2ETests`, `EditingE2ETests`,
+`KeysE2ETests`, `BuildE2ETests`, `OutlineE2ETests` (parsing at once, on the test's thread) and
+`LanguageE2ETests` drive it by label, as the user would: ⌘O, a tap on
 `Sources`, typing, ⌘S. They then check the layout, the editor's text and the files on disk.
 
 `drive-app` launches the real app (`uidrive --app Editor`) for what those cannot see.
@@ -174,6 +221,9 @@ Everything here runs on a user action: a tap, a key, a scan finishing. Nothing r
 - A keystroke adds one listener call, and at most one title change: the first edit after a save.
 - Build output reaches the windows at most 20 times a second, and each console appends only what
   is new. Parsing a line for a diagnostic is a prefix check for most lines.
+- A keystroke in a Swift file also works out its edits for the server: O(changes), a
+  position lookup each. Completion narrows O(items it got) on the window's thread, per keystroke
+  while the list shows. A hover waits on a wake, never per frame.
 - Parsing runs in the background, once per pause in typing, never per keystroke. A debug build
   parses 10,000 lines in under a second; a release build much faster.
 - The navigator's rows are made in O(rows shown) when the tree or a folder changes, and only the
@@ -188,5 +238,8 @@ Everything here runs on a user action: a tap, a key, a scan finishing. Nothing r
 - **Build output.** Problems are placed by line and column when the build reports them: edits
   made while it runs can shift them.
 - **Run.** A program that reads standard input gets none; there is no terminal.
-- **Planned next:**
-  - sourcekit-lsp: completion, hover, definitions, live diagnostics.
+- **Language server.**
+  - The Problems list shows the build's problems, not the server's; those show in the text.
+  - Completions insert plain text, placeholders reduced to their names: no tab stops.
+  - Results from other modules need the package's index, which sourcekit-lsp builds in the
+    background after the folder opens.

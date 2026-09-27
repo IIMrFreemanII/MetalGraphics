@@ -1124,6 +1124,18 @@ enum ElementCatalog {
       handler: HandlerSpec(property: "onCommand", placeholder: "{ _ in false }"),
       inPlaceOn: ["TextEditor"]
     ),
+    "onTextHover": ModifierSpec(
+      name: "onTextHover", labels: [nil],
+      produces: "TextEditor", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "onTextHover", placeholder: "{ _, _ in }"),
+      inPlaceOn: ["TextEditor"]
+    ),
+    "onCommandClick": ModifierSpec(
+      name: "onCommandClick", labels: [nil],
+      produces: "TextEditor", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "onCommandClick", placeholder: "{ _ in }"),
+      inPlaceOn: ["TextEditor"]
+    ),
     "onSearchChange": ModifierSpec(
       name: "onSearchChange", labels: [nil],
       produces: "TextEditor", setter: nil, combine: .identity,
