@@ -1,5 +1,6 @@
 import AppKit
 import EditorCore
+import SwiftCodeModel
 import MetalGraphicsLib
 import ReactiveUI
 
@@ -31,9 +32,12 @@ final class WorkspaceModel {
 struct RevealRequest: Equatable, Sendable {
   let path: String
   /// From 1.
-  let line: Int
+  var line: Int = 1
   /// From 1, in UTF-8 bytes, as compilers count.
-  let column: Int
+  var column: Int = 1
+  /// A UTF-16 offset in the text, which wins over the line and column when set: a symbol from
+  /// the outline.
+  var offset: Int? = nil
   let serial: Int
 }
 
@@ -72,6 +76,15 @@ enum Services {
   nonisolated(unsafe) static var watchFolder: @Sendable (String, @escaping @Sendable ([String]) -> Void) -> AnyObject? = {
     root, changed in DirectoryWatcher(root, onChange: changed)
   }
+
+  /// Parses Swift for the outline and folding: off the window threads.
+  nonisolated(unsafe) static var analyzeCode: @Sendable (String) -> CodeAnalysis = { CodeModel.analyze($0) }
+  /// Where parsing runs.
+  nonisolated(unsafe) static var parseQueue: @Sendable (@escaping @Sendable () -> Void) -> Void = { work in
+    DispatchQueue.global(qos: .utility).async(execute: work)
+  }
+  /// How long a pause in typing is before the file is parsed again; 0 parses at once.
+  nonisolated(unsafe) static var parseDelay: Double = 0.3
 
   /// How long build output waits to reach the windows, so a burst of lines is one update. 0
   /// delivers each piece at once, as tests want.

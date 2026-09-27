@@ -3,6 +3,7 @@ import Foundation
 import MetalGraphicsLib
 import ReactiveUI
 import simd
+import SwiftCodeModel
 
 /// One open file, in a tab: its text in an editor, a find bar over it when searching, and a
 /// status line under it.
@@ -24,6 +25,8 @@ final class FileEditorPanel : SingleChildElement {
   let styler: (any TextStyler)?
   /// Brackets and quotes typed in pairs, in code.
   let pairs: [AutoClosingPair]
+  /// Parses a Swift file after each pause in typing: the outline, and what folds.
+  let codeModel: CodeModelSession?
 
   @State var dirty: Bool
   // The find bar.
@@ -38,6 +41,8 @@ final class FileEditorPanel : SingleChildElement {
   @State var goingToLine: Bool = false
   /// The build's problems in this file.
   @State var diagnostics: [TextDiagnostic] = []
+  /// What can fold, from the last parse.
+  @State var foldable: [Range<Int>] = []
   @State var confirmingClose: Bool = false
   @State var status: String = "Ln 1, Col 1"
   /// What went wrong reading or saving the file; "" when nothing did.
@@ -50,6 +55,7 @@ final class FileEditorPanel : SingleChildElement {
     self.file = file
     self.styler = Self.styler(for: path)
     self.pairs = self.styler is SwiftStyler ? AutoClosingPair.code : []
+    self.codeModel = self.styler is SwiftStyler && file.loadError == nil ? CodeModelSession(document: file.document) : nil
     self.dirty = file.isDirty
     self.problem = file.loadError ?? ""
     super.init()
@@ -61,6 +67,10 @@ final class FileEditorPanel : SingleChildElement {
     }
     file.onDiskChange = { [unowned self] reason in
       self.problem = reason ?? ""
+    }
+    self.codeModel?.onAnalysis = { [unowned self] analysis in
+      self.foldable = analysis.foldingRanges
+      self.publishOutline()
     }
     panel.shouldClose = { [weak self] in
       guard let self, self.file.isDirty else { return true }
@@ -106,6 +116,7 @@ final class FileEditorPanel : SingleChildElement {
         .searchQuery(self.finding ? self.query : "")
         .searchOptions(TextSearchOptions(caseSensitive: self.caseSensitive, wholeWord: self.wholeWord, regex: self.regex))
         .diagnostics(self.diagnostics)
+        .foldingRanges(self.foldable)
         .editable(self.file.loadError == nil)
         .controller(self.controller)
         .onSelectionChange { selection in self.showStatus(selection) }
@@ -147,6 +158,7 @@ final class FileEditorPanel : SingleChildElement {
 
   override func onMount(_ context: UIContext) {
     WorkspaceModel.shared.activeFile = self.file.path
+    self.publishOutline()
     self.showTitle()
     // The build's problems and the places asked for are the shared models': subscribed by hand,
     // as they are turned into this document's ranges, which a body cannot do.
@@ -311,12 +323,21 @@ final class FileEditorPanel : SingleChildElement {
     (unit >= 0x30 && unit <= 0x39) || (unit >= 0x41 && unit <= 0x5A) || (unit >= 0x61 && unit <= 0x7A) || unit == 0x5F
   }
 
+  /// The outline of this file, when it is the one in front.
+  private func publishOutline() {
+    guard WorkspaceModel.shared.activeFile == self.file.path else { return }
+    let outline = OutlineModel.shared
+    outline.path = self.file.path
+    outline.symbols = self.codeModel?.analysis.symbols ?? []
+  }
+
   /// Takes a request to show a place in this file: selects it, centred, and takes the keyboard.
   private func revealIfAsked() {
     let model = WorkspaceModel.shared
     guard let request = model.reveal, request.path == self.file.path, self.mounted else { return }
     model.reveal = nil
-    let offset = Self.offset(of: request.line, request.column, in: self.file.document)
+    let offset = request.offset.map { min($0, self.file.document.length) }
+      ?? Self.offset(of: request.line, request.column, in: self.file.document)
     self.controller.select(offset ..< offset, reveal: .center)
     self.controller.focus()
   }

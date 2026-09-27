@@ -97,6 +97,16 @@ public final class EditorController {
     self.editor?.replaceAll(with: template) ?? 0
   }
 
+  /// Folds the innermost range around the caret that is not folded yet. Returns whether it did.
+  @discardableResult
+  public func foldAtCaret() -> Bool { self.editor?.foldAtCaret() ?? false }
+
+  /// Unfolds the fold whose first line holds the caret, or around it. Returns whether it did.
+  @discardableResult
+  public func unfoldAtCaret() -> Bool { self.editor?.unfoldAtCaret() ?? false }
+
+  public func unfoldAll() { self.editor?.unfoldAll() }
+
   /// "3 of 12" for a find bar: the selected match's index, from 1 (0 when no match is
   /// selected), and how many there are.
   public var matchPosition: (current: Int, count: Int) {
@@ -155,6 +165,12 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     get { self.state.filter }
     set { self.state.filter = newValue }
   }
+  /// What can fold, sorted by start: each range from its first line through its last, which
+  /// folding hides. The gutter shows a chevron by each first line. Set by `.foldingRanges`, from
+  /// a language's parse; moved with edits until set again.
+  public internal(set) var foldingRanges: [Range<Int>] = []
+  /// What is folded, moving with edits. An edit inside one unfolds it.
+  let folds = TextMarks<Void>(removesEmptied: true)
   /// Whether the view stays at the end as text is added there, when it was at the end: a log's.
   public private(set) var followsTail = false
   /// Set by an app's edit made while the view was at the end, with `followsTail`.
@@ -349,7 +365,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     if revealCaret {
       self.revealCaret(context)
     }
-    if self.gutter.width != self.gutter.size.x && self.showsLineNumbers {
+    if self.gutter.width != self.gutter.size.x && (self.showsLineNumbers || self.gutter.showsFolding) {
       context.invalidate(.layout)
     }
     context.invalidate(.render)
@@ -387,6 +403,9 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
 
   func document(_ document: TextDocument, didApply changes: ChangeSet, origin: EditOrigin) {
     self.content.anchorOffset = changes.map(self.content.anchorOffset, .before)
+    if !self.foldingRanges.isEmpty || !self.folds.isEmpty {
+      self.foldsDidApply(changes)
+    }
     if self.followsTail && origin == .program && self.mounted {
       let scroll = self.scrollView
       if scroll.offset.y >= scroll.scrollableSize.y - 4 { self.pinToEnd = true }
@@ -402,6 +421,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   }
 
   func editorStateDidChangeSelection(_ state: EditorState) {
+    if !self.folds.isEmpty { self.unfoldAroundSelection() }
     self.selectionDirty = true
     self.scheduleBracketMatch()
     self.scheduleSearchReport()
@@ -472,6 +492,12 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
       reveal = false
     case .centerSelection:
       self.centerCaret()
+      reveal = false
+    case .fold:
+      handled = self.foldAtCaret()
+      reveal = false
+    case .unfold:
+      handled = self.unfoldAtCaret()
       reveal = false
     default:
       handled = self.state.perform(command, layout: self.layout)
@@ -673,6 +699,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   }
 
   private func pressed(at point: float2, clicks: Int, extending: Bool) {
+    if !self.folds.isEmpty, self.pressedFoldMarker(at: point) { return }
     let (offset, affinity) = self.offset(at: point)
     self.granularity = clicks >= 3 ? .line : clicks == 2 ? .word : .character
     let range = self.unitRange(at: offset)
@@ -697,6 +724,11 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     self.granularity = .line
     let origin = self.content.textOrigin
     let line = self.layout.line(atY: Double(point.y - origin.y))
+    if self.gutter.isInFoldColumn(point.x) {
+      self.toggleFold(atLine: line)
+      self.pressRange = self.state.selection.primary.range
+      return
+    }
     let range = self.document.lineRange(line, includingNewline: true)
     if extending {
       let anchor = self.state.selection.primary.anchor
@@ -1145,6 +1177,21 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   public func onSelectionChange(_ action: @escaping (EditorSelection) -> Void) -> Self {
     self.onSelectionChange = action
     return self
+  }
+
+  /// Offers `value` to fold, from a language's parse: sorted by start. See `foldingRanges`.
+  public func foldingRanges(_ value: [Range<Int>]) -> Self {
+    self.foldingRanges = value
+    return self
+  }
+
+  public func setFoldingRanges(_ value: [Range<Int>], _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.foldingRanges else { return }
+    let wasEmpty = self.foldingRanges.isEmpty
+    self.foldingRanges = value
+    // The chevrons' column comes or goes with the first ranges and the last.
+    if wasEmpty != value.isEmpty { context.invalidate(.layout) }
+    context.invalidate(.render)
   }
 
   /// Lets `controller` select and reveal in this editor from code.

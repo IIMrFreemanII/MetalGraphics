@@ -69,10 +69,21 @@ let package = Package(
     // Foundation only, so its tests need no window.
     .target(name: "EditorCore", swiftSettings: swiftSettings),
 
+    // Swift source as a parse tree, for the editor's outline and folding. The one target linking
+    // swift-syntax's parser: only the Editor and its tests build it.
+    .target(
+      name: "SwiftCodeModel",
+      dependencies: [
+        .product(name: "SwiftSyntax", package: "swift-syntax"),
+        .product(name: "SwiftParser", package: "swift-syntax"),
+      ],
+      swiftSettings: swiftSettings
+    ),
+
     // The Swift editor: `swift run Editor [folder]`. See docs/Editor.md.
     .executableTarget(
       name: "Editor",
-      dependencies: ["MetalGraphicsLib", "ReactiveUI", "EditorCore"],
+      dependencies: ["MetalGraphicsLib", "ReactiveUI", "EditorCore", "SwiftCodeModel"],
       swiftSettings: swiftSettings,
       linkerSettings: [.unsafeFlags(["-Xlinker", "-interposable"], .when(configuration: .debug))]
     ),
@@ -90,7 +101,7 @@ let package = Package(
       exclude: ["__Snapshots__"],
       swiftSettings: swiftSettings
     ),
-    .testTarget(name: "EditorCoreTests", dependencies: ["EditorCore"], swiftSettings: swiftSettings),
+    .testTarget(name: "EditorCoreTests", dependencies: ["EditorCore", "SwiftCodeModel"], swiftSettings: swiftSettings),
     .testTarget(
       name: "EditorTests",
       dependencies: ["Editor", "EditorCore", "MetalGraphicsLib", "ReactiveUI"],

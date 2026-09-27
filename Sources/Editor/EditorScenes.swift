@@ -17,6 +17,7 @@ enum EditorScenes {
   static func resetForTesting() {
     WorkspaceModel.shared.reset()
     BuildModel.shared.reset()
+    OutlineModel.shared.reset()
     BuildController.shared.log.reset()
     OpenFiles.shared.reset()
     IDE.stopWatching()

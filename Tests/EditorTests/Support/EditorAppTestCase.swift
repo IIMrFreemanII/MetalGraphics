@@ -115,6 +115,8 @@ class EditorAppTestCase: XCTestCase {
     Services.describePackage = { _ in nil }
     Services.watchFolder = { _, _ in nil }
     Services.outputDelay = 0
+    Services.parseDelay = 0
+    Services.parseQueue = { $0() }
     self.app.manageDocking(IDE.space)
   }
 }

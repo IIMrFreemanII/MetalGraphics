@@ -15,6 +15,7 @@ enum IDE {
   static let welcomeKind = "welcome"
   static let consoleKind = "console"
   static let problemsKind = "problems"
+  static let outlineKind = "outline"
   /// Where a file panel keeps its path.
   static let pathKey = "File.path"
   /// The folder open last, reopened at launch.
@@ -33,13 +34,18 @@ enum IDE {
         DockPanelKind(welcomeKind, title: "Welcome") { _ in WelcomePanel() },
         DockPanelKind(consoleKind, title: "Console") { _ in ConsolePanel() },
         DockPanelKind(problemsKind, title: "Problems") { _ in ProblemsPanel() },
+        DockPanelKind(outlineKind, title: "Outline") { _ in OutlinePanel() },
       ]
     ) {
       var layout = DockLayout()
       let navigator = layout.addPanel(kind: navigatorKind, title: "Files")
+      let outline = layout.addPanel(kind: outlineKind, title: "Outline")
       let welcome = layout.addPanel(kind: welcomeKind, title: "Welcome")
       layout.hosts = [
-        DockHost(id: host, root: .row([.group([navigator]), .group([welcome])], fractions: [0.24, 0.76])),
+        DockHost(id: host, root: .row([
+          .column([.group([navigator]), .group([outline])], fractions: [0.6, 0.4]),
+          .group([welcome]),
+        ], fractions: [0.24, 0.76])),
       ]
       return layout
     }
@@ -160,9 +166,8 @@ enum IDE {
         for panel in group.panels where layout.panels[panel]?.kind == welcomeKind {
           layout.close(panel: panel)
         }
-      } else if let navigator = self.group(holding: navigatorKind, in: layout) {
-        layout.place(.group([id]), at: .node(navigator.id, .right))
-        self.giveEditorsRoom(&layout, navigatorGroup: navigator.id)
+      } else if self.placeBesideSideColumn(.group([id]), in: &layout) {
+        // Placed.
       } else {
         layout.place(.group([id]), at: .hostEdge(host, .center))
       }
@@ -176,6 +181,26 @@ enum IDE {
     self.openFile(path)
     let serial = (WorkspaceModel.shared.reveal?.serial ?? 0) + 1
     WorkspaceModel.shared.reveal = RevealRequest(path: path, line: line, column: column, serial: serial)
+  }
+
+  /// Shows `path` in a tab with the caret at UTF-16 `offset`: a symbol from the outline.
+  static func reveal(_ path: String, offset: Int) {
+    self.openFile(path)
+    let serial = (WorkspaceModel.shared.reveal?.serial ?? 0) + 1
+    WorkspaceModel.shared.reveal = RevealRequest(path: path, offset: offset, serial: serial)
+  }
+
+  /// Adds the Outline to a layout saved before there was one: a tab beside the navigator, which
+  /// can be dragged under it.
+  static func ensureOutlinePanel() {
+    self.space.update { layout in
+      guard !layout.panels.values.contains(where: { $0.kind == outlineKind }),
+            let navigator = self.group(holding: navigatorKind, in: layout)
+      else { return }
+      let outline = layout.addPanel(kind: outlineKind, title: "Outline")
+      layout.place(.group([outline]), at: .node(navigator.id, .center))
+      layout.select(panel: navigator.panels[0])
+    }
   }
 
   /// Shows the console and the Problems list, docked along the bottom the first time.
@@ -221,15 +246,58 @@ enum IDE {
     }
   }
 
-  /// A new split of the navigator and the files, wherever it is (the console may be below):
-  /// the files take most of it.
-  private static func giveEditorsRoom(_ layout: inout DockLayout, navigatorGroup: String) {
-    func find(_ node: DockNode) -> DockSplit? {
-      guard case .split(let split) = node else { return nil }
-      if split.axis == .horizontal, split.children.count == 2, split.children[0].id == navigatorGroup { return split }
-      return split.children.lazy.compactMap(find).first
+  /// Puts `files`, the first file's group, right of the side column (the navigator, and the
+  /// outline under it) and above the console: when the side column shares a column with the
+  /// console, what is above the console becomes a row of the side column and the files. The
+  /// files take most of the width. Returns false when there is no navigator.
+  private static func placeBesideSideColumn(_ files: DockNode, in layout: inout DockLayout) -> Bool {
+    guard let index = layout.hosts.firstIndex(where: { $0.id == host }), let root = layout.hosts[index].root,
+          let navigator = self.group(holding: navigatorKind, in: layout)
+    else { return false }
+    let panels = layout.panels
+    func holdsBuildPanels(_ node: DockNode) -> Bool {
+      node.panels.contains { [consoleKind, problemsKind].contains(panels[$0]?.kind) }
     }
-    guard let root = layout.host(host)?.root, let split = find(root) else { return }
-    layout.setFractions([0.24, 0.76], of: split.id)
+    func beside(_ side: DockNode) -> DockNode {
+      .row([side, files], fractions: [0.24, 0.76])
+    }
+    // Rebuilds the tree down to the navigator: the first node on the way without the console
+    // gets the files beside it, together with its siblings above the console.
+    func rebuild(_ node: DockNode) -> DockNode? {
+      if !holdsBuildPanels(node) { return node.panels.contains(navigator.panels[0]) ? beside(node) : nil }
+      guard case .split(let split) = node else { return nil }
+      guard let at = split.children.firstIndex(where: { $0.panels.contains(navigator.panels[0]) }) else { return nil }
+      let child = split.children[at]
+      if holdsBuildPanels(child) {
+        guard let rebuilt = rebuild(child) else { return nil }
+        var children = split.children
+        children[at] = rebuilt
+        return split.axis == .horizontal ? .row(children, fractions: split.fractions) : .column(children, fractions: split.fractions)
+      }
+      guard split.axis == .vertical else {
+        var children = split.children
+        children[at] = beside(child)
+        return .row(children, fractions: split.fractions)
+      }
+      // The run of siblings around the navigator's without the console.
+      var low = at
+      while low > 0 && !holdsBuildPanels(split.children[low - 1]) { low -= 1 }
+      var high = at
+      while high + 1 < split.children.count && !holdsBuildPanels(split.children[high + 1]) { high += 1 }
+      let run = Array(split.children[low ... high])
+      let runFractions = Array(split.fractions[low ... high])
+      let share = runFractions.reduce(0, +)
+      let side: DockNode = run.count == 1 ? run[0] : .column(run, fractions: runFractions.map { $0 / max(share, 0.0001) })
+      var children = Array(split.children[..<low])
+      var fractions = Array(split.fractions[..<low])
+      children.append(beside(side))
+      fractions.append(share)
+      children += split.children[(high + 1)...]
+      fractions += split.fractions[(high + 1)...]
+      return .column(children, fractions: fractions)
+    }
+    guard let rebuilt = rebuild(root) else { return false }
+    layout.hosts[index].root = rebuilt
+    return true
   }
 }

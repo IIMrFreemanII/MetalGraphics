@@ -27,6 +27,7 @@ TextEditor(document: document)
   .autoClosingPairs()                    // ( brings ), " brings ", typed over, deleted together
   .searchOptions(TextSearchOptions(caseSensitive: true, wholeWord: false, regex: false))
   .onSearchChange { current, count in … } // "3 of 12", for a find bar
+  .foldingRanges(self.foldable)          // chevrons in the gutter; ⌥⌘← ⌥⌘→ fold and unfold
   .controller(self.controller)           // select, reveal and focus from code, below
   .font(.system(size: 13, design: .monospaced))
 ```
@@ -73,6 +74,31 @@ may have changed: a new query or options, a find, or an edit or a move while sea
   indentation of the one it breaks.
 - **Gutter dots.** With line numbers shown, a line with diagnostics gets a dot in the gutter, in
   the colour of the worst.
+
+## Folding
+
+`.foldingRanges(ranges)` offers ranges to fold: sorted by start, each from its first line
+through its last, as a parser finds them (braces spanning lines). They move with edits until set
+again. The gutter shows a chevron by each first line.
+
+- **Folding.** A click on the chevron, ⌥⌘← (`EditorCommand.fold`, the innermost range around the
+  caret) or `fold(_:)` hides the lines after the first. The first line then ends in a "⋯".
+- **Unfolding.** A click on the "⋯" or the chevron, ⌥⌘→, `unfold(at:)` or `unfoldAll()`. Also:
+  - an edit reaching into a fold;
+  - a caret or selection landing in one (a find, a jump, → past the first line's end).
+
+  A caret inside a range being folded moves to the end of its first line.
+
+How it works:
+- **Hidden lines** have height 0 in the `LineTree` (`LineFlags.hidden`), so y↔line lookups,
+  scrolling and the content's size need nothing else.
+- **Skipped** by the visible lines (so by drawing and hit testing) and by ↑ ↓.
+- **Nested folds.** Unfolding one leaves the folds inside it folded.
+- **Folds are editor-owned `TextMarks`,** moved with edits.
+
+Folding and unfolding are O(lines in the fold). An edit is O(folds), to see whether it reached
+into one. With nothing folded, nothing runs; with nothing offered, the gutter has no chevron
+column.
 
 Each is O(1) or O(line) per keystroke. While a search is set and `onSearchChange` is armed, each
 edit and caret move counts the matches, O(document), once per frame. `TextEditor.select` and `focus` are the

@@ -247,7 +247,7 @@ public final class EditorState: TextDocumentObserver {
     case .cancel:
       guard self.selection.ranges.count > 1 else { return false }
       self.setSelection(EditorSelection(self.selection.primary))
-    case .copy, .scrollToDocumentEdge, .scrollPage, .scrollLine, .centerSelection:
+    case .copy, .scrollToDocumentEdge, .scrollPage, .scrollLine, .centerSelection, .fold, .unfold:
       return false
     }
     return true

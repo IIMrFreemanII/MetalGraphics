@@ -12,6 +12,7 @@ struct EditorApp: App {
     // A bare executable starts as a background process with no Dock icon or menu bar.
     NSApplication.shared.setActivationPolicy(.regular)
     NSApplication.shared.activate()
+    IDE.ensureOutlinePanel()
     DockWindows.manage(IDE.space)
     IDE.openFolderAtLaunch(arguments: CommandLine.arguments, environment: ProcessInfo.processInfo.environment)
   }

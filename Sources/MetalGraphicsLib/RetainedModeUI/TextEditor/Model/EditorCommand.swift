@@ -54,6 +54,10 @@ public enum EditorCommand: Hashable, Sendable {
   case scrollPage(forward: Bool)
   case scrollLine(forward: Bool)
   case centerSelection
+  /// Folds the innermost foldable range around the caret (⌥⌘←).
+  case fold
+  /// Unfolds the fold at the caret (⌥⌘→).
+  case unfold
 
   /// The command an `NSResponder` action selector names, as input methods and the key bindings
   /// in `DefaultKeyBinding.dict` send them. Nil for one the editor does not do.

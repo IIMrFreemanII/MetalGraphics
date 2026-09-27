@@ -10,7 +10,7 @@ Rules:
 
 ## Build
 
-One SwiftPM package (`Package.swift`), no Xcode project: `swift build`, `swift run Demo` (the demo app, a bare executable), `swift run Editor` (the Swift editor), `swift test`. Targets live in `Sources/` (`MetalGraphicsLib`, `Demo`, `Editor`, `EditorCore`, `ReactiveUI`, `ReactiveUIMacrosPlugin`) and `Tests/`; `Tools/` holds `uidrive` and `layoutchecks`. The `MetalShaders` plugin (`Plugins/`) compiles `Sources/MetalGraphicsLib/Shaders/*.metal` into the library's `Bundle.module`; the demo's images are plain files in `Sources/Demo/Resources/`, loaded with `Image(name, bundle: .module)`. Opening `Package.swift` in Xcode works too.
+One SwiftPM package (`Package.swift`), no Xcode project: `swift build`, `swift run Demo` (the demo app, a bare executable), `swift run Editor` (the Swift editor), `swift test`. Targets live in `Sources/` (`MetalGraphicsLib`, `Demo`, `Editor`, `EditorCore`, `SwiftCodeModel`, `ReactiveUI`, `ReactiveUIMacrosPlugin`) and `Tests/`; `Tools/` holds `uidrive` and `layoutchecks`. The `MetalShaders` plugin (`Plugins/`) compiles `Sources/MetalGraphicsLib/Shaders/*.metal` into the library's `Bundle.module`; the demo's images are plain files in `Sources/Demo/Resources/`, loaded with `Image(name, bundle: .module)`. Opening `Package.swift` in Xcode works too.
 
 ## Performance
 
@@ -34,7 +34,7 @@ Check UI changes with the headless tests (the `ui-tests` skill, `.claude/skills/
 
 ## Editor app
 
-`Editor` (`swift run Editor [folder]`) is a Swift code editor on the library: a navigator, a tab per file (dock panels), open and save, find and replace, quick open, go to line, brackets, pairs and indentation, build/run/test with a console and a Problems list, and files reloaded as they change on disk. `EditorCore` holds its UI-free model (Foundation only, `EditorCoreTests`); `EditorTests` drives the app headlessly over a temporary package. `uidrive --app Editor` drives the real one. Structure, keys, limits: `docs/Editor.md`.
+`Editor` (`swift run Editor [folder]`) is a Swift code editor on the library: a navigator, a tab per file (dock panels), open and save, find and replace, quick open, go to line, brackets, pairs and indentation, build/run/test with a console and a Problems list, files reloaded as they change on disk, and an outline and folding from swift-syntax (`SwiftCodeModel`, the only target linking its parser). `EditorCore` holds its UI-free model (Foundation only, `EditorCoreTests`); `EditorTests` drives the app headlessly over a temporary package. `uidrive --app Editor` drives the real one. Structure, keys, limits: `docs/Editor.md`.
 
 ## Text editor
 

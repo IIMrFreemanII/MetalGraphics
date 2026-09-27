@@ -1096,6 +1096,10 @@ enum ElementCatalog {
       name: "autoClosingPairs", labels: [nil],
       produces: "TextEditor", setter: "setAutoClosingPairs", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
     ),
+    "foldingRanges": ModifierSpec(
+      name: "foldingRanges", labels: [nil],
+      produces: "TextEditor", setter: "setFoldingRanges", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
     "controller": ModifierSpec(
       name: "controller", labels: [nil],
       produces: "TextEditor", setter: "setController", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]

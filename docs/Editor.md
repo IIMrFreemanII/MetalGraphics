@@ -12,6 +12,7 @@ It opens the folder named on the command line, else `EDITOR_OPEN`, else the one 
 | Target | What it holds |
 |---|---|
 | `EditorCore` (`Sources/EditorCore/`) | Foundation only, no UI: scanning and watching a folder (`WorkspaceScanner`, `FileNode`, `DirectoryWatcher`), the navigator's rows (`FileNode.rows`), reading and writing text files (`TextFileIO`), column conversions (`TextPositions`), fuzzy matching (`FuzzyMatcher`), and builds: running `swift build`/`run`/`test` (`SwiftPMBuildService`, `ProcessRunner`), their output (`BuildLog`), compiler diagnostics in it (`CompilerDiagnosticParser`), a package's executables (`PackageInfo`). Tested by `EditorCoreTests`. |
+| `SwiftCodeModel` (`Sources/SwiftCodeModel/`) | The one target linking swift-syntax's parser: `CodeModel.analyze(source)` gives a file's outline (types, members, `// MARK:`s, with their depth) and what can fold (braces and block comments spanning lines), in UTF-16 offsets. A pure function, run in the background. Tested by `EditorCoreTests`. Linking it costs about a second on a clean build, since the macro plugin compiles swift-syntax from source anyway. |
 | `Editor` (`Sources/Editor/`) | The app: its scene, dock space, panels and the glue between them. Tested end to end by `EditorTests`, in a `HeadlessApp` (`docs/HeadlessApp.md`). |
 
 ## The window
@@ -20,6 +21,7 @@ One window (`EditorScenes.ide`), whose root `IDERoot` is a `DockArea` over `IDE.
 panels are:
 
 - **Files** (`NavigatorPanel`): the folder's tree.
+- **Outline** (`OutlinePanel`), under it: the declarations of the file in front.
 - **A tab per open file** (`FileEditorPanel`).
 - **Welcome**: there until the first file opens.
 - **Console** and **Problems** (`BuildPanels.swift`): docked along the bottom by the first build.
@@ -44,6 +46,7 @@ host would both take its drags. AppKit is told not to treat the folder argument 
 | Return, ⌘G, ⇧⌘G | The next match, the next, the one before | the find field, `FileEditorPanel` |
 | Escape | Close the find bar | `FileEditorPanel` |
 | ⌘L | Go to a line, or `line:column` (`GoToLineSheet`) | `FileEditorPanel` |
+| ⌥⌘←, ⌥⌘→ | Fold the innermost block around the caret, unfold it | the editor (`EditorKeyBindings`) |
 | ⌘B, ⌘R, ⌘U | Build, run the chosen executable, test | `IDERoot` |
 | ⌘. | Stop the build or run | `IDERoot` |
 
@@ -95,6 +98,30 @@ Closing it clears the highlights. A Swift file's editor also matches brackets, t
 - **Across windows.** A tab dragged to another window is made anew there. Its unsaved text goes
   with it through `OpenFiles`; its undo history does not.
 
+## Outline and folding
+
+A Swift file's tab keeps a `CodeModelSession` (`Sources/Editor/Outline.swift`), which parses the
+file again 0.3 s after typing pauses (`Services.parseDelay`):
+
+1. The text is copied on the window's thread.
+2. It is parsed on a background queue (`Services.parseQueue`).
+3. The result is posted back, and dropped if the text changed meanwhile, since another parse is
+   already on its way.
+
+With the result, the tab does two things:
+- It gives the editor what can fold (`.foldingRanges`), so chevrons show in the gutter.
+- If it is the tab in front, it publishes its symbols to `OutlineModel`, which the Outline shows.
+
+A click on a symbol selects its name in the text (`IDE.reveal`, a `RevealRequest` with an
+offset). Folding is the library's (`docs/TextEditor.md`, *Folding*):
+- the chevron or ⌥⌘← folds;
+- the "⋯", the chevron or ⌥⌘→ unfolds;
+- an edit or the caret reaching into a fold unfolds it.
+
+A layout saved before the Outline existed gets it as a tab beside Files
+(`IDE.ensureOutlinePanel`). The first file opened with no other open goes to the right of Files
+and the Outline together, above the console when it is there.
+
 ## Building and running
 
 `BuildController` (`Sources/Editor/Build.swift`) runs one task at a time in the open folder:
@@ -134,7 +161,8 @@ folder opens; Product ▾ in the console picks which one ⌘R runs.
 a temporary folder. The folder picker returns that folder, and scans run at once.
 Builds are a `FakeBuildService` printing canned compiler output, and the folder is not watched:
 `IDE.filesChanged` is called instead. `NavigatorE2ETests`, `SaveE2ETests`, `EditingE2ETests`,
-`KeysE2ETests` and `BuildE2ETests` drive it by label, as the user would: ⌘O, a tap on
+`KeysE2ETests`, `BuildE2ETests` and `OutlineE2ETests` (parsing at once, on the test's thread) drive
+it by label, as the user would: ⌘O, a tap on
 `Sources`, typing, ⌘S. They then check the layout, the editor's text and the files on disk.
 
 `drive-app` launches the real app (`uidrive --app Editor`) for what those cannot see.
@@ -146,6 +174,8 @@ Everything here runs on a user action: a tap, a key, a scan finishing. Nothing r
 - A keystroke adds one listener call, and at most one title change: the first edit after a save.
 - Build output reaches the windows at most 20 times a second, and each console appends only what
   is new. Parsing a line for a diagnostic is a prefix check for most lines.
+- Parsing runs in the background, once per pause in typing, never per keystroke. A debug build
+  parses 10,000 lines in under a second; a release build much faster.
 - The navigator's rows are made in O(rows shown) when the tree or a folder changes, and only the
   rows in view are built.
 - An idle window draws nothing. The real app measured 0.2% CPU idle with a file open.
@@ -159,5 +189,4 @@ Everything here runs on a user action: a tap, a key, a scan finishing. Nothing r
   made while it runs can shift them.
 - **Run.** A program that reads standard input gets none; there is no terminal.
 - **Planned next:**
-  - an outline and folding from swift-syntax;
   - sourcekit-lsp: completion, hover, definitions, live diagnostics.

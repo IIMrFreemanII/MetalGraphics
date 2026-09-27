@@ -89,14 +89,22 @@ final class BuildE2ETests: EditorAppTestCase {
     self.app.step()
     try self.window.tap("README.md")
     self.app.step()
-    let group = try XCTUnwrap(IDE.space.layout.tabs(holding: self.filePanels[0].id)).id
+    let layout = IDE.space.layout
+    let group = try XCTUnwrap(layout.tabs(holding: self.filePanels[0].id)).id
     func splitHolding(_ node: DockNode) -> DockSplit? {
       guard case .split(let split) = node else { return nil }
       if split.children.contains(where: { $0.id == group }) { return split }
       return split.children.lazy.compactMap(splitHolding).first
     }
-    let split = try XCTUnwrap(IDE.space.layout.host(IDE.host)?.root.flatMap(splitHolding))
+    let split = try XCTUnwrap(layout.host(IDE.host)?.root.flatMap(splitHolding))
     XCTAssertEqual(split.fractions, [0.24, 0.76])
+    // Beside the navigator and the outline both, above the console.
+    XCTAssertEqual(split.axis, .horizontal)
+    let kinds = Set(split.children[0].panels.compactMap { layout.panels[$0]?.kind })
+    XCTAssertEqual(kinds, [IDE.navigatorKind, IDE.outlineKind])
+    guard case .split(let root)? = layout.host(IDE.host)?.root else { return XCTFail("no root split") }
+    XCTAssertEqual(root.axis, .vertical)
+    XCTAssertTrue(root.children.last.map { $0.panels.contains { layout.panels[$0]?.kind == IDE.consoleKind } } ?? false)
   }
 
   func testUnsavedEditsAreSavedBeforeTheBuild() throws {
