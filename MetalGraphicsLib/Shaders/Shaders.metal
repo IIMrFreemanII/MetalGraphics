@@ -370,6 +370,27 @@ static float vectorDistance(VectorItem item, float2 p, texture2d<float> atlas, s
       // only a canvas shape is trimmed, and its corners are all alike
       return trimmedStroke(abs(d), trimmed ? roundedBoxAlong(q, item.params0.zw, item.params1.x) : 0, item.stroke, true);
     }
+    case 4: {
+      // A wavy underline: a zigzag through a vertex every half wavelength, alternately above
+      // and below the axis. The three segments around `p` are the only ones near it.
+      float len = item.params0.x;
+      float amp = item.params0.y;
+      float step = item.params0.z * 0.5;
+      float k = floor(p.x / step);
+      float d = 1e9;
+      for (int i = -1; i <= 1; i++) {
+        float k0 = k + float(i);
+        float2 a = float2(k0 * step, fmod(abs(k0), 2.0) < 0.5 ? -amp : amp);
+        float2 b = float2((k0 + 1.0) * step, -a.y);
+        float2 pa = p - a;
+        float2 ba = b - a;
+        float h = saturate(dot(pa, ba) / dot(ba, ba));
+        d = min(d, length(pa - ba * h));
+      }
+      // Cut square at both ends.
+      d = max(d - item.params0.w, max(-p.x, p.x - len));
+      return d;
+    }
   }
   return kVectorOutside;
 }

@@ -104,6 +104,9 @@ final class WindowPresentation : PresentationRoot {
         scene: scene, layer: nil, root: { _ in unsafeRoot },
         showPointerStyle: { style in
           MainQueue.post { MainActor.assumeIsolated { PresentedWindows.host.showPointerStyle(handle, style) } }
+        },
+        showTextInput: { snapshot in
+          MainQueue.post { MainActor.assumeIsolated { PresentedWindows.host.showTextInput(handle, snapshot) } }
         }
       )
       renderer.clock = clock

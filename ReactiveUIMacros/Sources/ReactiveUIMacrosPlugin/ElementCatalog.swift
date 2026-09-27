@@ -455,6 +455,13 @@ enum ElementCatalog {
              ArgSpec("prompt", "setPrompt", animatable: true)],
       arity: .leaf
     ),
+    // Edits a string through a binding, or a document in place.
+    "TextEditor": TypeSpec(
+      name: "TextEditor",
+      args: [ArgSpec("text", "setText", animatable: true, binding: HandlerSpec(property: "onTextChange", placeholder: "")),
+             ArgSpec("document", "setDocument", animatable: true)],
+      arity: .leaf
+    ),
     "SecureField": TypeSpec(
       name: "SecureField",
       args: [ArgSpec(nil, "setLabel", animatable: true),
@@ -1044,6 +1051,64 @@ enum ElementCatalog {
     "disabled": ModifierSpec(
       name: "disabled", labels: [nil],
       produces: "FormControl", setter: "setDisabled", combine: .identity, animatable: true, inPlaceOn: formControls
+    ),
+    "lineWrapping": ModifierSpec(
+      name: "lineWrapping", labels: [nil],
+      produces: "TextEditor", setter: "setLineWrapping", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
+    "lineNumbers": ModifierSpec(
+      name: "lineNumbers", labels: [nil],
+      produces: "TextEditor", setter: "setShowsLineNumbers", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
+    "editorTheme": ModifierSpec(
+      name: "editorTheme", labels: [nil],
+      produces: "TextEditor", setter: "setTheme", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
+    "editable": ModifierSpec(
+      name: "editable", labels: [nil],
+      produces: "TextEditor", setter: "setIsEditable", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
+    "styler": ModifierSpec(
+      name: "styler", labels: [nil],
+      produces: "TextEditor", setter: "setStyler", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
+    "searchQuery": ModifierSpec(
+      name: "searchQuery", labels: [nil],
+      produces: "TextEditor", setter: "setSearchQuery", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
+    "diagnostics": ModifierSpec(
+      name: "diagnostics", labels: [nil],
+      produces: "TextEditor", setter: "setDiagnostics", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
+    "attachmentProvider": ModifierSpec(
+      name: "attachmentProvider", labels: [nil],
+      produces: "TextEditor", setter: "setAttachmentProvider", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
+    "followsTail": ModifierSpec(
+      name: "followsTail", labels: [nil],
+      produces: "TextEditor", setter: "setFollowsTail", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
+    "editFilter": ModifierSpec(
+      name: "editFilter", labels: [nil],
+      produces: "TextEditor", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "editFilter", placeholder: "{ _, _ in true }"),
+      inPlaceOn: ["TextEditor"]
+    ),
+    "caretBlink": ModifierSpec(
+      name: "caretBlink", labels: [nil],
+      produces: "TextEditor", setter: "setCaretBlinks", combine: .identity, animatable: true, inPlaceOn: ["TextEditor"]
+    ),
+    "onCommand": ModifierSpec(
+      name: "onCommand", labels: [nil],
+      produces: "TextEditor", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "onCommand", placeholder: "{ _ in false }"),
+      inPlaceOn: ["TextEditor"]
+    ),
+    "onSelectionChange": ModifierSpec(
+      name: "onSelectionChange", labels: [nil],
+      produces: "TextEditor", setter: nil, combine: .identity,
+      handler: HandlerSpec(property: "onSelectionChange", placeholder: "{ _ in }"),
+      inPlaceOn: ["TextEditor"]
     ),
     "onSubmit": ModifierSpec(
       name: "onSubmit", labels: [nil],

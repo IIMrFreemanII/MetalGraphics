@@ -52,7 +52,7 @@ Nothing happens between steps. The same script gives the same frames and the sam
 A `HeadlessWindow` sends the `InputEvent`s that a `RetainedLayerView` would, through `WindowHandle.send` and `Input.apply`. Points are the window's own: from the content's top left, with y down.
 
 - **Mouse and scroll.** `move(to:)`, `click(at:)`, `doubleClick`, `rightClick`, `mouseDown`/`mouseDrag`/`mouseUp` and `drag(from:to:)`. `drag(from:toScreen:)` drags out of the window, or moves a dock window with it. `scroll(by:at:)` and `pointerExit()`.
-- **Keys.** `press(key, modifiers:)` sends real key codes and the modifier flag changes. With command held it sends no key-up, as AppKit does. `type(_:)` sends one frame per character, and `paste(_:)` sends ⌘V with the pasteboard's text in the event.
+- **Keys.** `press(key, modifiers:)` sends real key codes and the modifier flag changes. With command held it sends no key-up, as AppKit does. `type(_:)` sends one frame per character, and `paste(_:)` sends ⌘V with the pasteboard's text in the event. `compose(_:selected:)` and `commit(_:)` send what an input method would, and `textInput` is the snapshot of the focused text the view would answer it from. A copy goes to `app.pasteboard`, never the real one.
 - **Window.** `resize(to:)` and `close()`.
 - **Key window.** Any input on a window makes it key first, as clicking one does. The window that was key before gets `.resignKey`, and the new one gets `.becomeKey`.
 - **Steps.** Every action steps the whole app as many frames as the real events would take. A click takes a press frame and then a release frame.
@@ -131,5 +131,4 @@ relaunch reopens none.
 - **Real threads and their races.** `WindowThreadTests` and `DockWindowsTests` cover them, under TSan.
 - **SwiftUI menus and commands.** Call `app.open(id:)` instead.
 - **Real window behaviour.** SwiftUI's own window restoration, AppKit's key-window and first-click rules, window chrome, Retina changes.
-- **The pasteboard a copy writes to.** It is still the real one.
 - **Frame pacing and idle CPU.** Use the `drive-app` skill for these.

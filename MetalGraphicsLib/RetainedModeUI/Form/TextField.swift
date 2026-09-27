@@ -14,9 +14,10 @@ import simd
 /// - ⌘Z undoes and ⇧⌘Z redoes, typing coalesced into one step until the caret jumps;
 /// - Return runs `onSubmit`, Escape gives up focus.
 ///
-/// There is no input method. The caret does not blink: a blinking one would redraw twice a
-/// second for as long as the field has focus, and an idle app should draw nothing.
-public class TextField : FormControl {
+/// Input methods compose in it: marked text shows underlined at the caret until committed. The
+/// caret does not blink: a blinking one would redraw twice a second for as long as the field has
+/// focus, and an idle app should draw nothing.
+public class TextField : FormControl, TextInputClient {
   public private(set) var text: String
   public private(set) var prompt: String
   /// Where an edit reports the new text. `@Component` arms it with the binding's write-back.
@@ -55,6 +56,11 @@ public class TextField : FormControl {
   private var openEdit: (kind: EditKind, end: Int)? = nil
   private static let undoLimit = 100
 
+  /// An input method's composition, shown at the caret until it is committed; and what the input
+  /// method selects in it, in UTF-16.
+  private var marked: String? = nil
+  private var markedSelection = 0 ..< 0
+
   private let label: Text
   private let displayed: Text
   private let box: FieldBox
@@ -83,6 +89,7 @@ public class TextField : FormControl {
       keys
     })
     keys.action = { [unowned self] press in self.handle(press) }
+    focusable.textInputClient = self
     focusable.onFocusChange = { [unowned self] focused in self.focusChanged(focused) }
     pointer.onPress = { [unowned self] down, input in
       if down { self.pressed(at: input.mousePosition.x, clicks: input.clickCount, extending: input.shiftPressed) }
@@ -114,6 +121,14 @@ public class TextField : FormControl {
 
   private func handle(_ press: KeyPress) -> KeyPress.Result {
     guard !self.isDisabled else { return .ignored }
+    if let actions = press.textInput {
+      // Tab moves focus, whatever the input method calls it.
+      if actions.count == 1, case let .command(name) = actions[0], name == "insertTab:" || name == "insertBacktab:" {
+        return .ignored
+      }
+      self.applyTextInput(actions, revision: press.textRevision)
+      return .handled
+    }
     let command = press.modifiers.contains(.command)
     let option = press.modifiers.contains(.option)
     let shift = press.modifiers.contains(.shift)
@@ -264,11 +279,7 @@ public class TextField : FormControl {
     let start = self.text.index(self.text.startIndex, offsetBy: selection.lowerBound)
     let end = self.text.index(start, offsetBy: selection.count)
     // The pasteboard is the main thread's; the window runs on its own.
-    let copied = String(self.text[start ..< end])
-    DispatchQueue.main.async {
-      NSPasteboard.general.clearContents()
-      NSPasteboard.general.setString(copied, forType: .string)
-    }
+    Pasteboard.write(String(self.text[start ..< end]))
   }
 
   // MARK: - Caret and selection
@@ -349,6 +360,11 @@ public class TextField : FormControl {
 
   private func focusChanged(_ focused: Bool) {
     guard let context = self.context else { return }
+    if !focused, let marked = self.marked {
+      // Kept as typed.
+      self.marked = nil
+      self.insert(marked, kind: .other)
+    }
     if !focused {
       // The selection goes with focus.
       self.openEdit = nil
@@ -357,13 +373,110 @@ public class TextField : FormControl {
     self.box.setFocused(focused, context)
   }
 
+  // MARK: - Input methods
+
+  /// The text as input methods see it: the composition is part of it, at the caret.
+  private var composedText: String {
+    guard let marked = self.marked else { return self.text }
+    let index = self.text.index(self.text.startIndex, offsetBy: self.caret)
+    return String(self.text[..<index]) + marked + String(self.text[index...])
+  }
+
+  /// Where character `index` of the text starts, in UTF-16.
+  private func utf16Offset(_ index: Int) -> Int {
+    self.text.index(self.text.startIndex, offsetBy: index).utf16Offset(in: self.text)
+  }
+
+  /// The character of the text a UTF-16 offset falls in.
+  private func characterIndex(_ offset: Int) -> Int {
+    let index = String.Index(utf16Offset: min(max(offset, 0), self.text.utf16.count), in: self.text)
+    return self.text.distance(from: self.text.startIndex, to: index)
+  }
+
+  func textInputSnapshot() -> TextInputSnapshot {
+    var snapshot = TextInputSnapshot()
+    snapshot.isActive = !self.isDisabled && !self.isSecure
+    let text = self.composedText
+    snapshot.text = text
+    snapshot.length = text.utf16.count
+    let caret = self.utf16Offset(self.caret)
+    if let marked = self.marked {
+      snapshot.marked = NSRange(location: caret, length: marked.utf16.count)
+      snapshot.selection = NSRange(location: caret + self.markedSelection.lowerBound, length: self.markedSelection.count)
+    } else {
+      let low = self.utf16Offset(self.selection.lowerBound)
+      snapshot.selection = NSRange(location: low, length: self.utf16Offset(self.selection.upperBound) - low)
+    }
+    snapshot.caretRect = self.box.caretRect(self.caret)
+    return snapshot
+  }
+
+  func applyTextInput(_ actions: [TextInputAction], revision: UInt64) {
+    for action in actions {
+      switch action {
+      case let .insert(text, replacement):
+        self.marked = nil
+        if let replacement, replacement.location != NSNotFound {
+          let low = self.characterIndex(replacement.location)
+          let high = self.characterIndex(replacement.location + replacement.length)
+          self.replace(low ..< max(low, high), with: text, kind: .other)
+        } else {
+          self.insert(text)
+        }
+      case let .setMarked(text, selected, _):
+        if self.marked == nil && !self.selection.isEmpty {
+          self.replace(self.selection, with: "", kind: .other)
+        }
+        self.marked = text.isEmpty ? nil : text
+        let count = text.utf16.count
+        let low = min(max(selected.location, 0), count)
+        self.markedSelection = low ..< min(max(selected.location + selected.length, low), count)
+      case .unmark:
+        if let marked = self.marked {
+          self.marked = nil
+          self.insert(marked, kind: .other)
+        }
+      case let .command(name):
+        self.command(selector: name)
+      }
+    }
+    self.refresh(self.context)
+  }
+
+  /// An input method's command, as the key that asks for it here.
+  private func command(selector name: String) {
+    let extend = name.hasSuffix("AndModifySelection:")
+    let base = extend ? String(name.dropLast("AndModifySelection:".count)) + ":" : name
+    let keys: [String: (KeyEquivalent, NSEvent.ModifierFlags)] = [
+      "moveLeft:": (.leftArrow, []), "moveRight:": (.rightArrow, []), "moveBackward:": (.leftArrow, []),
+      "moveForward:": (.rightArrow, []), "moveUp:": (.upArrow, []), "moveDown:": (.downArrow, []),
+      "moveWordLeft:": (.leftArrow, .option), "moveWordRight:": (.rightArrow, .option),
+      "moveToBeginningOfLine:": (.leftArrow, .command), "moveToEndOfLine:": (.rightArrow, .command),
+      "moveToLeftEndOfLine:": (.leftArrow, .command), "moveToRightEndOfLine:": (.rightArrow, .command),
+      "moveToBeginningOfDocument:": (.home, []), "moveToEndOfDocument:": (.end, []),
+      "moveToBeginningOfParagraph:": (.home, []), "moveToEndOfParagraph:": (.end, []),
+      "deleteBackward:": (.delete, []), "deleteForward:": (.deleteForward, []),
+      "deleteWordBackward:": (.delete, .option), "deleteWordForward:": (.deleteForward, .option),
+      "deleteToBeginningOfLine:": (.delete, .command), "deleteToEndOfLine:": (.deleteForward, .command),
+      "deleteToEndOfParagraph:": (.deleteForward, .command),
+      "insertNewline:": (.return, []), "cancelOperation:": (.escape, []),
+    ]
+    guard var (key, modifiers) = keys[base] else {
+      if base == "selectAll:" { self.select(0 ..< self.text.count) }
+      return
+    }
+    if extend { modifiers.insert(.shift) }
+    _ = self.handle(KeyPress(key: key, characters: "", modifiers: modifiers, phase: .down))
+  }
+
   // MARK: - Display
 
   /// Shows the text, or the prompt when there is none, and measures where the caret can go.
   private func refresh(_ context: UIContext?) {
-    let shown = self.text.isEmpty ? self.prompt
-      : self.isSecure ? String(repeating: "•", count: self.text.count) : self.text
-    let color = self.text.isEmpty ? FormMetrics.secondaryColor.withAlpha(0.7) : FormMetrics.labelColor
+    let isEmpty = self.text.isEmpty && self.marked == nil
+    let shown = isEmpty ? self.prompt
+      : self.isSecure ? String(repeating: "•", count: self.text.count) : self.composedText
+    let color = isEmpty ? FormMetrics.secondaryColor.withAlpha(0.7) : FormMetrics.labelColor
     if let context {
       self.displayed.setText(shown, context)
       self.displayed.setForegroundColor(color, context)
@@ -372,9 +485,18 @@ public class TextField : FormControl {
       _ = self.displayed.foregroundColor(color)
     }
     // The prompt is not text: its caret offsets are the empty text's.
-    let measured = self.text.isEmpty ? "" : shown
+    let measured = isEmpty ? "" : shown
     self.box.offsets = caretOffsets(measured, font: FormMetrics.font)
-    self.box.setSelection(caret: self.caret, anchor: self.anchor, context, force: true)
+    if let marked = self.marked {
+      // The caret sits where the input method's selection ends, the composition underlined.
+      let count = marked.count
+      let selectedEnd = String(decoding: Array(marked.utf16.prefix(self.markedSelection.upperBound)), as: UTF16.self).count
+      self.box.marked = self.caret ..< self.caret + count
+      self.box.setSelection(caret: self.caret + selectedEnd, anchor: self.caret + selectedEnd, context, force: true)
+    } else {
+      self.box.marked = nil
+      self.box.setSelection(caret: self.caret, anchor: self.anchor, context, force: true)
+    }
   }
 
   override func disabledChanged(_ context: UIContext) {
@@ -450,6 +572,8 @@ final class FieldBox : UIRenderableElement {
   private var anchor = 0
   /// How far the text is scrolled left.
   private var scroll: Float = 0
+  /// An input method's composition, underlined: characters of what is shown.
+  var marked: Range<Int>? = nil
 
   init(_ text: Text) {
     super.init()
@@ -484,6 +608,13 @@ final class FieldBox : UIRenderableElement {
 
   private func offset(_ index: Int) -> Float {
     self.offsets[index.clamped(to: 0 ... self.offsets.count - 1)]
+  }
+
+  /// The caret before character `index`, in the window: what an input method's candidate
+  /// window is placed by.
+  func caretRect(_ index: Int) -> CGRect {
+    let x = self.position.x + Self.inset.x - self.scroll + self.offset(index)
+    return CGRect(x: Double(x), y: Double(self.position.y + Self.inset.y), width: 1.5, height: Double(self.size.y - Self.inset.y * 2))
   }
 
   /// The character boundary nearest `x`, window top left origin: a binary search of the offsets.
@@ -551,6 +682,16 @@ final class FieldBox : UIRenderableElement {
     guard self.focused else { return }
     let height = (self.size.y - Self.inset.y * 2) * s
     let textX = origin.x + (Self.inset.x - self.scroll) * s
+    if let marked = self.marked {
+      let low = self.offset(marked.lowerBound) * s
+      let high = self.offset(marked.upperBound) * s
+      var line = FormMetrics.labelColor
+      line.w *= effect.opacity
+      renderer.draw(square: Square(
+        position: float2(textX + (low + high) * 0.5, origin.y + size.y * 0.5 + height * 0.5 - 1 * s),
+        size: float2(high - low, 1 * s), color: line
+      ))
+    }
     if self.caret != self.anchor {
       // Kept inside the box, like the text it covers.
       let low = max(self.offset(min(self.caret, self.anchor)) - self.scroll, -1) * s

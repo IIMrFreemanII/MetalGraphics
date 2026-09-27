@@ -48,6 +48,7 @@ func testSaveButtonSaves() {
 | `settle(maxFrames:)` | Steps until idle (no animation, nothing to draw). Returns the frames it took, or nil if it's still busy: assert it's not nil. |
 | `move(to:)`, `click(at:)`, `click(on: hittable or focusable)`, `clickWithinOneFrame(at:)`, `scroll(by:at:)` | Mouse input, in points from the window's top left, y down. `click` is a down frame then an up frame. A scroll with positive y moves content down. |
 | `press(.tab / .return / .delete / KeyEquivalent("a"), modifiers:)`, `type("text")` | Key down and up in one frame. `type` sends a frame per character. |
+| `compose("かな", selected:)`, `commit("仮名")` | What an input method sends the focused text: marked text, then the committed text. |
 | `all(T.self)`, `first(T.self)` | Finds elements in the tree in pre-order, e.g. `HittableView`, `FocusableElement`, `ScrollView`. |
 | `context`, `input`, `graphics`, `root`, `now`, `renders` | The live pieces. `renders` counts the frames that drew. |
 | `snapshot()`, `pixel(at:)` | The last frame as a `CGImage`, or one pixel's RGBA. |
@@ -84,6 +85,8 @@ Goldens are stored at `MetalGraphicsLibTests/__Snapshots__/<TestClass>/<name>.pn
 - Tests run in the `xctest` process, so `UIStorage` and `UserDefaults.standard` belong to that process, not to the app.
 - A change to UI behaviour or rendering comes with a test next to the existing ones: `InteractionTests`, `AnimationTests`, `LayoutTests` or `SnapshotTests`.
 - Guard idleness where it matters: after `settle()`, `h.step(frames: 30)` must not change `h.renders` (see `AnimationTests.testIdleTreeStopsDrawing`).
+- `settle()` stops while a wake (`UIContext.requestWake`, a caret's blink) is still in the future: `advance(seconds)` fires it. A focused `TextEditor` blinks for a minute after its last input.
+- What a copy writes goes through `Pasteboard.write`: replace it in a test to see it (`TextEditorTests.testCopyCutAndPaste`).
 
 ## The whole app (`HeadlessApp`, `GPURayMarchingTests`)
 

@@ -16,6 +16,12 @@ public struct Invalidation: OptionSet, Sendable {
   public static let all: Invalidation = [.render, .layout, .hitGrid, .treeOrder]
 }
 
+/// Something that asked to run again at a time: a caret's blink, a drag's autoscroll. See
+/// `UIContext.requestWake(at:for:)`.
+public protocol WakeTarget: AnyObject {
+  func wake(_ context: UIContext, now: Double)
+}
+
 /// Something a press drags that Escape cancels. See `UIContext.escapeTarget`.
 protocol EscapeCancellable: AnyObject {
   func cancelOnEscape()
@@ -198,6 +204,8 @@ public class UIContext {
   private var hitInvalidations: UInt32 = 0
   /// How many times the hit grid was rebuilt. For tests.
   private(set) var hitGridRebuilds = 0
+  /// How many layout passes ran. For tests.
+  private(set) var layoutPasses = 0
   private var lastSize: float2 = .zero
   private var afterLayoutWork: [() -> Void] = []
 
@@ -206,7 +214,74 @@ public class UIContext {
   /// Nothing to draw, nothing animating, nothing left for the next frame: until input or a write
   /// arrives, frames would find nothing to do. A window pauses its frames then.
   public var isIdle: Bool {
-    !self.needsRender && self.animator.isIdle && self.afterLayoutWork.isEmpty
+    !self.needsRender && self.animator.isIdle && self.afterLayoutWork.isEmpty && !self.hasDueWake
+  }
+
+  /// A wake whose time has come: the next frame has work.
+  private var hasDueWake: Bool {
+    guard !self.wakes.isEmpty, let next = self.nextWakeTime else { return false }
+    return next <= self.clock()
+  }
+
+  // MARK: - Wakes
+
+  private struct Wake {
+    var time: Double
+    weak var target: (any WakeTarget)?
+  }
+
+  private var wakes: [Wake] = []
+
+  /// Runs `target.wake` in the first frame at or after `time`, on this context's clock. One wake
+  /// per target: asking again moves it. Unlike an animation, a wake does not keep frames coming
+  /// until then: an idle window pauses, and its renderer arms a timer for the earliest wake.
+  public func requestWake(at time: Double, for target: any WakeTarget) {
+    if let index = self.wakes.firstIndex(where: { $0.target === target }) {
+      self.wakes[index].time = time
+    } else {
+      self.wakes.append(Wake(time: time, target: target))
+    }
+  }
+
+  public func cancelWake(for target: any WakeTarget) {
+    self.wakes.removeAll { $0.target === target || $0.target == nil }
+  }
+
+  /// The earliest wake asked for, if any.
+  public var nextWakeTime: Double? {
+    var earliest: Double? = nil
+    for wake in self.wakes where wake.target != nil {
+      earliest = min(earliest ?? wake.time, wake.time)
+    }
+    return earliest
+  }
+
+  /// Runs the wakes that are due, each once.
+  private func fireWakes(_ now: Double) {
+    guard self.wakes.contains(where: { $0.time <= now }) else { return }
+    var due: [any WakeTarget] = []
+    self.wakes.removeAll { wake in
+      guard let target = wake.target else { return true }
+      if wake.time <= now {
+        due.append(target)
+        return true
+      }
+      return false
+    }
+    for target in due {
+      target.wake(self, now: now)
+    }
+  }
+
+  /// Whether the window is the one receiving keys, as of the last frame.
+  public private(set) var isWindowKey = true
+
+  // MARK: - Text input
+
+  /// The focused element's text for input methods, or `.inactive`.
+  func textInputSnapshot() -> TextInputSnapshot {
+    guard let focused = self.focused, focused.mounted, let client = focused.textInputClient else { return .inactive }
+    return client.textInputSnapshot()
   }
 
   /// The time animations start and advance by. Tests swap it for a fake clock so frames can be
@@ -389,6 +464,7 @@ public class UIContext {
   ) -> Void {
     let time = time ?? self.clock()
     let hitInvalidationsAtStart = self.hitInvalidations
+    self.isWindowKey = input.isWindowKey
     if self.graphics !== graphics { self.graphics = graphics }
     graphics.size = size
     if size != self.lastSize {
@@ -457,14 +533,22 @@ public class UIContext {
       }
       self.dispatchKeys(input)
     }
+    // What input methods sent outside a key: to the focused text.
+    if !input.textInputs.isEmpty, !blocked, let client = self.focused?.textInputClient {
+      client.applyTextInput(input.textInputs, revision: input.textInputRevision)
+    }
 
     self.animator.tick(time, self)
+    if !self.wakes.isEmpty {
+      self.fireWakes(time)
+    }
     if !self.animator.isIdle {
       // A delayed animation writes nothing yet, but the frame after it must still be drawn.
       self.invalidate(.render)
     }
 
     if self.pending.contains(.layout) {
+      self.layoutPasses &+= 1
       self.isLayingOut = true
       defer { self.isLayingOut = false }
       root.size = size
@@ -645,7 +729,12 @@ public class UIContext {
       renderer.setBlur(0)
     }
     renderer.textForeground = nil
-    self.pending.remove(.render)
+    // A layout still pending — asked for by `afterLayout` work after this frame's pass — is laid
+    // out and drawn next frame: until then there is still something to draw, and the window
+    // must not go idle.
+    if !self.pending.contains(.layout) {
+      self.pending.remove(.render)
+    }
   }
 
   private func setForeground(_ foreground: Int, _ renderer: Graphics2D) -> Void {

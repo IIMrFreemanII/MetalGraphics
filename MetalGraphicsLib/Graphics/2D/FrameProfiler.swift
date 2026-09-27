@@ -45,7 +45,7 @@ public final class FrameProfiler {
 
   /// Sizes of the last drawn frame.
   public enum Count: Int, CaseIterable {
-    case elements, shapes, glyphs, vectors, filedShapes, dirtyCells
+    case elements, shapes, glyphs, vectors, filedShapes, dirtyCells, maxPerCell
 
     var name: String {
       switch self {
@@ -55,6 +55,7 @@ public final class FrameProfiler {
       case .vectors: "vectors"
       case .filedShapes: "filed"
       case .dirtyCells: "dirtyCells"
+      case .maxPerCell: "maxPerCell"
       }
     }
   }

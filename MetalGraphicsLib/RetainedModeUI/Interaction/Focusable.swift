@@ -16,6 +16,9 @@ public final class FocusableElement : SingleChildElement {
   /// Asked for with `.focused(true)` before it was mounted; taken on mount.
   private var wantsFocus = false
 
+  /// The text this element edits, when it takes text through input methods.
+  weak var textInputClient: (any TextInputClient)?
+
   public init(_ isFocusable: Bool = true, @UIElementBuilder content: () -> [UIElement]) {
     self.isFocusable = isFocusable
     super.init()

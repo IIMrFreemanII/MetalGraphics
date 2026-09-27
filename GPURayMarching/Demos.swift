@@ -24,6 +24,9 @@ enum Demo : String, Identifiable, CaseIterable {
   case redraw
   case windows
   case docking
+  case codeEditor
+  case markdown
+  case console
 
   var id: Self { self }
 
@@ -51,6 +54,9 @@ enum Demo : String, Identifiable, CaseIterable {
     case .redraw: "Redraw"
     case .windows: "Windows"
     case .docking: "Docking"
+    case .codeEditor: "Code Editor"
+    case .markdown: "Markdown"
+    case .console: "Console"
     }
   }
 
@@ -78,6 +84,9 @@ enum Demo : String, Identifiable, CaseIterable {
     case .redraw: RedrawDemo()
     case .windows: WindowsDemo()
     case .docking: DockingDemo()
+    case .codeEditor: CodeEditorDemo()
+    case .markdown: MarkdownEditorDemo()
+    case .console: ConsoleDemo()
     }
   }
 }

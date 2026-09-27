@@ -132,7 +132,14 @@ struct RetainedMetalView: NSViewRepresentable {
     let showPointerStyle: @Sendable (PointerStyle) -> Void = { [weak view] style in
       DispatchQueue.main.async { MainActor.assumeIsolated { view?.pointerStyle = style } }
     }
-    handle.start(sceneID: sceneID, root: root, restoring: restoring, persist: persist, layer: layer, showPointerStyle: showPointerStyle)
+    // The input method's answers come from the view, on the main thread, from what this sends.
+    let showTextInput: @Sendable (TextInputSnapshot) -> Void = { [weak view] snapshot in
+      DispatchQueue.main.async { MainActor.assumeIsolated { view?.textInputChanged(snapshot) } }
+    }
+    handle.start(
+      sceneID: sceneID, root: root, restoring: restoring, persist: persist, layer: layer,
+      showPointerStyle: showPointerStyle, showTextInput: showTextInput
+    )
 #if DEBUG
     HotReload.startIfNeeded()
 #endif
@@ -147,12 +154,15 @@ extension WindowHandle {
     sceneID: String, root: @escaping @Sendable (WindowScene) -> UIElement,
     restoring: String, persist: (@Sendable (String) -> Void)?,
     layer: CAMetalLayer?, showPointerStyle: @escaping @Sendable (PointerStyle) -> Void,
+    showTextInput: @escaping @Sendable (TextInputSnapshot) -> Void = { _ in },
     clock: (@Sendable () -> Double)? = nil
   ) {
     nonisolated(unsafe) let layer = layer
     self.start { [self] in
       let scene = WindowScene(sceneID: sceneID, storage: UISceneStorage(restoring: restoring, persist: persist), handle: self)
-      let renderer = RootViewRenderer(scene: scene, layer: layer, root: root, showPointerStyle: showPointerStyle)
+      let renderer = RootViewRenderer(
+        scene: scene, layer: layer, root: root, showPointerStyle: showPointerStyle, showTextInput: showTextInput
+      )
       // A fake one, from before the tree is built: what it starts animates on it too.
       if let clock {
         renderer.clock = clock

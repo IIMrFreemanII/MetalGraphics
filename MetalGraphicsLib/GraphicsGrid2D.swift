@@ -114,6 +114,12 @@ class GraphicsGrid2D {
     a.shape.depth > b.shape.depth
   }
 
+  /// The most shapes filed in one cell last frame.
+  public private(set) var maxShapesPerCell = 0
+  /// `kMaxShapesPerCell` in Shaders.metal.
+  static let shaderCellLimit = 512
+  nonisolated(unsafe) private static var warnedCellLimit = false
+
   public func updateBuffers() {
     self.sortShapesByDepth()
     
@@ -125,10 +131,12 @@ class GraphicsGrid2D {
 
     var startIndex = Int()
     let pointer = self.shapeBuffer.contents().assumingMemoryBound(to: Shape.self)
+    self.maxShapesPerCell = 0
     self.dirtyCells.removeAll(keepingCapacity: true)
     self.dirtyRects.removeAll(keepingCapacity: true)
     for i in self.shapesPerCell.indices {
       let count = self.shapesPerCell[i].count
+      self.maxShapesPerCell = max(self.maxShapesPerCell, count)
 
       self.cells[i] = GridCell(startIndex: Int32(startIndex), count: Int32(count))
 
@@ -147,6 +155,14 @@ class GraphicsGrid2D {
       self.cellHashes[i] = hash.value
     }
     self.hasCellHashes = true
+#if DEBUG
+    // `compute2D` shades at most this many per cell, topmost first: the bottom ones — backgrounds —
+    // are dropped. Dense tiny text is what gets there.
+    if self.maxShapesPerCell > Self.shaderCellLimit && !Self.warnedCellLimit {
+      Self.warnedCellLimit = true
+      print("MetalGraphics: \(self.maxShapesPerCell) shapes in one grid cell, past the shader's \(Self.shaderCellLimit)")
+    }
+#endif
 
     // to debug
 //    var tempShapes = Array(repeating: Shape(index: Int32(), shapeType: Int32()), count: self.shapesPerCellCount)

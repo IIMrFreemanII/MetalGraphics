@@ -722,6 +722,7 @@ public class Graphics2D {
       profiler.set(.vectors, self.vectors.count)
       profiler.set(.filedShapes, self.grid.shapesPerCellCount)
       profiler.set(.dirtyCells, self.grid.dirtyCells.count)
+      profiler.set(.maxPerCell, self.grid.maxShapesPerCell)
     }
 
     let uploadStart = profiler.start()
@@ -1610,6 +1611,21 @@ public class Graphics2D {
     item.stroke = float4(halfWidth, 0, 1, 0)
     item.kind = VectorItem.Kind.roundedBox.rawValue
     item.flags = VectorItem.closedFlag | (strokeWidth == nil ? 0 : VectorItem.strokeFlag)
+    self.draw(vector: item)
+  }
+
+  /// Draws a wavy underline from `start`, window centered, y down, in points, `length` long along
+  /// x: the squiggle under a misspelling or an error. One analytic shape, however long.
+  public func draw(squiggle start: float2, length: Float, amplitude: Float, wavelength: Float, thickness: Float, color: float4) {
+    guard length > 0, color.w > 0, wavelength > 0 else { return }
+    let reach = amplitude + thickness + 1 / self.pixelsPerPoint
+    var item = VectorItem()
+    item.row0 = float4(1, 0, -start.x, 1)
+    item.row1 = float4(0, 1, -start.y, 0)
+    item.params0 = float4(length, amplitude, wavelength, thickness * 0.5)
+    item.color = color
+    item.clip = float4(start.x, start.y - reach, start.x + length, start.y + reach)
+    item.kind = VectorItem.Kind.wave.rawValue
     self.draw(vector: item)
   }
 

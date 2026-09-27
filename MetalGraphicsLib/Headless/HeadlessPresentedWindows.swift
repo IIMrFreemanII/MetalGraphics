@@ -58,6 +58,10 @@ import simd
     self.windows[ObjectIdentifier(handle)]?.setPointerStyle(style)
   }
 
+  func showTextInput(_ handle: WindowHandle, _ snapshot: TextInputSnapshot) {
+    self.windows[ObjectIdentifier(handle)]?.setTextInput(snapshot)
+  }
+
   /// `window` was resized: a cover over it follows.
   func parentResized(_ parent: HeadlessWindow) {
     for window in self.windows.values {

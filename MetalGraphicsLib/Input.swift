@@ -35,6 +35,14 @@ extension Drag: CustomStringConvertible {
   public var charactersCode: UInt32?
   public var modifierFlags: NSEvent.ModifierFlags?
 
+  /// What input methods asked for since the last frame outside key presses, for the focused
+  /// text; and the text revision it was asked against.
+  public internal(set) var textInputs: [TextInputAction] = []
+  public internal(set) var textInputRevision: UInt64 = 0
+  /// The last batch of text actions from the main thread applied: published back with the text,
+  /// so the main thread can tell a snapshot from before what it sent.
+  public internal(set) var textInputSequence: UInt64 = 0
+
   /// Every key event since the last frame, in order, for `UIContext` to route to `.onKeyPress`
   /// handlers. Unlike `characters`, which keeps only the last, nothing typed between two frames
   /// is lost.
@@ -108,6 +116,7 @@ extension Drag: CustomStringConvertible {
     self.scrollDelta = float2()
 
     self.keyPresses.removeAll(keepingCapacity: true)
+    self.textInputs.removeAll(keepingCapacity: true)
     self.keysDown.removeAll(keepingCapacity: true)
     self.keysUp.removeAll(keepingCapacity: true)
 
@@ -138,10 +147,17 @@ public enum InputEvent: Sendable {
     public var isRepeat: Bool
     /// The pasteboard's text when this is ⌘V, read on the main thread with the event.
     public var pasteboard: String?
+    /// What the input method made of the key, when the focused element takes text through one:
+    /// empty when it kept the key for its composition. Nil when the key went past it.
+    public var textActions: [TextInputAction]?
+    /// Which batch of text actions this is, and the text's revision they were made against.
+    public var textSequence: UInt64
+    public var textRevision: UInt64
 
     public init(
       keyCode: UInt16, characters: String?, charactersIgnoringModifiers: String?,
-      modifiers: NSEvent.ModifierFlags, isRepeat: Bool = false, pasteboard: String? = nil
+      modifiers: NSEvent.ModifierFlags, isRepeat: Bool = false, pasteboard: String? = nil,
+      textActions: [TextInputAction]? = nil, textSequence: UInt64 = 0, textRevision: UInt64 = 0
     ) {
       self.keyCode = keyCode
       self.characters = characters
@@ -149,6 +165,9 @@ public enum InputEvent: Sendable {
       self.modifiers = modifiers
       self.isRepeat = isRepeat
       self.pasteboard = pasteboard
+      self.textActions = textActions
+      self.textSequence = textSequence
+      self.textRevision = textRevision
     }
   }
 
@@ -174,6 +193,9 @@ public enum InputEvent: Sendable {
   case resignKey
   /// The window became key, with the pointer where it is if it is over the view.
   case becomeKey(pointer: float2?)
+  /// What an input method asked for outside a key press: a pick from the accent menu, the
+  /// character viewer, dictation. `sequence` and `revision` as for a key's actions.
+  case textInput([TextInputAction], sequence: UInt64, revision: UInt64)
 }
 
 public extension Input {
@@ -192,7 +214,15 @@ public extension Input {
         self.keysDown.insert(code)
         self.keysPressed.insert(code)
       }
+      if key.textActions != nil {
+        self.textInputSequence = max(self.textInputSequence, key.textSequence)
+      }
       self.queueKeyPress(key, key.isRepeat ? .repeat : .down)
+
+    case .textInput(let actions, let sequence, let revision):
+      self.textInputs.append(contentsOf: actions)
+      self.textInputRevision = revision
+      self.textInputSequence = max(self.textInputSequence, sequence)
 
     case .keyUp(let key):
       self.queueKeyPress(key, .up)
@@ -303,7 +333,9 @@ public extension Input {
   private func queueKeyPress(_ key: InputEvent.Key, _ phase: KeyPress.Phases) {
     // `charactersIgnoringModifiers` keeps shift: shift-a is "A". A letter's key is its lowercase
     // one, so `.onKeyPress("a")` sees both; `characters` still says which was typed.
-    guard var character = key.charactersIgnoringModifiers?.lowercased().first else { return }
+    // A dead key types nothing, but what the input method made of it still has to arrive.
+    guard var character = key.charactersIgnoringModifiers?.lowercased().first ?? (key.textActions != nil ? "\0" : nil)
+    else { return }
     // Shift-Tab reports a back-tab; it is the Tab key, with shift in the modifiers.
     if character == "\u{19}" {
       character = "\t"
@@ -311,7 +343,8 @@ public extension Input {
     let press = KeyPress(
       key: KeyEquivalent(character), characters: key.characters ?? "",
       modifiers: key.modifiers.intersection(.deviceIndependentFlagsMask), phase: phase,
-      keyCode: GCKeyCode(macKeyCode: key.keyCode), pasteboard: key.pasteboard
+      keyCode: GCKeyCode(macKeyCode: key.keyCode), pasteboard: key.pasteboard,
+      textInput: phase == .up ? nil : key.textActions, textRevision: key.textRevision
     )
     self.keyPresses.append(press)
     if phase == .up {

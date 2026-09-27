@@ -225,6 +225,20 @@ final class UIHarness {
     }
   }
 
+  /// An input method's composition so far: `text` marked, its selection `selected` (the end
+  /// when nil), for the focused text.
+  func compose(_ text: String, selected: NSRange? = nil) {
+    let selected = selected ?? NSRange(location: text.utf16.count, length: 0)
+    self.input.textInputs.append(.setMarked(text, selected: selected, replacement: nil))
+    self.step()
+  }
+
+  /// An input method committing `text`, in place of the composition or at the selection.
+  func commit(_ text: String) {
+    self.input.textInputs.append(.insert(text, replacement: nil))
+    self.step()
+  }
+
   // MARK: - Tree
 
   /// Every element of type `T` in the tree, in pre-order.

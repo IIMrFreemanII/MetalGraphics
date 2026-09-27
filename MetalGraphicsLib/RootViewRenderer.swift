@@ -23,16 +23,24 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
   /// The cursor the frame last asked for, and who shows it: the view, on the main thread.
   private var pointerStyle = PointerStyle.default
   private let showPointerStyle: @Sendable (PointerStyle) -> Void
+  /// The focused text as input methods last heard of it, and who hears: the view, on the main
+  /// thread.
+  private var textInput = TextInputSnapshot.inactive
+  private let showTextInput: @Sendable (TextInputSnapshot) -> Void
+  /// Resumes the paused frames when the earliest wake is due.
+  private var wakeTimer: CFRunLoopTimer?
 
   public init(
     scene: WindowScene, layer: CAMetalLayer?,
     root: @escaping @Sendable (WindowScene) -> UIElement,
-    showPointerStyle: @escaping @Sendable (PointerStyle) -> Void
+    showPointerStyle: @escaping @Sendable (PointerStyle) -> Void,
+    showTextInput: @escaping @Sendable (TextInputSnapshot) -> Void = { _ in }
   ) {
     self.scene = scene
     self.layer = layer
     self.makeRoot = root
     self.showPointerStyle = showPointerStyle
+    self.showTextInput = showTextInput
     super.init()
   }
 
@@ -140,6 +148,25 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
     self.displayLink?.isPaused = false
   }
 
+  /// Arms a timer on this thread's run loop that resumes the frames when the context's earliest
+  /// wake is due, replacing any armed before. A caret blinks this way at two frames a second,
+  /// with nothing running in between.
+  private func armWakeTimer() {
+    if let timer = self.wakeTimer {
+      CFRunLoopTimerInvalidate(timer)
+      self.wakeTimer = nil
+    }
+    guard let next = self.uiContext.nextWakeTime, self.displayLink != nil else { return }
+    let delay = max(next - self.uiContext.clock(), 0)
+    nonisolated(unsafe) let renderer = self
+    let timer = CFRunLoopTimerCreateWithHandler(nil, CFAbsoluteTimeGetCurrent() + delay, 0, 0, 0) { _ in
+      renderer.wakeTimer = nil
+      renderer.resume()
+    }
+    self.wakeTimer = timer
+    CFRunLoopAddTimer(CFRunLoopGetCurrent(), timer, .commonModes)
+  }
+
   /// Whether its frames are paused, idle or hidden.
   var isPaused: Bool {
     self.displayLink?.isPaused ?? false
@@ -153,6 +180,10 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
   /// The window closed. Unmounting the tree unsubscribes it from shared models and frees the
   /// context's registries; the frames stop, and the layer goes back to the main thread.
   func teardown() {
+    if let timer = self.wakeTimer {
+      CFRunLoopTimerInvalidate(timer)
+      self.wakeTimer = nil
+    }
     self.displayLink?.invalidate()
     self.displayLink = nil
     if let root = self.handle?.root {
@@ -177,6 +208,7 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
 
     if self.uiContext.isIdle, self.graphics2D?.needsDamageFrames != true, self.handle?.hasEvents != true {
       self.displayLink?.isPaused = true
+      self.armWakeTimer()
     }
     // Another window on the thread whose tree this frame changed — a presentation and its
     // presenter — may be paused with nothing posted to wake it.
@@ -211,6 +243,13 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
     if self.uiContext.pointerStyle != self.pointerStyle {
       self.pointerStyle = self.uiContext.pointerStyle
       self.showPointerStyle(self.pointerStyle)
+    }
+    // So is the input method: sent only when the focused text, its selection or caret changed.
+    var textInput = self.uiContext.textInputSnapshot()
+    textInput.appliedSequence = self.input.textInputSequence
+    if textInput != self.textInput {
+      self.textInput = textInput
+      self.showTextInput(textInput)
     }
 
     // Nothing changed since the last frame, so there is nothing new to present: the layer keeps
