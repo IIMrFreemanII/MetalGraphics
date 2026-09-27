@@ -15,7 +15,7 @@ public struct RetainedView: View {
   @StateObject private var host = RetainedWindowHost()
   /// This window's `UISceneStorage`, saved and restored with the window by SwiftUI.
   @SceneStorage("MetalGraphics.UISceneStorage") private var persisted = ""
-  @Environment(\.openWindow) private var openWindowAction
+  @SwiftUI.Environment(\.openWindow) private var openWindowAction
 
   public init(sceneID: String, root: @escaping @Sendable (WindowScene) -> UIElement) {
     self.sceneID = sceneID

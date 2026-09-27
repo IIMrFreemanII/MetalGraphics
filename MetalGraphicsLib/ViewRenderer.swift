@@ -93,7 +93,8 @@ open class ViewRenderer: NSObject {
         forName: NSApplication.willTerminateNotification, object: nil, queue: .main
       ) { _ in
         MainActor.assumeIsolated {
-          let handles = WindowRegistry.live
+          // A presentation's window is closed with the window whose thread it runs on.
+          let handles = WindowRegistry.live.filter { $0.parent == nil }
           handles.forEach { $0.close() }
           for handle in handles {
             handle.thread?.waitUntilFinished(timeout: 0.5)

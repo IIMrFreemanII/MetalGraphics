@@ -59,6 +59,8 @@ import simd
   /// Where the pointer last was on the screen.
   var screenPointer = float2()
   var dockDrag: HeadlessDockWindows.Drag?
+  /// Opens presentations' windows, while the app lives.
+  private(set) var presentedWindows: HeadlessPresentedWindows?
 
   private let defaults: UserDefaults
   private let suiteName: String
@@ -75,6 +77,7 @@ import simd
     let defaults: UserDefaults
     let opener: (@MainActor (String) -> Void)?
     let post: @Sendable (@escaping @Sendable () -> Void) -> Void
+    let presentedWindows: any PresentedWindowHost
   }
 
   public init(scenes: [RetainedScene], screenSize: float2 = float2(1440, 900), pixelsPerPoint: Float = 2) {
@@ -91,17 +94,25 @@ import simd
     self.saved = Saved(
       executor: state.executor, defaults: UIStorage.defaults,
       opener: Windows.setOpener { [weak self] id in self?.open(id: id) },
-      post: MainQueue.post
+      post: MainQueue.post,
+      presentedWindows: PresentedWindows.host
     )
     state.executor = mainExecutor
     UIStorage.defaults = self.defaults
     MainQueue.post = { work in mainExecutor.post(work) }
+    let presented = HeadlessPresentedWindows(app: self)
+    self.presentedWindows = presented
+    PresentedWindows.host = presented
     Self.live = self
   }
 
   /// Closes every window and puts back what the app swapped out. Idempotent.
   public func close() {
     guard !self.isClosed else { return }
+    // Presentations' windows go with their trees, without asking their bindings.
+    for window in self.windows.reversed() where window.presentation != nil {
+      window.close(quitting: true)
+    }
     for window in self.windows.reversed() {
       window.close()
     }
@@ -117,7 +128,9 @@ import simd
       UIStorage.defaults = saved.defaults
       Windows.setOpener(saved.opener)
       MainQueue.post = saved.post
+      PresentedWindows.host = saved.presentedWindows
     }
+    self.presentedWindows = nil
     self.saved = nil
     self.defaults.removePersistentDomain(forName: self.suiteName)
     if Self.live === self { Self.live = nil }
@@ -169,6 +182,28 @@ import simd
     return window
   }
 
+  /// A presentation's window, opened over the one it was presented from.
+  func addPresented(_ window: HeadlessWindow) {
+    self.add(window)
+  }
+
+  /// The open presentation shown last from `window`, if any.
+  public func presentation(over window: HeadlessWindow) -> HeadlessWindow? {
+    self.windows.last { $0.isOpen && $0.presentation?.parent === window }
+  }
+
+  /// The presentation shown over `window`, and over that, and so on: the one on top. Nil when
+  /// none is.
+  func topPresentation(over window: HeadlessWindow) -> HeadlessWindow? {
+    var top: HeadlessWindow? = nil
+    var current = window
+    while let next = self.presentation(over: current) {
+      top = next
+      current = next
+    }
+    return top
+  }
+
   private func add(_ window: HeadlessWindow) {
     self.windows.append(window)
     if window.isVisible {
@@ -194,6 +229,10 @@ import simd
   public func makeKey(_ window: HeadlessWindow) {
     self.bringToFront(window)
     guard self.keyWindow !== window else { return }
+    // A popover's window goes when the keyboard moves to a window not shown over it.
+    if let popover = self.keyWindow, popover.presentation?.kind == .popover, !self.isShown(window, over: popover) {
+      PresentedWindows.send(.resignedKey, to: popover.handle)
+    }
     self.keyWindow?.handle.send(.resignKey)
     self.keyWindow = window
     window.handle.send(.becomeKey(pointer: window.pointer))
@@ -215,8 +254,27 @@ import simd
   }
 
   func didClose(_ window: HeadlessWindow) {
+    // The keyboard goes back to the window a presentation was shown from.
+    if let parent = window.presentation?.parent, self.keyWindow === window, parent.isOpen, parent.isVisible {
+      self.zOrder.removeAll { $0 === window }
+      self.windows.removeAll { $0 === window }
+      window.handle.send(.resignKey)
+      self.keyWindow = nil
+      self.makeKey(parent)
+      return
+    }
     self.didHide(window)
     self.windows.removeAll { $0 === window }
+  }
+
+  /// Whether `window` was presented from `base`, or from something presented from it.
+  private func isShown(_ window: HeadlessWindow, over base: HeadlessWindow) -> Bool {
+    var current = window.presentation?.parent
+    while let presenter = current {
+      if presenter === base { return true }
+      current = presenter.presentation?.parent
+    }
+    return false
   }
 
   /// The visible window whose frame holds `point` (screen), front to back, skipping `except`.

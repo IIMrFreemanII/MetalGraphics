@@ -174,6 +174,9 @@ public class HittableGrid2D {
   /// Hovers what is under the pointer now: ends the hover of views it left, starts it on views
   /// it entered, and tells continuous hovers where it is. Also what a re-hover runs, when the
   /// content moved under a pointer that did not.
+  /// Whether anything is hovered.
+  var isHovering: Bool { !self.hoverChain.isEmpty }
+
   func updateHover(_ input: Input) {
     let point = input.mousePosition
     self.nextChain.removeAll(keepingCapacity: true)

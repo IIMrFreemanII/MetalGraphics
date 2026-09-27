@@ -1,5 +1,11 @@
-/// The four edges of a rectangle, as sets: `.padding(.horizontal, 8)`.
-public enum Edge: Sendable {
+/// One of the four edges of a rectangle: where a popover points from. As sets:
+/// `.padding(.horizontal, 8)`.
+public enum Edge: Sendable, Equatable {
+  case top
+  case leading
+  case bottom
+  case trailing
+
   public struct Set: OptionSet, Sendable {
     public let rawValue: UInt8
     public init(rawValue: UInt8) { self.rawValue = rawValue }

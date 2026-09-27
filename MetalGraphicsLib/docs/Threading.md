@@ -9,7 +9,7 @@ only AppKit and SwiftUI work.
 | Thread | What runs there |
 |---|---|
 | Main | SwiftUI scenes and `RetainedView`; `RetainedLayerView`'s AppKit side: events, size, key status, occlusion, the cursor; `@SceneStorage`; `openWindow`; the pasteboard; hot reload's watchers |
-| A window's `WindowThread` | Everything of that window's tree: its elements, `UIContext`, `Input`, `Graphics2D`, `UISceneStorage`, `RootViewRenderer`. Its frames, driven by a `CAMetalDisplayLink` on the thread's run loop |
+| A window's `WindowThread` | Everything of that window's tree: its elements, `UIContext`, `Input`, `Graphics2D`, `UISceneStorage`, `RootViewRenderer`. Its frames, driven by a `CAMetalDisplayLink` on the thread's run loop. And the windows of the presentations shown from it, each with a renderer and display link of its own |
 | The shared bake queue | Glyph and icon bakes into the shared SDF atlas, and image uploads (`SharedGPUWork`) |
 
 The main thread never waits for a window thread, and a window thread never waits for the main
@@ -26,6 +26,14 @@ thread. They post to each other:
 Main holds only a window's `WindowHandle`. The renderer is made, used and released on the
 window's thread. A closed window's thread unmounts its tree, which unsubscribes it from shared
 models, then ends; anything posted to it afterwards is dropped.
+
+A presentation shown in a window of its own (`docs/Modals.md`) runs on the thread of the window
+it was shown from, not on one of its own: its content is built by a closure that captures the
+presenter, and writes its bindings. Its `WindowHandle` is a child of that window's
+(`WindowHandle(childOf:name:)`): the same thread and mailbox, its own events and renderer.
+Closing it tears down only its tree; closing the window tears down its children's too, in the
+same turn. A frame that changes another tree on its thread — a presentation writing its
+presenter's state — resumes that window's paused frames (`WindowHandle.wakeSurfaces`).
 
 Docking's windows follow the same rules: an area posts what it asks of the windows to main,
 which drags a window itself and posts back where the pointer is to the area under it

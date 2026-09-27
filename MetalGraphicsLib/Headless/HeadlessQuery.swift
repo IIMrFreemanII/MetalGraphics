@@ -179,6 +179,7 @@ public extension HeadlessWindow {
       element.forEachChild { visit($0, depth + 1) }
     }
     visit(self.root, 0)
+    self.context.overlays.forEach { visit($0, 0) }
     return lines.joined(separator: "\n")
   }
 }

@@ -801,6 +801,8 @@ struct CodeGen {
       let main = handler.label ?? "action"
       let others = Set(spec.labeledHandlers.compactMap(\.label))
       let kept = call.arguments.filter { argument in
+        // Armed on mount, whatever it is: a closure or a reference would hold `self` if left in.
+        if let label = argument.label?.text, others.contains(label) { return false }
         guard argument.expression.is(ClosureExprSyntax.self), let label = argument.label?.text else {
           return !argument.expression.is(ClosureExprSyntax.self)
         }

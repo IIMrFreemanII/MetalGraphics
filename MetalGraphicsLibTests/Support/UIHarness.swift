@@ -242,6 +242,18 @@ final class UIHarness {
     self.all(type).first
   }
 
+  /// Every element of type `T` in the overlays over the tree — popovers, sheets, alerts — bottom
+  /// first, each in pre-order.
+  func overlayAll<T: UIElement>(_ type: T.Type) -> [T] {
+    var found: [T] = []
+    func visit(_ element: UIElement) {
+      if let match = element as? T { found.append(match) }
+      element.forEachChild(visit)
+    }
+    self.context.overlays.forEach(visit)
+    return found
+  }
+
   // MARK: - Pixels
 
   /// The last frame drawn. Steps first if something is waiting to be drawn.

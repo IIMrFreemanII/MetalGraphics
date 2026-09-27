@@ -148,6 +148,13 @@ public final class WindowHandle: @unchecked Sendable {
   /// Where work for the window is posted: its thread's mailbox, or one that a headless window
   /// drains itself.
   public let executor: WindowExecutor
+  /// The window this one's tree runs beside, on its thread and with its mailbox: a presentation
+  /// shown in a window of its own (`init(childOf:name:)`). Nil for a window of its own.
+  public let parent: WindowHandle?
+  /// The windows run beside this one, and every renderer on its thread, this one's included:
+  /// on the root handle, and touched only on its thread.
+  var children: [WindowHandle] = []
+  var surfaces: [RootViewRenderer] = []
   private let lock = NSLock()
   private var events: [InputEvent] = []
   private var isClosed = false
@@ -161,6 +168,7 @@ public final class WindowHandle: @unchecked Sendable {
     let thread = WindowThread(name: name)
     self.thread = thread
     self.executor = thread.executor
+    self.parent = nil
   }
 
   /// A window with no thread of its own: `start` makes its renderer at once, on the calling
@@ -168,6 +176,23 @@ public final class WindowHandle: @unchecked Sendable {
   init(threadlessNamed name: String) {
     self.thread = nil
     self.executor = WindowExecutor()
+    self.parent = nil
+  }
+
+  /// A window whose tree runs on `parent`'s thread, beside `parent`'s own, with the same
+  /// mailbox: what a presentation in a window of its own is, so its content and the tree that
+  /// presents it touch each other directly. Made on that thread; `start` makes its renderer at
+  /// once. Closing it tears down only its own tree.
+  init(childOf parent: WindowHandle, name: String) {
+    self.thread = nil
+    self.executor = parent.executor
+    self.parent = parent
+    parent.children.append(self)
+  }
+
+  /// The handle whose thread and surfaces this one's are.
+  var root: WindowHandle {
+    self.parent?.root ?? self
   }
 
   /// Starts the thread and makes the renderer on it; without a thread, makes it now.
@@ -225,23 +250,72 @@ public final class WindowHandle: @unchecked Sendable {
   }
 
   /// The window closed: its tree unmounts and its thread ends, after whatever was posted before.
+  /// A child's tree unmounts after the frame under way, and the thread goes on.
   public func close() {
-    let wasOpen = self.lock.withLock {
-      defer { self.isClosed = true }
-      return !self.isClosed
+    guard self.markClosed() else { return }
+    if self.parent != nil {
+      self.executor.post { [self] in self.teardownSurface() }
+      return
     }
-    guard wasOpen else { return }
     guard let thread = self.thread else {
       // Headless: on the thread that steps it, now. What was posted and has not run is dropped,
       // as a window thread drops what arrives after it stops.
+      self.teardownChildren()
       self.renderer?.teardown()
       self.renderer = nil
       self.executor.close()
       return
     }
+    // The children's trees first, in the same turn: nothing posted after it runs.
     thread.stop { [self] in
+      self.teardownChildren()
       self.renderer?.teardown()
       self.renderer = nil
+    }
+  }
+
+  /// Whether it was open until now.
+  private func markClosed() -> Bool {
+    self.lock.withLock {
+      defer { self.isClosed = true }
+      return !self.isClosed
+    }
+  }
+
+  /// Unmounts this child's tree, and those of the windows beside it it presented. On the
+  /// thread. Once.
+  private func teardownSurface() {
+    self.teardownChildren()
+    self.renderer?.teardown()
+    self.renderer = nil
+    self.parent?.children.removeAll { $0 === self }
+  }
+
+  private func teardownChildren() {
+    let children = self.children
+    self.children.removeAll()
+    for child in children.reversed() {
+      _ = child.markClosed()
+      child.teardownSurface()
+    }
+  }
+
+  // MARK: - Surfaces
+
+  /// Resumes the frames of every window on the thread: work arrived, and any of them may have
+  /// something to draw.
+  func resumeSurfaces() {
+    for surface in self.surfaces {
+      surface.resume()
+    }
+  }
+
+  /// Resumes the paused windows on the thread that have something to do. A window's frame may
+  /// change another's tree directly — a presentation's binding writing its presenter's state —
+  /// with nothing posted to wake it.
+  func wakeSurfaces(except current: RootViewRenderer) {
+    for surface in self.surfaces where surface !== current && surface.isPaused && surface.hasWork {
+      surface.resume()
     }
   }
 }
