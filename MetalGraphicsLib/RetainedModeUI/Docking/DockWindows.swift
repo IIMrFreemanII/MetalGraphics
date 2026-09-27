@@ -114,7 +114,9 @@ import simd
         window.isPlaced = true
       }
       let dragged = drag?.window === window
-      if visible && window.isPlaced && !window.isVisible && !dragged {
+      // A minimised window is not visible either, and stays in the Dock until the user brings it
+      // back.
+      if visible && window.isPlaced && !window.isVisible && !window.isMiniaturized && !dragged {
         window.orderFront(nil)
       } else if !visible && window.isVisible {
         window.orderOut(nil)
@@ -221,6 +223,13 @@ import simd
     return true
   }
 
+  /// A press on a native title bar dragged past its slop: drags the window as an area's request
+  /// does. `grab` is where the pointer holds the content, from its top left: above it, in the
+  /// title bar, y is negative.
+  static func beginTitleBarDrag(_ window: DockWindow, grab: float2) {
+    begin(Drag(space: window.space, host: window.host, window: window, grab: grab))
+  }
+
   static func isDragging(_ window: NSWindow) -> Bool {
     drag?.window === window
   }
@@ -243,7 +252,12 @@ import simd
 }
 
 /// A detached host's window. Closing it closes the host's panels.
+///
+/// Its native title bar is not the window server's to drag: a drag of it is a window drag of
+/// `DockWindows`, which docks the window where it is let go, as the custom look's title bar does.
 final class DockWindow : NSWindow, NSWindowDelegate {
+  /// How far a title-bar press moves before it drags the window.
+  static let dragSlop: CGFloat = 3
   let space: DockSpace
   let host: String
   let handle: WindowHandle
@@ -253,6 +267,9 @@ final class DockWindow : NSWindow, NSWindowDelegate {
   /// layout keeps it for the next launch.
   private var isClosedByUser = false
   private var style: DockWindowStyle?
+  /// A press on the native title bar: where it went down, screen coordinates, where it holds the
+  /// content, and whether it drags the window yet.
+  private var titleBarPress: (start: NSPoint, grab: float2, dragging: Bool)?
 
   init(space: DockSpace, host: String, handle: WindowHandle) {
     self.space = space
@@ -282,18 +299,85 @@ final class DockWindow : NSWindow, NSWindowDelegate {
       self.styleMask = [.titled, .closable, .miniaturizable, .resizable]
       self.titlebarAppearsTransparent = false
       self.titleVisibility = .visible
-      self.isMovable = true
     case .custom:
       self.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
       self.titlebarAppearsTransparent = true
       self.titleVisibility = .hidden
-      // The area's title bar drags the window, and docks it.
-      self.isMovable = false
     }
+    // Either title bar drags the window through `DockWindows`, which docks it: the native one
+    // in `sendEvent`, the area's own by a request.
+    self.isMovable = false
     for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
       self.standardWindowButton(button)?.isHidden = style == .custom
     }
     self.setFrame(frame, display: true)
+  }
+
+  // MARK: - The native title bar
+
+  /// Where a press at `point`, window coordinates, holds the content from its top left, when it
+  /// lands on the native title bar and not on one of its buttons; nil otherwise. The custom
+  /// look's title bar is the area's.
+  func titleBarGrab(at point: NSPoint) -> float2? {
+    guard self.style == .native else { return nil }
+    let content = self.contentLayoutRect
+    guard point.y > content.maxY, point.y <= self.frame.height, point.x >= 0, point.x <= self.frame.width else {
+      return nil
+    }
+    if self.contentView?.superview?.hitTest(point) is NSButton { return nil }
+    return float2(Float(point.x - content.minX), Float(content.maxY - point.y))
+  }
+
+  override func sendEvent(_ event: NSEvent) {
+    switch event.type {
+    case .leftMouseDown:
+      guard let grab = self.titleBarGrab(at: event.locationInWindow) else { break }
+      // Not passed on: the title bar view would own the press, and its drags would not come
+      // through here.
+      if event.clickCount == 2 {
+        self.titleBarPress = nil
+        self.doubleClickTitleBar()
+      } else {
+        self.makeKeyAndOrderFront(nil)
+        self.titleBarPress = (NSEvent.mouseLocation, grab, false)
+      }
+      return
+
+    case .leftMouseDragged:
+      guard var press = self.titleBarPress else { break }
+      if !press.dragging {
+        let mouse = NSEvent.mouseLocation
+        guard hypot(mouse.x - press.start.x, mouse.y - press.start.y) >= Self.dragSlop else { return }
+        press.dragging = true
+        self.titleBarPress = press
+        DockWindows.beginTitleBarDrag(self, grab: press.grab)
+      } else {
+        DockWindows.dragged()
+      }
+      return
+
+    case .leftMouseUp:
+      guard let press = self.titleBarPress else { break }
+      self.titleBarPress = nil
+      if press.dragging {
+        DockWindows.released()
+      }
+      return
+
+    default:
+      break
+    }
+    super.sendEvent(event)
+  }
+
+  /// What the system does on a title bar's double click: the user's choice in the Desktop & Dock
+  /// settings.
+  private func doubleClickTitleBar() {
+    switch UserDefaults.standard.string(forKey: "AppleActionOnDoubleClick") {
+    case "Minimize": self.miniaturize(nil)
+    case "None": break
+    default: self.zoom(nil)
+    }
   }
 
   /// The custom look's close button.

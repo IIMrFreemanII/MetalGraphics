@@ -79,10 +79,11 @@ what a drag does.
   the window follows, so give it time: `40 40` works.
 - Tear a panel out by dragging its tab past the window's edge (a negative or too-large
   coordinate). The new window appears in `windows` under the panel's title, or "N panels".
-- To dock a detached window, drag its tab (or, in the custom look, its title bar) onto a marker
+- To dock a detached window, drag its title bar (y 14 in a shot, in either look) or its tab onto a marker
   of another window. Only this app's windows count, frontmost first, so raise the target with
   `--window N activate` before raising the dragged one. A window listed in front of the target
-  at that point, such as Demos, takes the drop instead.
+  at that point, such as Demos, takes the drop instead. Markers are 28 pt: aim at the middle one's
+  center (the group's center), or the drop just moves the window.
 - `uidrive shot` captures a window even when it is covered, but the markers are drawn only in the
   window the pointer is over.
 - Indices from `windows` follow creation order. Detached windows are made at launch, so they
