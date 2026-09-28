@@ -13,11 +13,12 @@ import ReactiveUI
 @Component
 final class TextDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let buttonFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
-  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
-  private static let accent = float4(0.2, 0.4, 0.9, 1)
+  private static let buttonColor: float4 = .fill
+  private static let buttonShape = UIShape.rect(cornerRadius: 6)
+  private static let accent: float4 = .accent
 
   private static let helvetica = FontManager.shared.font(named: "Helvetica Neue")
   private static let georgia = FontManager.shared.font(named: "Georgia")
@@ -100,16 +101,16 @@ final class TextDemo : SingleChildElement {
             .foregroundColor(Self.captionColor)
           Text("Width: \(Int(self.wrapWidth))")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.cycleWidth() }
           Frame(float2(self.wrapWidth, 90), .topLeading) {
             Text(Self.paragraph)
               .font(.custom(Self.helvetica, size: 14))
               .padding(Inset(all: 6))
           }
-          .background(.init(0.9, 0.9, 0.9, 1))
+          .background(.fill)
 
           Text("Reactive size and text")
             .font(Self.captionFont)
@@ -197,9 +198,9 @@ final class TextDemo : SingleChildElement {
             Text("Hello, ") + Text(self.name).bold().foregroundColor(Self.accent) + Text("!")
             Text("Next name")
               .font(Self.buttonFont)
-              .foregroundColor(.white)
+              .foregroundColor(.label)
               .padding(Self.buttonInset)
-              .background(Self.buttonColor)
+              .background(Self.buttonColor, in: Self.buttonShape)
               .onTap { _ in self.nextName() }
           }
           .font(.title3)
@@ -218,9 +219,9 @@ final class TextDemo : SingleChildElement {
           }
           Text(self.expanded ? "Less" : "More")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.expanded.toggle() }
           Text("Centred lines,\nas many as it takes")
             .multilineTextAlignment(.center)
@@ -236,13 +237,13 @@ final class TextDemo : SingleChildElement {
               .foregroundColor(.red)
           }
           .font(.headline)
-          .foregroundStyle(self.tinted ? Self.accent : .black)
+          .foregroundStyle(self.tinted ? Self.accent : .label)
           .animation(.easeInOut(0.4), value: self.tinted)
           Text("Tint")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.tinted.toggle() }
 
           Text("Formatted")

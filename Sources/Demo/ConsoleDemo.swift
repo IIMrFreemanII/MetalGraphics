@@ -10,7 +10,7 @@ import simd
 @Component
 final class ConsoleDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.47, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let font = TextFont.system(size: 12, design: .monospaced)
   private static let theme: EditorTheme = {
     var theme = EditorTheme.dark

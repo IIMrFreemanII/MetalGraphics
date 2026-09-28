@@ -68,7 +68,7 @@ final class ToggleSwitch : FormGraphic {
 
   override func draw(_ renderer: Graphics2D, origin: float2, size: float2, scale: Float, opacity: Float) {
     let t = self.progress
-    var track = mix(FormMetrics.fillColor, FormMetrics.accentColor, t)
+    var track = mix(renderer.resolve(FormMetrics.fillColor), renderer.resolve(FormMetrics.accentColor), t)
     track.w *= opacity
     renderer.draw(roundedRect: origin, size: size, radii: float4(repeating: size.y * 0.5), color: track)
 
@@ -78,11 +78,11 @@ final class ToggleSwitch : FormGraphic {
     // A soft rim under the knob, so it reads on the light track.
     renderer.draw(
       roundedRect: float2(x, origin.y + inset) - 0.5 * scale, size: float2(repeating: diameter + scale),
-      radii: float4(repeating: (diameter + scale) * 0.5), color: float4(0, 0, 0, 0.12 * opacity)
+      radii: float4(repeating: (diameter + scale) * 0.5), color: float4.shadow.withAlpha(0.6 * opacity)
     )
     renderer.draw(
       roundedRect: float2(x, origin.y + inset), size: float2(repeating: diameter),
-      radii: float4(repeating: diameter * 0.5), color: float4(1, 1, 1, opacity)
+      radii: float4(repeating: diameter * 0.5), color: float4.controlKnob.withAlpha(opacity)
     )
   }
 }

@@ -11,26 +11,28 @@ public struct RetainedWindowGroup: Scene {
   let title: String
   let id: String
   let defaultSize: CGSize
+  let chrome: WindowChrome
   let root: @Sendable (WindowScene) -> UIElement
 
   public init(
-    _ title: String, id: String, defaultSize: CGSize = RetainedScene.standardSize,
+    _ title: String, id: String, defaultSize: CGSize = RetainedScene.standardSize, chrome: WindowChrome = .standard,
     root: @escaping @Sendable (WindowScene) -> UIElement
   ) {
     self.title = title
     self.id = id
     self.defaultSize = defaultSize
+    self.chrome = chrome
     self.root = root
   }
 
   /// The window group `scene` declares, as `HeadlessApp` also opens it.
   public init(_ scene: RetainedScene) {
-    self.init(scene.title, id: scene.id, defaultSize: scene.defaultSize, root: scene.root)
+    self.init(scene.title, id: scene.id, defaultSize: scene.defaultSize, chrome: scene.chrome, root: scene.root)
   }
 
   public var body: some Scene {
     WindowGroup(self.title, id: self.id) {
-      RetainedView(sceneID: self.id, root: self.root)
+      RetainedView(sceneID: self.id, chrome: self.chrome, root: self.root)
     }
     .defaultSize(self.defaultSize)
   }
@@ -42,26 +44,28 @@ public struct RetainedWindow: Scene {
   let title: String
   let id: String
   let defaultSize: CGSize
+  let chrome: WindowChrome
   let root: @Sendable (WindowScene) -> UIElement
 
   public init(
-    _ title: String, id: String, defaultSize: CGSize = RetainedScene.standardSize,
+    _ title: String, id: String, defaultSize: CGSize = RetainedScene.standardSize, chrome: WindowChrome = .standard,
     root: @escaping @Sendable (WindowScene) -> UIElement
   ) {
     self.title = title
     self.id = id
     self.defaultSize = defaultSize
+    self.chrome = chrome
     self.root = root
   }
 
   /// The single window `scene` declares, as `HeadlessApp` also opens it.
   public init(_ scene: RetainedScene) {
-    self.init(scene.title, id: scene.id, defaultSize: scene.defaultSize, root: scene.root)
+    self.init(scene.title, id: scene.id, defaultSize: scene.defaultSize, chrome: scene.chrome, root: scene.root)
   }
 
   public var body: some Scene {
     Window(self.title, id: self.id) {
-      RetainedView(sceneID: self.id, root: self.root)
+      RetainedView(sceneID: self.id, chrome: self.chrome, root: self.root)
     }
     .defaultSize(self.defaultSize)
   }
@@ -90,18 +94,32 @@ public struct RetainedScene: Sendable {
   public let kind: Kind
   /// Points.
   public let defaultSize: CGSize
+  /// What the window's frame looks like: see `WindowChrome`.
+  public let chrome: WindowChrome
   public let root: @Sendable (WindowScene) -> UIElement
 
   public init(
     _ title: String, id: String, kind: Kind = .group, defaultSize: CGSize = RetainedScene.standardSize,
-    root: @escaping @Sendable (WindowScene) -> UIElement
+    chrome: WindowChrome = .standard, root: @escaping @Sendable (WindowScene) -> UIElement
   ) {
     self.title = title
     self.id = id
     self.kind = kind
     self.defaultSize = defaultSize
+    self.chrome = chrome
     self.root = root
   }
+}
+
+/// What a window's frame looks like.
+public enum WindowChrome: Sendable {
+  /// An opaque window, drawn on the theme's `windowBackground`, with the system's title bar.
+  case standard
+  /// A frosted window: the desktop shows through, blurred by the system, wherever the tree
+  /// draws nothing or something translucent — the theme's sidebar, bars and dock gaps — under a
+  /// transparent title bar. What text sits on stays opaque. A headless window draws it opaque,
+  /// on `windowBackground`, so snapshots do not depend on the desktop.
+  case translucent
 }
 
 /// One open window, as its tree sees it. Reached as `context.scene`, or passed to the root by

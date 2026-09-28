@@ -29,6 +29,8 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
   private let showTextInput: @Sendable (TextInputSnapshot) -> Void
   /// Resumes the paused frames when the earliest wake is due.
   private var wakeTimer: CFRunLoopTimer?
+  /// Swaps the window's theme when the appearance changes.
+  private var themeSubscriber: ThemeSubscriber?
 
   public init(
     scene: WindowScene, layer: CAMetalLayer?,
@@ -52,6 +54,9 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
     graphics.profiler.label = "\(self.scene.sceneID) \(self.scene.id.uuidString.prefix(4))"
     self.graphics2D = graphics
     self.uiContext.scene = self.scene
+    self.uiContext.setTheme(ThemeStore.shared.theme)
+    self.uiContext.onTitleBarDragRegions = { [weak handle] regions in handle?.setTitleBarDragRegions(regions) }
+    self.themeSubscriber = ThemeSubscriber(context: self.uiContext)
     self.root.mounted = true
     self.scene.storage.holdsChanges = true
     self.root.setChild(self.makeRoot(self.scene), self.uiContext)
@@ -109,6 +114,20 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
     guard self.scene.storage.encoded != persisted else { return }
     self.scene.storage.restore(from: persisted)
     self.rebuild()
+  }
+
+  /// Draws on `color` where the tree draws nothing: clear lets the desktop through a
+  /// translucent window (`WindowChrome.translucent`).
+  func setBackground(_ color: float4) {
+    self.graphics2D?.background = color
+    self.uiContext.invalidate(.render)
+    self.resume()
+  }
+
+  /// The content runs under a title bar where `insets` says: see `TitleBarInsets`.
+  func setTitleBar(_ insets: TitleBarInsets) {
+    self.uiContext.setTitleBar(insets)
+    self.resume()
   }
 
   /// The view is `size` points, `scale` pixels each.
@@ -190,6 +209,8 @@ open class RootViewRenderer: ViewRenderer, CAMetalDisplayLinkDelegate {
       root.surfaces.removeAll { $0 === self }
     }
     self.root.handleUnmount(self.uiContext)
+    self.themeSubscriber?.stop()
+    self.themeSubscriber = nil
     self.graphics2D = nil
     nonisolated(unsafe) let layer = self.layer
     self.layer = nil

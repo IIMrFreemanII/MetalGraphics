@@ -93,6 +93,16 @@ extension UIElement {
     }
   }
 
+  /// A frosted glass panel of the theme's `role` behind this element, cut to `shape`: the
+  /// theme's popover, menu, tooltip or sheet glass, following light and dark.
+  public func glass(_ role: ThemeMaterial, in shape: UIShape = .rect) -> GlassBackground {
+    let glass = GlassBackground(.regular, in: shape) {
+      self
+    }
+    glass.materialRole = role
+    return glass
+  }
+
   /// A fixed width, height or both; a nil side takes this element's. See `Frame`.
   public func frame(width: Float? = nil, height: Float? = nil, alignment: Alignment = .center) -> Frame {
     Frame(width: width, height: height, alignment: alignment) {

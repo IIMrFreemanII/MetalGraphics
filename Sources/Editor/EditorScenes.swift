@@ -5,7 +5,8 @@ import MetalGraphicsLib
 // end-to-end tests (`EditorTests`) open the same ones in a `HeadlessApp`.
 enum EditorScenes {
   static let ide = RetainedScene(
-    "Editor", id: IDE.windowID, kind: .single, defaultSize: CGSize(width: 1180, height: 780)
+    "Editor", id: IDE.windowID, kind: .single, defaultSize: CGSize(width: 1180, height: 780),
+    chrome: .translucent
   ) { _ in
     IDERoot()
   }

@@ -131,7 +131,7 @@ import simd
   }
 
   private static func makeWindow(for host: String, in space: DockSpace, style: DockWindowStyle) -> DockWindow {
-    let (view, handle) = RetainedWindowContent.make(sceneID: "dock") { _ in DockArea(space, host: host) }
+    let (view, handle) = RetainedWindowContent.make(sceneID: "dock", chrome: .translucent) { _ in DockArea(space, host: host) }
     let window = DockWindow(space: space, host: host, handle: handle)
     window.contentView = view
     window.apply(style)
@@ -312,6 +312,7 @@ final class DockWindow : NSWindow, NSWindowDelegate {
       self.standardWindowButton(button)?.isHidden = style == .custom
     }
     self.setFrame(frame, display: true)
+    (self.contentView as? RetainedLayerView)?.sendTitleBar()
   }
 
   // MARK: - The native title bar

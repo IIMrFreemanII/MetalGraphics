@@ -18,11 +18,12 @@ import ReactiveUI
 final class RedrawDemo : SingleChildElement {
   private static let buttonFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
-  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
+  private static let buttonColor: float4 = .fill
+  private static let buttonShape = UIShape.rect(cornerRadius: 6)
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let bodyFont = TextFont.system(size: 13)
-  private static let track = float4(0.88, 0.88, 0.88, 1)
+  private static let track: float4 = .fill
   private static let shake = UIKeyframes(offset: [
     .linear(float2(-12, 0), duration: 0.06),
     .linear(float2(12, 0), duration: 0.12),
@@ -41,7 +42,7 @@ final class RedrawDemo : SingleChildElement {
     VStack(alignment: .leading, spacing: 14) {
       Text("Only the areas whose content changed are drawn again; the rest stays as it was.")
         .font(Self.bodyFont)
-        .foregroundColor(.black)
+        .foregroundColor(.label)
       Text("Redrawn areas are tinted green; the tint fades once an area stops redrawing.")
         .font(Self.captionFont)
         .foregroundColor(Self.captionColor)
@@ -69,9 +70,9 @@ final class RedrawDemo : SingleChildElement {
       }
       Text("Nudge")
         .font(Self.buttonFont)
-        .foregroundColor(.white)
+        .foregroundColor(.label)
         .padding(Self.buttonInset)
-        .background(Self.buttonColor)
+        .background(Self.buttonColor, in: Self.buttonShape)
         .onTap { _ in self.nudges += 1 }
 
       Text("animated: each redraws its own cells only")
@@ -107,21 +108,21 @@ final class RedrawDemo : SingleChildElement {
       HStack(spacing: 6) {
         Text("Stress: off")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.setStress(rows: 0) }
         Text("100 rows")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.setStress(rows: 100) }
         Text("500 rows")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.setStress(rows: 500) }
         Text("\(self.stressRows.count) rows of 8 labels")
           .font(Self.captionFont)
@@ -186,7 +187,7 @@ final class StressLabel : SingleChildElement {
         .frame(width: 8, height: 8)
       Text("Item \(self.number)")
         .font(Self.font)
-        .foregroundColor(.init(0.3, 0.3, 0.3, 1))
+        .foregroundColor(.secondaryLabel)
     }
   }
 }

@@ -17,13 +17,14 @@ import ReactiveUI
 @Component
 final class KeyboardDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let labelFont = TextFont.system(size: 14)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
-  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
-  private static let idleColor = float4(0.9, 0.9, 0.9, 1)
-  private static let focusedColor = float4(0.78, 0.86, 1, 1)
-  private static let dotColor = float4(0.2, 0.45, 0.95, 1)
+  private static let buttonColor: float4 = .fill
+  private static let buttonShape = UIShape.rect(cornerRadius: 6)
+  private static let idleColor: float4 = .fill
+  private static let focusedColor: float4 = .selection
+  private static let dotColor: float4 = .accent
   private static let arrows: Set<KeyEquivalent> = [.upArrow, .downArrow, .leftArrow, .rightArrow]
   private static let typeable = CharacterSet.alphanumerics.union(.punctuationCharacters)
     .union(.symbols).union(.whitespaces)
@@ -76,9 +77,9 @@ final class KeyboardDemo : SingleChildElement {
       }
       Text("Focus the field")
         .font(Self.captionFont)
-        .foregroundColor(.white)
+        .foregroundColor(.label)
         .padding(Self.buttonInset)
-        .background(Self.buttonColor)
+        .background(Self.buttonColor, in: Self.buttonShape)
         .onTap { _ in self.fieldFocused = true }
       Text("Last press nothing inside handled: \(self.unhandled)")
         .font(Self.captionFont)

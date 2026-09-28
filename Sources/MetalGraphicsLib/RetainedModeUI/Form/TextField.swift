@@ -88,9 +88,12 @@ public class TextField : FormControl, TextInputClient {
     self.displayed = displayed
     self.box = box
     self.focusable = focusable
+    // The label keeps its width, the field takes the rest; in a form's row, where it is capped,
+    // the spacer takes what is left, so the field sits at the row's trailing edge.
     super.init(content: HStack(spacing: FormMetrics.labelSpacing) {
-      if !label.text.isEmpty { label }
-      keys
+      if !label.text.isEmpty { label.layoutPriority(2) }
+      Spacer(minLength: 0)
+      keys.layoutPriority(1)
     })
     keys.action = { [unowned self] press in self.handle(press) }
     focusable.textInputClient = self
@@ -102,6 +105,19 @@ public class TextField : FormControl, TextInputClient {
     // An I-beam over the text, as AppKit's fields show.
     pointer.pointerStyle = .horizontalText
     self.refresh(nil)
+  }
+
+  open override func mount(_ context: UIContext) {
+    super.mount(context)
+    // A labelled field in a form's row is as wide as the design's, not the row's.
+    let inForm = !self.label.text.isEmpty && self.nearestAncestor(Section.self) != nil
+    self.box.setMaxWidth(inForm ? FormMetrics.fieldWidth : nil, context)
+  }
+
+  /// An icon before the text, inside the box: a search field's magnifier. Not in SwiftUI.
+  public func leadingIcon(_ icon: ThemeIcon?) -> Self {
+    self.box.setIcon(icon)
+    return self
   }
 
   public convenience init(_ label: String, text: String, prompt: String = "", onTextChange: ((String) -> Void)? = nil) {
@@ -596,6 +612,12 @@ final class FieldBox : UIRenderableElement {
   private(set) var position: float2 = .zero
   private(set) var size: float2 = .zero
   private var focused = false
+  /// Capped in a form's row: see `FormMetrics.fieldWidth`.
+  private var maxWidth: Float? = nil
+  /// Drawn before the text, which starts after it: by the box, outside the text's clip, so not
+  /// a child of it.
+  private var icon: Image? = nil
+  private static let iconGap: Float = 6
   /// Where a caret goes before each character of what is shown, and after the last; see
   /// `caretOffsets`. Set whenever the text changes.
   var offsets: [Float] = [0]
@@ -606,9 +628,33 @@ final class FieldBox : UIRenderableElement {
   /// An input method's composition, underlined: characters of what is shown.
   var marked: Range<Int>? = nil
 
+  private let text: Text
+
   init(_ text: Text) {
+    self.text = text
     super.init()
     self.applyContent([text])
+  }
+
+  func setMaxWidth(_ value: Float?, _ context: UIContext) {
+    guard value != self.maxWidth else { return }
+    self.maxWidth = value
+    context.invalidate(.layout)
+  }
+
+  /// Before the tree is mounted only.
+  func setIcon(_ icon: ThemeIcon?) {
+    guard let icon else {
+      self.icon = nil
+      return
+    }
+    self.icon = Image(icon: icon).foregroundColor(FormMetrics.secondaryColor)
+  }
+
+  /// From the box's left edge to the text.
+  private var leading: Float {
+    guard let icon = self.icon else { return Self.inset.x }
+    return Self.inset.x + icon.getSize().x + Self.iconGap
   }
 
   override func mount(_ context: UIContext) {
@@ -644,13 +690,13 @@ final class FieldBox : UIRenderableElement {
   /// The caret before character `index`, in the window: what an input method's candidate
   /// window is placed by.
   func caretRect(_ index: Int) -> CGRect {
-    let x = self.position.x + Self.inset.x - self.scroll + self.offset(index)
+    let x = self.position.x + self.leading - self.scroll + self.offset(index)
     return CGRect(x: Double(x), y: Double(self.position.y + Self.inset.y), width: 1.5, height: Double(self.size.y - Self.inset.y * 2))
   }
 
   /// The character boundary nearest `x`, window top left origin: a binary search of the offsets.
   func index(atX x: Float) -> Int {
-    let local = x - (self.position.x + Self.inset.x - self.scroll)
+    let local = x - (self.position.x + self.leading - self.scroll)
     var low = 0
     var high = self.offsets.count - 1
     while low < high {
@@ -667,22 +713,30 @@ final class FieldBox : UIRenderableElement {
     self.size
   }
 
-  // As wide as it is offered, down to a usable minimum; one line tall.
+  /// As wide as it is offered, up to its cap, down to a usable minimum.
+  private func width(_ proposal: ProposedSize) -> Float {
+    let offered = proposal.width ?? Self.idealWidth
+    return max(self.maxWidth.map { min(offered, $0) } ?? offered, Self.minWidth)
+  }
+
+  // One line tall.
   override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
-    let line = self.child?.measure(.unspecified).y ?? 0
-    return float2(max(proposal.width ?? Self.idealWidth, Self.minWidth), line + Self.inset.y * 2)
+    let line = self.text.measure(.unspecified).y
+    return float2(self.width(proposal), line + Self.inset.y * 2)
   }
 
   override func calcSize(_ proposal: ProposedSize) -> float2 {
-    let line = self.child?.calcSize(.unspecified).y ?? 0
-    self.size = float2(max(proposal.width ?? Self.idealWidth, Self.minWidth), line + Self.inset.y * 2)
+    let line = self.text.calcSize(.unspecified).y
+    _ = self.icon?.calcSize(.unspecified)
+    self.size = float2(self.width(proposal), line + Self.inset.y * 2)
     return self.size
   }
 
   override func calcPosition(_ position: float2) {
     self.position = position
     // Just enough to keep the caret in the box, never more than the text needs.
-    let visible = self.size.x - Self.inset.x * 2 - 1
+    let leading = self.leading
+    let visible = self.size.x - leading - Self.inset.x - 1
     let caret = self.offset(self.caret)
     if caret - self.scroll > visible {
       self.scroll = caret - visible
@@ -691,12 +745,18 @@ final class FieldBox : UIRenderableElement {
     }
     let textWidth = self.offsets.last ?? 0
     self.scroll = max(0, min(self.scroll, textWidth - visible))
-    self.child?.calcPosition(position + Self.inset - float2(self.scroll, 0))
+    self.text.calcPosition(position + float2(leading, Self.inset.y) - float2(self.scroll, 0))
+    if let icon = self.icon {
+      icon.calcPosition(position + float2(Self.inset.x, ((self.size.y - icon.getSize().y) * 0.5).rounded()))
+    }
   }
 
   // The text only: the box, selection and caret are drawn by the box itself, outside its clip.
   override var clipRect: ClipRect? {
-    ClipRect(position: self.position + float2(Self.inset.x - 1, 0), size: self.size - float2(Self.inset.x * 2 - 2, 0))
+    ClipRect(
+      position: self.position + float2(self.leading - 1, 0),
+      size: self.size - float2(self.leading + Self.inset.x - 2, 0)
+    )
   }
 
   override func render(_ renderer: Graphics2D, _ effect: EffectState) {
@@ -705,14 +765,22 @@ final class FieldBox : UIRenderableElement {
     let origin = effect.apply(to: self.position) - renderer.size * 0.5
     let size = self.size * s
     let radii = float4(repeating: 6 * s)
-    renderer.draw(roundedRect: origin, size: size, radii: radii, color: float4(1, 1, 1, effect.opacity))
-    var border = self.focused ? FormMetrics.accentColor : FormMetrics.strokeColor
-    border.w *= effect.opacity
-    renderer.draw(roundedRect: origin, size: size, radii: radii, color: border, strokeWidth: (self.focused ? 2 : 1) * s)
+    if self.focused {
+      // The focus ring, just outside the field.
+      let ring: Float = 3.5 * s
+      renderer.draw(
+        roundedRect: origin - ring, size: size + ring * 2, radii: radii + ring,
+        color: float4.focusRing.withAlpha(effect.opacity), strokeWidth: ring
+      )
+    }
+    renderer.draw(roundedRect: origin, size: size, radii: radii, color: float4.controlBackground.withAlpha(effect.opacity))
+    let border = FormMetrics.strokeColor.withAlpha(effect.opacity)
+    renderer.draw(roundedRect: origin, size: size, radii: radii, color: border, strokeWidth: 0.5 * s)
+    self.icon?.render(renderer, effect)
 
     guard self.focused else { return }
     let height = (self.size.y - Self.inset.y * 2) * s
-    let textX = origin.x + (Self.inset.x - self.scroll) * s
+    let textX = origin.x + (self.leading - self.scroll) * s
     if let marked = self.marked {
       let low = self.offset(marked.lowerBound) * s
       let high = self.offset(marked.upperBound) * s
@@ -726,7 +794,7 @@ final class FieldBox : UIRenderableElement {
     if self.caret != self.anchor {
       // Kept inside the box, like the text it covers.
       let low = max(self.offset(min(self.caret, self.anchor)) - self.scroll, -1) * s
-      let high = min(self.offset(max(self.caret, self.anchor)) - self.scroll, self.size.x - Self.inset.x * 2 + 1) * s
+      let high = min(self.offset(max(self.caret, self.anchor)) - self.scroll, self.size.x - self.leading - Self.inset.x + 1) * s
       var fill = FormMetrics.accentColor
       fill.w *= 0.25 * effect.opacity
       renderer.draw(
@@ -739,11 +807,5 @@ final class FieldBox : UIRenderableElement {
       let x = textX + self.offset(self.caret) * s
       renderer.draw(square: Square(position: float2(x, origin.y + size.y * 0.5), size: float2(1.5 * s, height), color: caret))
     }
-  }
-}
-
-extension float4 {
-  func withAlpha(_ alpha: Float) -> float4 {
-    float4(self.x, self.y, self.z, self.w * alpha)
   }
 }

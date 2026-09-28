@@ -110,7 +110,16 @@ import simd
     let presented = HeadlessPresentedWindows(app: self)
     self.presentedWindows = presented
     PresentedWindows.host = presented
+    // Every app starts in light, whatever the machine's appearance: tests see the same pixels.
+    ThemeStore.shared.appearanceOverride = nil
+    ThemeStore.shared.setSystemAppearance(.light)
     Self.live = self
+  }
+
+  /// Switches the system appearance, as the main thread hears of it: every window takes the
+  /// theme on its next step.
+  public func setAppearance(_ appearance: Appearance) {
+    ThemeStore.shared.setSystemAppearance(appearance)
   }
 
   /// Closes every window and puts back what the app swapped out. Idempotent.
@@ -140,6 +149,8 @@ import simd
     }
     self.presentedWindows = nil
     self.saved = nil
+    ThemeStore.shared.appearanceOverride = nil
+    ThemeStore.shared.setSystemAppearance(.light)
     self.defaults.removePersistentDomain(forName: self.suiteName)
     if Self.live === self { Self.live = nil }
   }
@@ -173,6 +184,11 @@ import simd
       app: self, sceneID: id, title: scene.title, size: float2(Float(scene.defaultSize.width), Float(scene.defaultSize.height)),
       origin: self.cascadeOrigin(), restoring: restoring, root: scene.root
     )
+    // Under a standard title bar, as the real window's content is: goldens show what makes room
+    // for it.
+    if scene.chrome == .translucent {
+      window.setTitleBar(.standard)
+    }
     self.add(window)
     return window
   }

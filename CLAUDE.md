@@ -20,6 +20,12 @@ Before implementing or changing any feature in MetalGraphicsLib, Demo or Reactiv
 
 Debug builds reload Swift (via InjectionNext), shaders and the ReactiveUI macros live, and restore the selected tab from `UIStorage`. Setup, limits and what still needs a relaunch: `docs/HotReload.md`.
 
+## Design system
+
+Everything draws with a `Theme` (frosted glass, light and dark, following the system): colour roles as `float4` (`.secondaryLabel`, `.selection`), glass materials by role (`.glass(.popover)`), SF type, radii. Never hard-code a UI colour; use a role. Translucent windows: `RetainedScene(..., chrome: .translucent)`. Tokens, switching, chrome, glass: `docs/DesignSystem.md`.
+
+Before building or restyling any UI in MetalGraphicsLib, Demo or Editor, load the `design-system` skill (`.claude/skills/design-system/SKILL.md`) and apply its checklist: match the design canvas "MetalGraphics Frosted Glass", reuse the components (`ListRow`, `KindBadge`, `ThemeIcon`, `Form`, dock tab styles, `.glass(role)`), take every colour, size and font from the theme. `DesignLintTests` fails on a colour written out; a deliberate one carries `// design: <reason>`. Name the board the change matches, and any departure from it, in the final summary.
+
 ## Threading
 
 Every window runs its frames on a thread of its own; the main thread does AppKit and SwiftUI only. What runs where, how the two post to each other, and the rules for code in a tree: `docs/Threading.md`.

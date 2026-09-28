@@ -355,9 +355,8 @@ final class PickerMark : UIRenderableElement {
     let s = effect.scale
 
     if self.kind == .menuItem, self.highlighted {
-      var fill = FormMetrics.accentColor
-      fill.w *= 0.16 * effect.opacity
-      renderer.draw(roundedRect: origin, size: size, radii: float4(repeating: 5 * s), color: fill)
+      let fill = float4.selection.withAlpha(effect.opacity)
+      renderer.draw(roundedRect: origin, size: size, radii: float4(repeating: renderer.theme.radii.sm * s), color: fill)
     }
 
     let alpha = effect.opacity * self.progress
@@ -365,8 +364,8 @@ final class PickerMark : UIRenderableElement {
     switch self.kind {
     case .segment:
       let radii = float4(repeating: 5 * s)
-      renderer.draw(roundedRect: origin - 0.5 * s, size: size + s, radii: radii, color: float4(0, 0, 0, 0.1 * alpha))
-      renderer.draw(roundedRect: origin, size: size, radii: radii, color: float4(1, 1, 1, alpha))
+      renderer.draw(roundedRect: origin - 0.5 * s, size: size + s, radii: radii, color: float4.shadow.withAlpha(0.5 * alpha))
+      renderer.draw(roundedRect: origin, size: size, radii: radii, color: float4.segmentSelected.withAlpha(alpha))
     case .check:
       let center = float2(origin.x + size.x - Self.checkWidth * 0.5 * s, origin.y + size.y * 0.5)
       Self.drawCheck(renderer, at: center, scale: s, color: FormMetrics.accentColor, alpha: alpha)
@@ -386,7 +385,7 @@ final class PickerMark : UIRenderableElement {
 }
 
 /// A bordered button face around a title, as a pop-up button or a date pill: white, rounded,
-/// with ⌃⌄ at the trailing edge when `chevrons` is set.
+/// with ⌃⌄ on an accent tile at the trailing edge when `chevrons` is set.
 final class PopupFace : UIRenderableElement {
   static let inset = Inset(left: 8, top: 3, right: 8, bottom: 3)
   static let chevronWidth: Float = 16
@@ -395,7 +394,7 @@ final class PopupFace : UIRenderableElement {
   private(set) var position: float2 = .zero
   private(set) var size: float2 = .zero
   private var inset: Inset {
-    self.chevrons ? Inset(left: 8, top: 3, right: 8 + Self.chevronWidth, bottom: 3) : Self.inset
+    self.chevrons ? Inset(left: 10, top: 3, right: 3 + Self.chevronWidth + 10, bottom: 3) : Self.inset
   }
 
   init(chevrons: Bool, @UIElementBuilder content: () -> [UIElement]) {
@@ -440,19 +439,25 @@ final class PopupFace : UIRenderableElement {
     let origin = effect.apply(to: self.position) - renderer.size * 0.5
     let size = self.size * s
     let radii = float4(repeating: 6 * s)
-    renderer.draw(roundedRect: origin, size: size, radii: radii, color: float4(1, 1, 1, effect.opacity))
+    renderer.draw(roundedRect: origin, size: size, radii: radii, color: float4.controlButton.withAlpha(effect.opacity))
     var border = FormMetrics.strokeColor
     border.w *= effect.opacity
-    renderer.draw(roundedRect: origin, size: size, radii: radii, color: border, strokeWidth: s)
+    renderer.draw(roundedRect: origin, size: size, radii: radii, color: border, strokeWidth: 0.5 * s)
     guard self.chevrons else { return }
-    var ink = FormMetrics.labelColor
-    ink.w *= 0.7 * effect.opacity
-    let center = float2(origin.x + size.x - (8 + Self.chevronWidth * 0.5) * s + 2 * s, origin.y + size.y * 0.5)
-    let w = 1.4 * s
+    // The tile, inset 3 from the trailing edge, and the arrows on it.
+    let tile = Self.chevronWidth * s
+    let tileOrigin = float2(origin.x + size.x - 3 * s - tile, origin.y + (size.y - tile) * 0.5)
+    renderer.draw(
+      roundedRect: tileOrigin, size: float2(repeating: tile), radii: float4(repeating: 4 * s),
+      color: FormMetrics.accentColor.withAlpha(effect.opacity)
+    )
+    let ink = float4.accentForeground.withAlpha(effect.opacity)
+    let center = tileOrigin + tile * 0.5
+    let w = 1.3 * s
     // ⌃ above ⌄
-    renderer.draw(stroke: center + float2(-3, -2) * s, to: center + float2(0, -5) * s, width: w, color: ink)
-    renderer.draw(stroke: center + float2(0, -5) * s, to: center + float2(3, -2) * s, width: w, color: ink)
-    renderer.draw(stroke: center + float2(-3, 2) * s, to: center + float2(0, 5) * s, width: w, color: ink)
-    renderer.draw(stroke: center + float2(0, 5) * s, to: center + float2(3, 2) * s, width: w, color: ink)
+    renderer.draw(stroke: center + float2(-2.5, -1.5) * s, to: center + float2(0, -4) * s, width: w, color: ink)
+    renderer.draw(stroke: center + float2(0, -4) * s, to: center + float2(2.5, -1.5) * s, width: w, color: ink)
+    renderer.draw(stroke: center + float2(-2.5, 1.5) * s, to: center + float2(0, 4) * s, width: w, color: ink)
+    renderer.draw(stroke: center + float2(0, 4) * s, to: center + float2(2.5, 1.5) * s, width: w, color: ink)
   }
 }

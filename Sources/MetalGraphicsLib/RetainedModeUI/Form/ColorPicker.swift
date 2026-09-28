@@ -203,7 +203,7 @@ func drawCheckerboard(_ renderer: Graphics2D, origin: float2, size: float2, cell
     for column in 0 ..< columns where (row + column) % 2 == 1 {
       let min = origin + float2(Float(column), Float(row)) * cell
       let max = simd_min(min + cell, origin + size)
-      renderer.draw(square: Square(position: (min + max) * 0.5, size: max - min, color: float4(0, 0, 0, 0.12 * opacity)))
+      renderer.draw(square: Square(position: (min + max) * 0.5, size: max - min, color: float4.separator.withAlpha(opacity)))
     }
   }
 }
@@ -226,7 +226,7 @@ final class ColorWell : FormGraphic {
 
   override func draw(_ renderer: Graphics2D, origin: float2, size: float2, scale: Float, opacity: Float) {
     let radii = float4(repeating: 6 * scale)
-    renderer.draw(roundedRect: origin, size: size, radii: radii, color: float4(1, 1, 1, opacity))
+    renderer.draw(roundedRect: origin, size: size, radii: radii, color: float4.controlButton.withAlpha(opacity))
     let inset = 3 * scale
     let inner = size - inset * 2
     if self.color.w < 1 {
@@ -263,7 +263,7 @@ final class ColorSwatch : FormGraphic {
   override func draw(_ renderer: Graphics2D, origin: float2, size: float2, scale: Float, opacity: Float) {
     let radii = float4(repeating: 4 * scale)
     renderer.draw(roundedRect: origin, size: size, radii: radii, color: self.color.withAlpha(opacity))
-    renderer.draw(roundedRect: origin, size: size, radii: radii, color: float4(0, 0, 0, 0.1 * opacity), strokeWidth: scale)
+    renderer.draw(roundedRect: origin, size: size, radii: radii, color: float4.border.withAlpha(opacity), strokeWidth: scale)
     if self.isSelected {
       var ring = FormMetrics.accentColor
       ring.w *= opacity

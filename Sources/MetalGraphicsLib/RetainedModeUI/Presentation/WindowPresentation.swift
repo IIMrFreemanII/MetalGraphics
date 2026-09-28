@@ -67,7 +67,17 @@ final class WindowPresentation : PresentationRoot {
 
   /// What the window's content is drawn on.
   static func backgroundColor(_ kind: PresentationKind) -> float4 {
-    kind == .fullScreenCover ? FormMetrics.groupedBackground : FormMetrics.cardColor
+    switch kind {
+    case .fullScreenCover: FormMetrics.groupedBackground
+    // On the system's popover glass: see `AppKitPresentedWindows`.
+    case .popover: .clear
+    default: FormMetrics.cardColor
+    }
+  }
+
+  /// `color` as the current theme has it: AppKit, on the main thread, needs a plain colour.
+  static func resolved(_ color: float4) -> float4 {
+    Theme.current.resolve(color)
   }
 
   override func mount(_ context: UIContext) {
@@ -122,7 +132,7 @@ final class WindowPresentation : PresentationRoot {
     root.lastAnchor = presentation.anchorRect
     let request = PresentedWindowRequest(
       handle: handle, parent: parent, kind: presentation.kind, style: style, idealSize: ideal,
-      anchor: root.lastAnchor, background: Self.backgroundColor(presentation.kind), title: presentation.title
+      anchor: root.lastAnchor, background: Self.resolved(Self.backgroundColor(presentation.kind)), title: presentation.title
     )
     MainQueue.post { MainActor.assumeIsolated { PresentedWindows.host.open(request) } }
     return root

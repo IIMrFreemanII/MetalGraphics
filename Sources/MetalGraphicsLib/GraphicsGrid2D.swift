@@ -249,6 +249,19 @@ class GraphicsGrid2D {
     return int2(Int(coord.x.isNaN ? 0 : coord.x), Int(coord.y.isNaN ? 0 : coord.y))
   }
 
+  /// Adds to `hash` what cell `index` holds below `depth`, bottom up: what a glass drawn at
+  /// `depth` sees there, as `backdrop2D` cuts the cell off.
+  func addShapes(inCell index: Int, below depth: Float, to hash: inout ContentHash) {
+    let shapes = self.shapesPerCell[index]
+    // Sorted topmost first: walk up from the bottom until the cut.
+    var i = shapes.count - 1
+    while i >= 0, shapes[i].shape.depth < depth {
+      hash.add(shapes[i].contentHash)
+      i -= 1
+    }
+    hash.add(UInt64(shapes.count - 1 - i))
+  }
+
   /// Calls `body` with the index of every cell `min`...`max` touches, in points.
   func forEachCell(min: float2, max: float2, _ body: (Int) -> Void) {
     guard min.x <= max.x, min.y <= max.y else { return }

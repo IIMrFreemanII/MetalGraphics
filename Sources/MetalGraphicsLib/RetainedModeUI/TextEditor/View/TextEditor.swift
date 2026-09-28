@@ -153,7 +153,10 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
 
   public private(set) var lineWrapping: LineWrapping = .none
   public private(set) var showsLineNumbers = false
-  public private(set) var theme: EditorTheme = .light
+  public private(set) var theme: EditorTheme = Theme.current.editor
+  /// Whether it shows the window theme's `editor`, following light and dark, rather than one it
+  /// was given.
+  private var followsTheme = true
   public var isEditable: Bool { self.state.isEditable }
 
   /// Where an edit reports the whole text, once per frame. `@Component` arms it with the
@@ -269,9 +272,10 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   public init(document: TextDocument) {
     self.document = document
     self.state = EditorState(document: document)
-    self.font = EditorTheme.light.font
-    self.layout = EditorLayout(document: document, theme: .light, font: EditorTheme.light.font)
-    self.styling = EditorStyling(document: document, theme: .light)
+    let theme = Theme.current.editor
+    self.font = theme.font
+    self.layout = EditorLayout(document: document, theme: theme, font: theme.font)
+    self.styling = EditorStyling(document: document, theme: theme)
     let content = EditorContentView()
     let gutter = EditorGutterView()
     let scrollView = ScrollView([.vertical, .horizontal]) { content }
@@ -342,9 +346,14 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   public override func mount(_ context: UIContext) {
     self.context = context
     self.state.clock = { [unowned context] in context.clock() }
+    if self.followsTheme {
+      context.addThemeObserver(self)
+      self.applyTheme(context.theme.editor, context)
+    }
   }
 
   public override func unmount(_ context: UIContext) {
+    context.removeThemeObserver(self)
     self.isFocused = false
     self.hoverPoint = nil
     self.hoverDeadline = nil
@@ -1091,7 +1100,16 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     context.invalidate(.layout)
   }
 
+  /// Shows `value` from now on, rather than the window theme's editor colours.
   public func setTheme(_ value: EditorTheme, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    if self.followsTheme {
+      self.followsTheme = false
+      context.removeThemeObserver(self)
+    }
+    self.applyTheme(value, context)
+  }
+
+  private func applyTheme(_ value: EditorTheme, _ context: UIContext) {
     guard value != self.theme else { return }
     self.theme = value
     self.styling.theme = value
@@ -1201,6 +1219,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
   }
 
   public func editorTheme(_ value: EditorTheme) -> Self {
+    self.followsTheme = false
     self.theme = value
     self.styling.theme = value
     return self
@@ -1340,5 +1359,11 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     guard value != self.caretBlinks else { return }
     self.caretBlinks = value
     self.restartBlink()
+  }
+}
+
+extension TextEditor: ThemeObserving {
+  public func themeDidChange(_ theme: Theme, _ context: UIContext) {
+    self.applyTheme(theme.editor, context)
   }
 }

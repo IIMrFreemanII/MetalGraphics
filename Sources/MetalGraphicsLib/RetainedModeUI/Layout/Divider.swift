@@ -12,7 +12,7 @@ public final class Divider : UIRenderableElement {
   public private(set) var position: float2 = .zero
   public private(set) var size: float2 = .zero
 
-  public init(color: float4 = float4(0, 0, 0, 0.1), thickness: Float = 1) {
+  public init(color: float4 = .separator, thickness: Float = 1) {
     self.color = color
     self.thickness = thickness
     super.init()

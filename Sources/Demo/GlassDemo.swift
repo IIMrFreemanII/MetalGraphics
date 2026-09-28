@@ -14,14 +14,14 @@ import ReactiveUI
 @Component
 final class GlassDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let labelFont = TextFont.system(size: 15)
   private static let titleFont = TextFont.system(size: 44)
-  private static let red = float4(0.95, 0.3, 0.3, 1)
-  private static let green = float4(0.2, 0.7, 0.3, 1)
-  private static let blue = float4(0.2, 0.45, 0.95, 1)
-  private static let orange = float4(0.95, 0.5, 0.1, 1)
-  private static let purple = float4(0.6, 0.3, 0.85, 1)
+  private static let red: float4 = .hue(.red)
+  private static let green: float4 = .hue(.green)
+  private static let blue: float4 = .hue(.blue)
+  private static let orange: float4 = .hue(.orange)
+  private static let purple: float4 = .hue(.purple)
   private static let clear = float4(0, 0, 0, 0)
   private static let card = UIShape.rect(cornerRadius: 16)
   private static let slide = UIAnimation.spring(response: 0.5, dampingFraction: 0.75)

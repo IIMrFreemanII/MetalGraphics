@@ -13,11 +13,11 @@ import ReactiveUI
 @Component
 final class ShapesDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let chipFont = TextFont.system(size: 13)
-  private static let cardColor = float4(0.93, 0.93, 0.95, 1)
-  private static let borderColor = float4(0.75, 0.75, 0.78, 1)
-  private static let orange = float4(0.95, 0.5, 0.1, 1)
+  private static let cardColor: float4 = .fill
+  private static let borderColor: float4 = .border
+  private static let orange: float4 = .hue(.orange)
   private static let hoverAnimation = UIAnimation.spring()
 
   @State var hovered: Bool = false
@@ -87,7 +87,7 @@ final class ShapesDemo : SingleChildElement {
         Text("Border")
           .font(Self.chipFont)
           .padding(Inset(vertical: 4, horizontal: 12))
-          .border(.black, width: 1)
+          .border(.label, width: 1)
         Text("Rounded border")
           .font(Self.chipFont)
           .padding(Inset(vertical: 4, horizontal: 12))
@@ -106,19 +106,19 @@ final class ShapesDemo : SingleChildElement {
         Text(self.lifted ? "Lifted" : "Hover me")
           .font(Self.chipFont)
           .frame(width: 120, height: 70)
-          .background(.white, in: .rect(cornerRadius: 12))
+          .background(.card, in: .rect(cornerRadius: 12))
           .shadow(radius: self.lifted ? 12 : 3, y: self.lifted ? 8 : 1)
           .animation(Self.hoverAnimation, value: self.lifted)
           .onHover { isHovered, _ in self.lifted = isHovered }
         Text("Shadowed")
           .font(TextFont.system(size: 28))
           .foregroundColor(Self.orange)
-          .shadow(color: float4(0, 0, 0, 0.5), radius: 2, x: 2, y: 2)
+          .shadow(color: .shadow, radius: 2, x: 2, y: 2)
         VectorCanvas(width: 64, height: 64) {
           Circle(center: float2(32, 32), radius: 24)
             .fill(.blue)
         }
-        .shadow(color: float4(0, 0, 0.6, 0.5), radius: 6, y: 4)
+        .shadow(color: .hue(.blue, alpha: 0.5), radius: 6, y: 4)
         Image("photo", bundle: .module)
           .resizable()
           .scaledToFill()

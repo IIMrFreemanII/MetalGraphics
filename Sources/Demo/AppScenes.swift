@@ -5,18 +5,20 @@ import MetalGraphicsLib
 // end-to-end tests (`DemoTests`) open the same ones in a `HeadlessApp`.
 enum AppScenes {
   /// First, so it opens at launch, and File ▸ New Window (⌘N) opens another.
-  static let demos = RetainedScene("Demos", id: "main", defaultSize: CGSize(width: 960, height: 680)) { scene in
+  static let demos = RetainedScene("Demos", id: "main", defaultSize: CGSize(width: 1000, height: 760), chrome: .translucent) { scene in
     Demos(scene: scene)
   }
 
   static let sharedState = RetainedScene(
-    "Shared State", id: SharedStateWindow.id, kind: .single, defaultSize: CGSize(width: 420, height: 320)
+    "Shared State", id: SharedStateWindow.id, kind: .single, defaultSize: CGSize(width: 420, height: 320),
+    chrome: .translucent
   ) { _ in
     SharedStateWindow()
   }
 
   static let workspace = RetainedScene(
-    "Workspace", id: Workspace.windowID, kind: .single, defaultSize: CGSize(width: 1000, height: 640)
+    "Workspace", id: Workspace.windowID, kind: .single, defaultSize: CGSize(width: 1000, height: 640),
+    chrome: .translucent
   ) { _ in
     DockArea(Workspace.space, host: "main")
   }

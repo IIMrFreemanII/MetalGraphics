@@ -98,7 +98,7 @@ struct OutlineItem : Identifiable {
 @Component
 final class OutlinePanel : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.47, 1)
+  private static let captionColor: float4 = .secondaryLabel
 
   @State var items: [OutlineItem] = []
   @State var caption: String = "No file"
@@ -149,62 +149,50 @@ final class OutlinePanel : SingleChildElement {
 
 @Component
 final class OutlineRow : SingleChildElement {
-  private static let font = TextFont.system(size: 12)
-  private static let badgeFont = TextFont.system(size: 9, weight: .bold)
+  private static let font = TextFont.system(size: 13)
   private static let markFont = TextFont.system(size: 11, weight: .semibold)
-  private static let markColor = float4(0.45, 0.45, 0.47, 1)
-  private static let hoverColor = float4(0, 0, 0, 0.05)
-  private static let clearColor = float4(0, 0, 0, 0)
-  private static let indent: Float = 12
+  private static let markColor: float4 = .secondaryLabel
+  private static let indent: Float = 14
 
   let item: OutlineItem
   let badge: String
   let badgeColor: float4
-  @State var hovered: Bool = false
 
   init(item: OutlineItem) {
     self.item = item
-    (self.badge, self.badgeColor) = Self.badge(for: item.symbol.kind)
+    (self.badge, self.badgeColor) = Self.badge(for: item.symbol.kind, depth: item.symbol.depth)
     super.init()
   }
 
   @UIElementBuilder var body: [UIElement] {
-    HStack(spacing: 6) {
-      Text(self.badge)
-        .font(Self.badgeFont)
-        .foregroundColor(.white)
-        .frame(width: 14, height: 14)
-        .background(self.badgeColor)
+    ListRow(
+      indent: Float(self.item.symbol.depth) * Self.indent, spacing: 7,
+      action: { IDE.reveal(self.item.path, offset: self.item.symbol.nameRange.lowerBound) }
+    ) {
+      KindBadge(self.badge, color: self.badgeColor)
       Text(self.item.symbol.name)
         .font(self.item.symbol.kind == .mark ? Self.markFont : Self.font)
-        .foregroundColor(self.item.symbol.kind == .mark ? Self.markColor : float4(0.13, 0.13, 0.15, 1))
+        .foregroundColor(self.item.symbol.kind == .mark ? Self.markColor : .label)
         .lineLimit(1)
       Spacer()
     }
-    .padding(Inset(left: 10 + Float(self.item.symbol.depth) * Self.indent, top: 3, right: 8, bottom: 3))
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(self.hovered ? Self.hoverColor : Self.clearColor)
-    .onHover { hovered, _ in self.hovered = hovered }
-    .onTap { _ in IDE.reveal(self.item.path, offset: self.item.symbol.nameRange.lowerBound) }
   }
 
-  static func badge(for kind: CodeSymbol.Kind) -> (String, float4) {
-    let type = float4(0.55, 0.36, 0.78, 1)
-    let member = float4(0.2, 0.5, 0.85, 1)
-    let value = float4(0.28, 0.6, 0.4, 1)
-    return switch kind {
-    case .class: ("C", type)
-    case .struct: ("S", type)
-    case .enum: ("E", type)
-    case .protocol: ("P", type)
-    case .actor: ("A", type)
-    case .extension: ("Ex", float4(0.5, 0.5, 0.55, 1))
-    case .function, .initializer, .subscript: ("M", member)
-    case .variable: ("V", value)
-    case .enumCase: ("c", value)
-    case .typealias: ("T", type)
-    case .macro: ("#", member)
-    case .mark: ("—", float4(0.62, 0.62, 0.65, 1))
+  /// A symbol's letter and colour, from the theme's palette: a member variable is a property.
+  static func badge(for kind: CodeSymbol.Kind, depth: Int = 0) -> (String, float4) {
+    switch kind {
+    case .class: ("C", .hue(.badgeClass))
+    case .struct: ("S", .hue(.badgeStruct))
+    case .enum: ("E", .hue(.badgeEnum))
+    case .protocol: ("P", .hue(.indigo))
+    case .actor: ("A", .hue(.badgeClass))
+    case .extension: ("Ex", .hue(.gray))
+    case .function, .initializer, .subscript: ("M", .hue(.badgeMethod))
+    case .variable: depth > 0 ? ("P", .hue(.badgeProperty)) : ("V", .hue(.badgeVariable))
+    case .enumCase: ("c", .hue(.badgeEnum))
+    case .typealias: ("T", .hue(.badgeStruct))
+    case .macro: ("#", .hue(.badgeMethod))
+    case .mark: ("—", .hue(.gray))
     }
   }
 }

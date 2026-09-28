@@ -137,7 +137,19 @@ struct Glass {
   float opacity;
   float depth;
   float padding;
+  // the tint at the bottom edge, straight alpha: a vertical gradient from `tint`
+  float4 tintBottom;
+  // a light inner edge at the top, straight alpha, fading to `rimBottom` of it at the bottom
+  float4 rim;
+  // under the backdrop where it is transparent (a translucent window), straight alpha: opaque
+  // for a panel whose text must read over any desktop, clear for one that shows the desktop
+  float4 fallback;
+  // the rim's width, in points
+  float rimWidth;
+  float rimBottom;
+  float2 padding2;
 };
+static_assert(sizeof(Glass) == 160, "Glass must match GlassItem in Graphics2D.swift");
 
 struct TextureHandle {
   texture2d<float> texture;
@@ -196,7 +208,10 @@ struct SceneData {
   int2 windowSize;
   float time;
   DebugData debug;
+  // under everything, premultiplied: opaque white, or clear in a translucent window
+  float4 background;
 };
+static_assert(sizeof(SceneData) == 32, "SceneData must match Graphics2D.swift");
 
 constant const float kVectorOutside = 1e4;
 
@@ -444,11 +459,11 @@ static bool gridCell(float2 uv, GridArgBuffer grid, thread int2 &cell) {
   return true;
 }
 
-// The color of the scene at `uv`, in centered points, y down, over the white background: every
-// shape filed in its grid cell with a depth below `maxDepth`, composited front to back.
+// The color of the scene at `uv`, in centered points, y down, over `bgColor` (premultiplied):
+// every shape filed in its grid cell with a depth below `maxDepth`, composited front to back.
 // `pixelsPerPoint` sets the anti-aliasing width, and `pixel` seeds glass grain.
 static float4 shadeScene(
-                         float2 uv, float pixelsPerPoint, float maxDepth, float2 pixel,
+                         float2 uv, float pixelsPerPoint, float maxDepth, float2 pixel, float4 bgColor,
                          constant ShapeArgBuffer *buffers, constant GridArgBuffer *gridBuffer,
                          texture2d<float> glyphAtlas, texture2d<float> vectorAtlas, texture2d<float> glassAtlas
                          )
@@ -459,7 +474,6 @@ static float4 shadeScene(
   constexpr sampler shadowSampler(filter::linear, mip_filter::linear, address::clamp_to_zero);
   constexpr sampler glassSampler(coord::pixel, filter::linear, address::clamp_to_edge);
 
-  float4 bgColor = color::white;
   // premultiplied color, composited front to back
   float4 accumulated = float4(0);
 
@@ -635,25 +649,41 @@ static float4 shadeScene(
         Glass item = buffer.glasses[shape.index];
         float2 center = (item.rect.xy + item.rect.zw) * 0.5;
         float2 halfSize = (item.rect.zw - item.rect.xy) * 0.5;
-        coverage = saturate(0.5 - sdRoundedBox(uv - center, halfSize, item.radii) * pixelsPerPoint);
+        float d = sdRoundedBox(uv - center, halfSize, item.radii);
+        coverage = saturate(0.5 - d * pixelsPerPoint);
         if (coverage <= 0) {
           break;
         }
-        // Without a backdrop (the atlas was full) the glass is its tint over the background.
-        float3 backdrop = bgColor.rgb;
+        // Premultiplied. Without a backdrop (the atlas was full) the glass is its tint over the
+        // background.
+        float4 backdrop = bgColor;
         float2 regionSize = item.regionMax - item.regionMin;
         if (all(regionSize > 0)) {
           // Texel j of the region holds the scene at `sceneOrigin + j * pointsPerTexel`; its
           // center is at j + 0.5. Kept half a texel inside, so a neighbour never bleeds in.
           float2 local = (uv - item.sceneOrigin) / item.pointsPerTexel + 0.5;
           float2 texel = item.regionMin + clamp(local, float2(0.5), regionSize - 0.5);
-          backdrop = glassAtlas.sample(glassSampler, texel).rgb;
+          backdrop = glassAtlas.sample(glassSampler, texel);
         }
-        float luma = dot(backdrop, float3(0.2126, 0.7152, 0.0722));
-        float3 glassColor = mix(float3(luma), backdrop, item.saturation);
-        glassColor = mix(glassColor, item.tint.rgb, item.tint.a);
+        // Where the window lets the desktop through, the fallback fills in under the backdrop.
+        backdrop += (1 - backdrop.a) * float4(item.fallback.rgb * item.fallback.a, item.fallback.a);
+        float3 glassColor = backdrop.a > 1e-4 ? backdrop.rgb / backdrop.a : float3(0);
+        float luma = dot(glassColor, float3(0.2126, 0.7152, 0.0722));
+        glassColor = mix(float3(luma), glassColor, item.saturation);
+        // 0 at the top edge, 1 at the bottom: the tint's gradient and the rim's fade.
+        float t = saturate((uv.y - item.rect.y) / max(item.rect.w - item.rect.y, 1e-3));
+        float4 tint = mix(item.tint, item.tintBottom, t);
+        glassColor = mix(glassColor, tint.rgb, tint.a);
+        float glassAlpha = backdrop.a + tint.a * (1 - backdrop.a);
+        // The rim: the band just inside the edge, anti-aliased on both sides.
+        if (item.rim.a > 0 && item.rimWidth > 0) {
+          float band = saturate(coverage - saturate(0.5 - (d + item.rimWidth) * pixelsPerPoint));
+          float rimAlpha = item.rim.a * mix(1.0, item.rimBottom, t) * band;
+          glassColor = mix(glassColor, item.rim.rgb, rimAlpha);
+          glassAlpha += rimAlpha * (1 - glassAlpha);
+        }
         glassColor += (hash12(pixel) - 0.5) * item.noise;
-        shapeColor = float4(saturate(glassColor), item.opacity);
+        shapeColor = float4(saturate(glassColor), glassAlpha * item.opacity);
 
         break;
       }
@@ -688,7 +718,7 @@ static void shadePixel(
   float2 uv = pixelToPoint(gid, width, height, data.windowSize);
   float pixelsPerPoint = float(width) / float(data.windowSize.x);
 
-  float4 color = shadeScene(uv, pixelsPerPoint, INFINITY, float2(gid), buffers, gridBuffer, glyphAtlas, vectorAtlas, glassAtlas);
+  float4 color = shadeScene(uv, pixelsPerPoint, INFINITY, float2(gid), data.background, buffers, gridBuffer, glyphAtlas, vectorAtlas, glassAtlas);
 
   GridArgBuffer grid = gridBuffer[0];
   int2 cellCoord;
@@ -842,7 +872,7 @@ kernel void backdrop2D(
     return;
   }
   float2 uv = pass.sceneOrigin + float2(gid) * pass.pointsPerTexel;
-  float4 color = shadeScene(uv, 1 / pass.pointsPerTexel, pass.maxDepth, float2(gid), buffers, gridBuffer, glyphAtlas, vectorAtlas, glassAtlas);
+  float4 color = shadeScene(uv, 1 / pass.pointsPerTexel, pass.maxDepth, float2(gid), data.background, buffers, gridBuffer, glyphAtlas, vectorAtlas, glassAtlas);
   output.write(color, gid);
 }
 

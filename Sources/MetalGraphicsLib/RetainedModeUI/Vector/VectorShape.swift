@@ -126,7 +126,7 @@ open class VectorShape: UIElement, Hittable, PointerHandling {
     var color = self.color
     color.w *= self.opacity * opacity
     let scale = self.scale
-    guard color.w > 0, scale > 0, unitScale > 0 else { return }
+    guard color.w != 0, scale > 0, unitScale > 0 else { return }
 
     let pointsPerUnit = unitScale * scale
     guard

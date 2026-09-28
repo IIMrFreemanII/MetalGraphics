@@ -173,10 +173,19 @@ final class PresentedWindow : NSWindow, NSWindowDelegate {
     }
     let screen = (presenter.screen ?? NSScreen.main)?.visibleFrame ?? presenter.frame
     let color = request.background
+    // A popover's window is the system's popover glass, rounded as its card; the tree draws
+    // on it with nothing under.
+    let isGlass = request.kind == .popover
     let view = RetainedLayerView(
       handle: request.handle,
-      background: CGColor(srgbRed: CGFloat(color.x), green: CGFloat(color.y), blue: CGFloat(color.z), alpha: CGFloat(color.w))
+      background: CGColor(srgbRed: CGFloat(color.x), green: CGFloat(color.y), blue: CGFloat(color.z), alpha: CGFloat(color.w)),
+      chrome: isGlass ? .translucent : .standard
     )
+    if isGlass {
+      view.effectMaterial = .popover
+      view.effectCornerRadius = CGFloat(PopoverLayer.cornerRadius)
+      request.handle.post { $0.setBackground(.clear) }
+    }
     WindowRegistry.add(request.handle, view: view)
 
     let size: CGSize

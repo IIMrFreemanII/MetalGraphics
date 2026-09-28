@@ -2,15 +2,39 @@ import Foundation
 import simd
 import Synchronization
 
+/// How a tab group's tabs look: by the kind of the panel it shows.
+public enum DockTabStyle: Sendable {
+  /// Small pills on a 30 pt bar: a navigator, an outline, a console.
+  case panel
+  /// Larger pills on a 40 pt bar with a separator under it, each with its panel's icon and
+  /// unsaved mark: an editor's documents.
+  case document
+}
+
 /// A kind of panel the app offers: what makes one, on the thread of the window it is shown in.
 public struct DockPanelKind: Sendable {
   public let id: String
   public let title: String
+  /// What the panel's content is drawn on: the opaque `.contentBackground`, or `.sidebarTint`
+  /// for a navigator or an outline, which lets a translucent window's desktop through.
+  public let background: float4
+  /// How the tabs of a group showing one look.
+  public let tabStyle: DockTabStyle
+  /// The icon on a document tab, and its colour, from the panel's title: shown before the
+  /// panel is ever made, as for a tab behind another. `DockPanel.setIcon` overrides it.
+  public let tabIcon: (@Sendable (String) -> (ThemeIcon, float4)?)?
   let make: @Sendable (DockPanel) -> UIElement
 
-  public init(_ id: String, title: String, make: @escaping @Sendable (DockPanel) -> UIElement) {
+  public init(
+    _ id: String, title: String, background: float4 = .contentBackground, tabStyle: DockTabStyle = .panel,
+    tabIcon: (@Sendable (String) -> (ThemeIcon, float4)?)? = nil,
+    make: @escaping @Sendable (DockPanel) -> UIElement
+  ) {
     self.id = id
     self.title = title
+    self.background = background
+    self.tabStyle = tabStyle
+    self.tabIcon = tabIcon
     self.make = make
   }
 }
@@ -43,6 +67,24 @@ public final class DockPanel {
 
   public func setTitle(_ title: String) {
     self.space.setTitle(title, ofPanel: self.id)
+  }
+
+  /// Marks its tab as holding unsaved changes: a dot after the title, in a document tab.
+  public func setEdited(_ edited: Bool) {
+    self.space.decorate(panel: self.id) { $0.isEdited = edited }
+  }
+
+  /// A count on its tab, in a capsule after the title: a problems list's. 0 shows none.
+  public func setBadge(_ count: Int) {
+    self.space.decorate(panel: self.id) { $0.badge = max(count, 0) }
+  }
+
+  /// The icon before its title, in a document tab.
+  public func setIcon(_ icon: ThemeIcon?, color: float4 = .secondaryLabel) {
+    self.space.decorate(panel: self.id) {
+      $0.icon = icon
+      $0.iconColor = color
+    }
   }
 
   public func close() {
@@ -189,6 +231,15 @@ public final class DockSpace: @unchecked Sendable {
 
   public func setTitle(_ title: String, ofPanel id: String) {
     self.commit { $0.panels[id]?.title = title }
+  }
+
+  /// Changes what a panel's tab shows besides its title: see `DockPanel.setEdited`.
+  func decorate(panel id: String, _ edit: (inout DockPanelInfo) -> Void) {
+    self.commit { layout in
+      guard var info = layout.panels[id] else { return }
+      edit(&info)
+      layout.panels[id] = info
+    }
   }
 
   /// Switches how every detached window looks, at once.

@@ -10,22 +10,41 @@ import MetalKit
 public final class RetainedLayerView: NSView {
   public let handle: WindowHandle
   public let metalLayer = CAMetalLayer()
+  /// What the window's frame looks like; a translucent one is set up once the view is in it.
+  public let chrome: WindowChrome
+  /// The system's blur of the desktop behind a translucent window.
+  private weak var effectView: NSVisualEffectView?
+  /// Which blur a translucent window gets, and how round its corners are: a popover's window
+  /// takes `.popover`, rounded as its card.
+  var effectMaterial: NSVisualEffectView.Material = .sidebar
+  var effectCornerRadius: CGFloat = 0
   /// What was last sent to the window's thread.
   private var sentSize = float2(-1, -1)
   private var sentScale: Float = 0
+  private var sentTitleBar = TitleBarInsets.zero
 
   /// `background` is what shows before the first frame is drawn: what the content is drawn on.
-  public init(handle: WindowHandle, background: CGColor? = nil) {
+  public init(handle: WindowHandle, background: CGColor? = nil, chrome: WindowChrome = .standard) {
     self.handle = handle
+    self.chrome = chrome
     super.init(frame: .zero)
     self.metalLayer.device = GPUDevice.main
     self.metalLayer.pixelFormat = .bgra8Unorm
+    // The frames are sRGB, as the colours they are drawn from: tagged, so a wide-gamut display
+    // shows them as they are, beside AppKit's.
+    self.metalLayer.colorspace = CGColorSpace(name: CGColorSpace.sRGB)
     // The frame copies its canvas into the drawable with a blit.
     self.metalLayer.framebufferOnly = false
     // A resize shows at once, before the window's thread draws the new size: the last frame
     // stays pinned to the top left rather than stretching, over the colour frames clear to.
     self.metalLayer.contentsGravity = .topLeft
-    self.metalLayer.backgroundColor = background ?? CGColor(srgbRed: 0.93, green: 0.97, blue: 1, alpha: 1)
+    if chrome == .translucent {
+      // Premultiplied frames over whatever is behind: the system's blur of the desktop.
+      self.metalLayer.isOpaque = false
+      self.metalLayer.backgroundColor = CGColor(gray: 0, alpha: 0)
+    } else {
+      self.metalLayer.backgroundColor = background ?? CGColor(srgbRed: 0.93, green: 0.93, blue: 0.94, alpha: 1)
+    }
     self.wantsLayer = true
     self.layerContentsPlacement = .topLeft
   }
@@ -59,6 +78,59 @@ public final class RetainedLayerView: NSView {
   override public func setFrameSize(_ newSize: NSSize) {
     super.setFrameSize(newSize)
     self.sendSize()
+    self.sendTitleBar()
+  }
+
+  /// A press on the content never moves the window: the tree says where the title bar is
+  /// empty, and `mouseDown` drags the window from there itself.
+  override public var mouseDownCanMoveWindow: Bool {
+    false
+  }
+
+  /// Where a translucent window's title bar lies over the content, sent when it changes.
+  func sendTitleBar() {
+    guard self.chrome == .translucent, let window = self.window else { return }
+    var insets = TitleBarInsets.zero
+    // Only where the content runs under the title bar: a detached dock window in the native
+    // look has a title bar of its own above it.
+    let mask = window.styleMask
+    if !mask.contains(.fullScreen), mask.contains(.titled), mask.contains(.fullSizeContentView) {
+      let top = window.frame.height - window.contentLayoutRect.maxY
+      var leading: CGFloat = 0
+      for kind in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+        guard let button = window.standardWindowButton(kind), !button.isHidden else { continue }
+        leading = max(leading, button.convert(button.bounds, to: nil).maxX)
+      }
+      // Without traffic lights the content draws a title bar of its own: a detached dock
+      // window in the custom look.
+      if leading > 0 {
+        insets = TitleBarInsets(top: Float(max(top, 0)), leading: Float(leading) + 12)
+      }
+    }
+    guard insets != self.sentTitleBar else { return }
+    self.sentTitleBar = insets
+    let sent = insets
+    self.handle.post { $0.setTitleBar(sent) }
+  }
+
+  /// A press on the empty title bar the tree reported: drags the window, or on a double click
+  /// does what the system does there. True when it was one.
+  private func pressTitleBar(_ event: NSEvent) -> Bool {
+    guard self.chrome == .translucent, let window = self.window else { return false }
+    let point = self.convert(event.locationInWindow, from: nil)
+    let x = Float(point.x), y = Float(point.y)
+    let hit = self.handle.titleBarDragRegions.contains { r in x >= r.x && x < r.x + r.z && y >= r.y && y < r.y + r.w }
+    guard hit else { return false }
+    if event.clickCount == 2 {
+      switch UserDefaults.standard.string(forKey: "AppleActionOnDoubleClick") {
+      case "Minimize": window.miniaturize(nil)
+      case "None": break
+      default: window.zoom(nil)
+      }
+    } else {
+      window.performDrag(with: event)
+    }
+    return true
   }
 
   override public func viewDidChangeBackingProperties() {
@@ -199,6 +271,7 @@ public final class RetainedLayerView: NSView {
   }
 
   override public func mouseDown(with event: NSEvent) {
+    if self.pressTitleBar(event) { return }
     let (position, inView) = self.pointer(at: event.locationInWindow)
     self.send(.mouseDown(.left, position, inView: inView, clickCount: event.clickCount))
   }
@@ -266,6 +339,9 @@ public final class RetainedLayerView: NSView {
     }
     self.windowObservers.removeAll()
     guard let window = self.window else { return }
+    if self.chrome == .translucent {
+      self.makeTranslucent(window)
+    }
 
     let center = NotificationCenter.default
     let observe = { (name: Notification.Name, handler: @escaping @MainActor (RetainedLayerView) -> Void) in
@@ -281,14 +357,42 @@ public final class RetainedLayerView: NSView {
     observe(NSWindow.didResignKeyNotification) { $0.windowDidResignKey() }
     observe(NSWindow.didBecomeKeyNotification) { $0.windowDidBecomeKey() }
     observe(NSWindow.didChangeOcclusionStateNotification) { $0.windowOcclusionDidChange() }
+    observe(NSWindow.didEnterFullScreenNotification) { $0.sendTitleBar() }
+    observe(NSWindow.didExitFullScreenNotification) { $0.sendTitleBar() }
 
     // Occlusion is left to its notification: a window not yet on screen reads as occluded.
     if !window.isKeyWindow {
       self.send(.resignKey)
     }
     self.sendSize()
+    self.sendTitleBar()
     // After SwiftUI has set the window up: it would otherwise keep the keyboard until a click.
     DispatchQueue.main.async { [weak self] in self?.claimKeyboard() }
+  }
+
+  /// Lets the desktop through `window`, blurred: a transparent title bar over a system blur that
+  /// fills the window, under the content. One blur for the whole window; the tree tints it, per
+  /// region, as it draws (`ThemeColor.sidebarTint`, `.barTint`), so nothing of AppKit's has to
+  /// follow the tree's layout.
+  private func makeTranslucent(_ window: NSWindow) {
+    window.styleMask.insert(.fullSizeContentView)
+    window.titlebarAppearsTransparent = true
+    window.titleVisibility = .hidden
+    window.isOpaque = false
+    window.backgroundColor = .clear
+    guard self.effectView == nil, let content = window.contentView, let frame = content.superview else { return }
+    let effect = NSVisualEffectView(frame: frame.bounds)
+    effect.material = self.effectMaterial
+    if self.effectCornerRadius > 0 {
+      effect.wantsLayer = true
+      effect.layer?.cornerRadius = self.effectCornerRadius
+      effect.layer?.masksToBounds = true
+    }
+    effect.blendingMode = .behindWindow
+    effect.state = .followsWindowActiveState
+    effect.autoresizingMask = [.width, .height]
+    frame.addSubview(effect, positioned: .below, relativeTo: content)
+    self.effectView = effect
   }
 
   /// Becomes the window's first responder when nothing else in it is: the window itself or a

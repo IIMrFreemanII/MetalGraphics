@@ -6,6 +6,17 @@ public extension float4 {
   static let blue = float4(0.0, 0.478, 1, 1.0)
   static let white = float4(1, 1, 1, 1)
   static let black = float4(0, 0, 0, 1)
+  static let clear = float4(0, 0, 0, 0)
+
+  /// A colour from `0xRRGGBB`, as design tools write it, with `alpha` 0...1.
+  init(hex: UInt32, alpha: Float = 1) {
+    self.init(Float((hex >> 16) & 0xFF) / 255, Float((hex >> 8) & 0xFF) / 255, Float(hex & 0xFF) / 255, alpha)
+  }
+
+  /// This colour with its alpha multiplied by `alpha`.
+  func withAlpha(_ alpha: Float) -> float4 {
+    float4(self.x, self.y, self.z, self.w * alpha)
+  }
 }
 
 public extension float4 {

@@ -9,8 +9,8 @@ import simd
 final class GoToLineSheet : SingleChildElement {
   private static let titleFont = TextFont.system(size: 15, weight: .semibold)
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.47, 1)
-  private static let errorColor = float4(0.8, 0.2, 0.15, 1)
+  private static let captionColor: float4 = .secondaryLabel
+  private static let errorColor: float4 = .destructive
 
   @Environment(\.dismiss) private var dismiss
 
@@ -143,13 +143,10 @@ final class QuickOpenSheet : SingleChildElement {
 final class QuickOpenRow : SingleChildElement {
   private static let nameFont = TextFont.system(size: 13)
   private static let folderFont = TextFont.system(size: 11)
-  private static let folderColor = float4(0.45, 0.45, 0.47, 1)
-  private static let hoverColor = float4(0.0, 0.48, 1.0, 0.12)
-  private static let clearColor = float4(0, 0, 0, 0)
+  private static let folderColor: float4 = .secondaryLabel
 
   let item: QuickOpenItem
   let onOpen: (String) -> Void
-  @State var hovered: Bool = false
 
   init(item: QuickOpenItem, onOpen: @escaping (String) -> Void) {
     self.item = item
@@ -158,19 +155,19 @@ final class QuickOpenRow : SingleChildElement {
   }
 
   @UIElementBuilder var body: [UIElement] {
-    VStack(alignment: .leading, spacing: 1) {
-      Text(self.item.name)
-        .font(Self.nameFont)
-        .lineLimit(1)
-      Text(self.item.folder)
-        .font(Self.folderFont)
-        .foregroundColor(Self.folderColor)
-        .lineLimit(1)
+    ListRow(height: 38, margin: 0, spacing: 8, action: { self.onOpen(self.item.path) }) {
+      Image(icon: .document)
+        .foregroundColor(FileRowView.documentColor(self.item.name))
+      VStack(alignment: .leading, spacing: 1) {
+        Text(self.item.name)
+          .font(Self.nameFont)
+          .lineLimit(1)
+        Text(self.item.folder)
+          .font(Self.folderFont)
+          .foregroundColor(Self.folderColor)
+          .lineLimit(1)
+      }
+      Spacer()
     }
-    .padding(Inset(vertical: 4, horizontal: 8))
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(self.hovered ? Self.hoverColor : Self.clearColor)
-    .onHover { hovered, _ in self.hovered = hovered }
-    .onTap { _ in self.onOpen(self.item.path) }
   }
 }

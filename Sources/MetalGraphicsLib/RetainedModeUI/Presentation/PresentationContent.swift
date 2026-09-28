@@ -91,7 +91,7 @@ struct PresentationContent {
 
 /// A presentation's dimmed backdrop: one rect over the whole window.
 final class ModalBackdrop : FormGraphic {
-  static let color = float4(0, 0, 0, 0.25)
+  static let color: float4 = .scrim
 
   override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
     proposal.replacingUnspecified(with: .zero)

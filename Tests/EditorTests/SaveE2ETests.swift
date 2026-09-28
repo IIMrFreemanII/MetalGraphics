@@ -4,8 +4,10 @@ import XCTest
 
 // Editing a file, seeing that it has unsaved changes, saving it, and closing it with changes.
 final class SaveE2ETests: EditorAppTestCase {
+  /// Greeter.swift's tab as it reads: its title, after a dot while unsaved.
   private var greeterTitle: String? {
-    IDE.space.layout.panels[self.filePanels.first { $0.path.hasSuffix("Greeter.swift") }?.id ?? ""]?.title
+    let info = IDE.space.layout.panels[self.filePanels.first { $0.path.hasSuffix("Greeter.swift") }?.id ?? ""]
+    return info.map { ($0.isEdited ? "● " : "") + $0.title }
   }
 
   /// Greeter.swift open, the caret at its very start.

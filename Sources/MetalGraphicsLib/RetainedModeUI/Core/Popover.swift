@@ -66,7 +66,7 @@ final class PopoverLayer : OverlayLayer {
   static let animation = UIAnimation.easeOut(0.12)
   static let gap: Float = 4
   static let margin: Float = 8
-  static let cornerRadius: Float = 8
+  static let cornerRadius: Float = 10
 
   weak var anchor: (any Hittable)?
   let alignment: HorizontalAlignment
@@ -92,9 +92,9 @@ final class PopoverLayer : OverlayLayer {
     let card = ScrollView(.vertical) { content }
       .clipShape(.rect(cornerRadius: radius))
       .background {
-        CardFill(cornerRadius: radius).shadow(color: float4(0, 0, 0, 0.22), radius: 10, y: 4)
+        CardFill(cornerRadius: radius, material: .popover).shadow(color: .shadow, radius: 12, y: 6)
       }
-      .border(float4(0, 0, 0, 0.12), width: 0.5, in: .rect(cornerRadius: radius))
+      .border(.separator, width: 0.5, in: .rect(cornerRadius: radius))
     // A tap goes to the topmost view that takes taps, and a press to the topmost that takes
     // presses. This takes both under the content, so a click anywhere on the card — on a
     // slider, which only presses, or on nothing — never reaches the scrim and dismisses.
@@ -170,14 +170,17 @@ final class PopoverLayer : OverlayLayer {
 }
 
 /// A card's rounded fill, as large as it is offered: a popover's, a sheet's, an alert's. Under
-/// its own shadow, apart from the content, so the text on the card casts none.
+/// its own shadow, apart from the content, so the text on the card casts none. With a
+/// `material`, the card is that glass of the theme's, over whatever is behind it.
 final class CardFill : FormGraphic {
   let cornerRadius: Float
   let color: float4
+  let material: ThemeMaterial?
 
-  init(cornerRadius: Float, color: float4 = float4(1, 1, 1, 1)) {
+  init(cornerRadius: Float, color: float4 = .card, material: ThemeMaterial? = nil) {
     self.cornerRadius = cornerRadius
     self.color = color
+    self.material = material
     super.init()
   }
 
@@ -186,8 +189,15 @@ final class CardFill : FormGraphic {
   }
 
   override func draw(_ renderer: Graphics2D, origin: float2, size: float2, scale: Float, opacity: Float) {
-    var color = self.color
-    color.w *= opacity
-    renderer.draw(roundedRect: origin, size: size, radii: float4(repeating: self.cornerRadius * scale), color: color)
+    let radii = float4(repeating: self.cornerRadius * scale)
+    if let material = self.material {
+      let glass = renderer.theme[material]
+      renderer.draw(
+        glass: origin, size: size, radii: radii, material: glass,
+        sigma: glass.blurRadius * ShadowState.sigmaPerRadius * scale, opacity: opacity
+      )
+      return
+    }
+    renderer.draw(roundedRect: origin, size: size, radii: radii, color: self.color.withAlpha(opacity))
   }
 }

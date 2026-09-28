@@ -48,20 +48,35 @@ struct GlassItem {
   var opacity: Float = 1
   var depth: Float = 0
   private var padding: Float = 0
+  /// The tint at the bottom edge: a vertical gradient from `tint`. Straight alpha.
+  var tintBottom = float4()
+  /// A light inner edge, straight alpha, strongest at the top and `rimBottom` of it at the bottom.
+  var rim = float4()
+  /// Under the backdrop where it is transparent (a translucent window), straight alpha.
+  var fallback = float4()
+  /// The rim's width, in points.
+  var rimWidth: Float = 0
+  var rimBottom: Float = 0
+  private var padding2 = float2()
 
   init(
-    rect: float4, radii: float4, tint: float4, sceneOrigin: float2, regionMin: float2, regionMax: float2,
-    pointsPerTexel: Float, saturation: Float, noise: Float, opacity: Float, depth: Float
+    rect: float4, radii: float4, material: GlassMaterial, sceneOrigin: float2, regionMin: float2, regionMax: float2,
+    pointsPerTexel: Float, opacity: Float, depth: Float
   ) {
     self.rect = rect
     self.radii = radii
-    self.tint = tint
+    self.tint = material.tint
+    self.tintBottom = material.tintBottom ?? material.tint
+    self.rim = material.rim
+    self.rimWidth = material.rimWidth
+    self.rimBottom = material.rimBottom
+    self.fallback = material.fallback
     self.sceneOrigin = sceneOrigin
     self.regionMin = regionMin
     self.regionMax = regionMax
     self.pointsPerTexel = pointsPerTexel
-    self.saturation = saturation
-    self.noise = noise
+    self.saturation = material.saturation
+    self.noise = material.noise
     self.opacity = opacity
     self.depth = depth
   }
@@ -100,6 +115,32 @@ private struct GlassPass {
     self.pointsPerTexel = pointsPerTexel
     self.maxDepth = maxDepth
     self.sigma = sigma
+  }
+}
+
+/// What a glass's backdrop in the atlas was rendered from: its region and how it samples the
+/// scene, and the hash of the shapes below the glass there.
+private struct GlassBackdrop {
+  var atlasOrigin = SIMD2<Int32>()
+  var size = SIMD2<Int32>()
+  var sceneOrigin = float2()
+  var pointsPerTexel: Float = 0
+  var sigma: Float = 0
+  var shapes: UInt64 = 0
+
+  init(_ pass: GlassPass, shapes: UInt64) {
+    self.atlasOrigin = pass.atlasOrigin
+    self.size = pass.size
+    self.sceneOrigin = pass.sceneOrigin
+    self.pointsPerTexel = pass.pointsPerTexel
+    self.sigma = pass.sigma
+    self.shapes = shapes
+  }
+
+  /// Whether `pass` lands where this backdrop is and samples the scene the same way.
+  func isInPlace(for pass: GlassPass) -> Bool {
+    self.atlasOrigin == pass.atlasOrigin && self.size == pass.size && self.sceneOrigin == pass.sceneOrigin
+      && self.pointsPerTexel == pass.pointsPerTexel && self.sigma == pass.sigma
   }
 }
 
@@ -142,6 +183,8 @@ public struct SceneData {
   public var windowSize = SIMD2<Int32>()
   public var time = Float()
   public var debug = DebugData()
+  /// Under everything, premultiplied. See `Graphics2D.background`.
+  var background = float4(1, 1, 1, 1)
 }
 
 /// Where a frame is presented: the drawable the display link handed the frame, which the frame
@@ -173,6 +216,17 @@ public class Graphics2D {
   public internal(set) var size = float2()
   /// Seconds the window has been drawing for, handed to the shaders.
   public var time: Float = 0
+  /// The look to draw with: the window's `UIContext.theme`, handed over at the start of each
+  /// render. Drawing code reads colours, materials and radii from here.
+  public internal(set) var theme: Theme = .light
+
+  /// What shows where nothing is drawn: the theme's window background, or clear in a window that
+  /// lets the desktop through (`RetainedScene.chrome`). A role follows the theme. Output is
+  /// premultiplied, as a layer that is not opaque takes it; glass there sees its material's
+  /// fallback.
+  public var background: float4 = .windowBackground
+  /// `background` as the last frame shaded it: a change shades every pixel again.
+  private var shadedBackground = float4(-1, -1, -1, -1)
 
   public init() {
     self.device = GPUDevice.main
@@ -358,9 +412,21 @@ public class Graphics2D {
   private var glassBuffer: MTLBuffer!
   private var glassBufferCount: Int = 0
   private var glassPasses: [GlassPass] = []
+  /// Which of `glassPasses` run this frame: a backdrop is kept in the atlas from frame to
+  /// frame, and rendered again only when what it shows changed. See `damageGlasses`.
+  private var glassPassNeeded: [Bool] = []
+  /// Each pass's glass bounds, min x, min y, max x, max y, for the glasses above it.
+  private var glassPassBounds: [float4] = []
+  /// What each pass's backdrop in the atlas was last rendered from, by pass index.
+  private var glassBackdrops: [GlassBackdrop] = []
+  /// Set when the atlas was made anew: none of its backdrops are there any more.
+  private var glassAtlasReset = true
+  /// Backdrop passes the last frame ran. For tests.
+  private(set) var lastGlassPasses = 0
   /// Every glass's blurred backdrop, each in a region of its own, so a glass above another
-  /// samples the lower one's while its own is rendered. Regions are packed in rows, which
-  /// start over every frame; the atlas grows, never shrinks.
+  /// samples the lower one's while its own is rendered. Regions are packed in rows in the
+  /// glasses' order, the same every frame while the glasses keep their sizes, so a backdrop
+  /// still in place is reused; the atlas grows, never shrinks.
   private var glassAtlas: MTLTexture!
   private var glassAtlasCursor = SIMD2<Int>(0, 0)
   private var glassAtlasRowHeight = 0
@@ -466,6 +532,8 @@ public class Graphics2D {
 
   /// Every draw from now on casts `shadow` too, beneath itself and any shadow added before.
   func addShadow(_ shadow: ShadowState) {
+    var shadow = shadow
+    shadow.color = self.resolve(shadow.color)
     self.shadows.append(shadow)
   }
 
@@ -627,12 +695,21 @@ public class Graphics2D {
     }
   }
 
-  /// A glass shows the scene behind it, blurred, from as far as its backdrop reaches: when any
-  /// cell there changed, all of the glass is shaded again. Bottom glass first, so one a glass
-  /// above samples has already spread its damage.
+  /// A glass shows the scene below it, blurred, from as far as its backdrop reaches. Its
+  /// backdrop stays in the atlas from frame to frame, and is rendered again only when it moved
+  /// there, samples the scene differently, the shapes below the glass in its reach changed, or
+  /// a lower glass it shows was rendered again; all of the glass is shaded again then. What is
+  /// drawn above a glass — text typed into it, a caret, a scrolled list — leaves its backdrop
+  /// alone. Bottom glass first, so one a glass above samples has already spread its damage.
   private func damageGlasses() {
     self.glassNeedsPasses = false
-    guard !self.glasses.isEmpty else { return }
+    self.glassPassNeeded.removeAll(keepingCapacity: true)
+    self.glassPassBounds.removeAll(keepingCapacity: true)
+    defer { self.glassAtlasReset = false }
+    guard !self.glasses.isEmpty else {
+      self.glassBackdrops.removeAll(keepingCapacity: true)
+      return
+    }
     let grid = self.grid
     if self.dirtyMask.count != grid.cells.count {
       self.dirtyMask = Array(repeating: false, count: grid.cells.count)
@@ -642,19 +719,52 @@ public class Graphics2D {
     for cell in grid.dirtyCells {
       self.dirtyMask[Int(cell)] = true
     }
+    var passIndex = 0
     for glass in self.glasses {
+      let region = glass.regionMax - glass.regionMin
+      guard region.x > 0, region.y > 0, passIndex < self.glassPasses.count else { continue }
+      let pass = self.glassPasses[passIndex]
       let bounds = glass.bounds(pixelsPerPoint: self.pixelsPerPoint)
       let boundsMin = bounds.center - abs(bounds.size) * 0.5
       let boundsMax = bounds.center + abs(bounds.size) * 0.5
-      var touched = false
-      grid.forEachCell(min: boundsMin, max: boundsMax) { touched = touched || self.dirtyMask[$0] }
-      let region = glass.regionMax - glass.regionMin
-      var backdropChanged = false
-      if region.x > 0, region.y > 0 {
-        let reach = glass.sceneOrigin + region * glass.pointsPerTexel
-        grid.forEachCell(min: glass.sceneOrigin, max: reach) { backdropChanged = backdropChanged || self.dirtyMask[$0] }
+      let reachMin = glass.sceneOrigin
+      let reachMax = glass.sceneOrigin + region * glass.pointsPerTexel
+
+      let last: GlassBackdrop? = passIndex < self.glassBackdrops.count && !self.glassAtlasReset
+        ? self.glassBackdrops[passIndex] : nil
+      var reachChanged = false
+      grid.forEachCell(min: reachMin, max: reachMax) { reachChanged = reachChanged || self.dirtyMask[$0] }
+      var shapes = last?.shapes ?? 0
+      if last == nil || reachChanged {
+        var hash = ContentHash()
+        grid.forEachCell(min: reachMin, max: reachMax) { grid.addShapes(inCell: $0, below: pass.maxDepth, to: &hash) }
+        shapes = hash.value
       }
-      if backdropChanged {
+      var needed = true
+      if let last, last.isInPlace(for: pass), last.shapes == shapes {
+        needed = false
+        // A lower glass rendered again looks different through this one.
+        for lower in 0 ..< passIndex where self.glassPassNeeded[lower] {
+          let other = self.glassPassBounds[lower]
+          if other.x <= reachMax.x, other.z >= reachMin.x, other.y <= reachMax.y, other.w >= reachMin.y {
+            needed = true
+            break
+          }
+        }
+      }
+
+      let backdrop = GlassBackdrop(pass, shapes: shapes)
+      if passIndex < self.glassBackdrops.count {
+        self.glassBackdrops[passIndex] = backdrop
+      } else {
+        self.glassBackdrops.append(backdrop)
+      }
+      self.glassPassNeeded.append(needed)
+      self.glassPassBounds.append(float4(boundsMin.x, boundsMin.y, boundsMax.x, boundsMax.y))
+      passIndex += 1
+
+      if needed {
+        self.glassNeedsPasses = true
         grid.forEachCell(min: boundsMin, max: boundsMax) { cell in
           if !self.dirtyMask[cell] {
             self.dirtyMask[cell] = true
@@ -663,9 +773,9 @@ public class Graphics2D {
           }
         }
       }
-      if touched || backdropChanged {
-        self.glassNeedsPasses = true
-      }
+    }
+    if self.glassBackdrops.count > passIndex {
+      self.glassBackdrops.removeSubrange(passIndex...)
     }
   }
 
@@ -714,6 +824,8 @@ public class Graphics2D {
 
     let buffersStart = profiler.start()
     self.grid.updateBuffers()
+    // Before the damage, which needs to know whether the atlas still holds last frame's backdrops.
+    self.growGlassTextures()
     self.damageGlasses()
     profiler.add(.gridBuffers, since: buffersStart)
     if profiler.isEnabled {
@@ -804,7 +916,6 @@ public class Graphics2D {
       }
 
       self.glassBuffer.contents().copyMemory(from: &self.glasses, byteCount: self.glasses.byteCount)
-      self.growGlassTextures()
     }
 
     do {
@@ -994,7 +1105,10 @@ public class Graphics2D {
     let debug = self.sceneData.debug
     let debugChanged = debug.drawGrid != self.lastDebug.drawGrid
       || debug.showFilledCells != self.lastDebug.showFilledCells
+    let background = self.resolve(self.background)
     var full = self.needsFullDamage || !self.partialRendering || texture !== self.lastTarget || debugChanged
+      || background != self.shadedBackground
+    self.shadedBackground = background
     self.needsFullDamage = false
     self.lastTarget = texture
     self.lastDebug = debug
@@ -1047,18 +1161,26 @@ public class Graphics2D {
 
     self.sceneData.windowSize = SIMD2<Int32>(Int32(self.size.x), Int32(self.size.y))
     self.sceneData.time = self.time
+    let background = self.resolve(self.background)
+    self.sceneData.background = float4(background.xyz * background.w, background.w)
 
     commandEncoder.setBytes(&self.sceneData, length: MemoryLayout<SceneData>.stride, index: 0)
     commandEncoder.setBuffer(self.shapeArgBuffer, offset: 0, index: 1)
     commandEncoder.setBuffer(self.grid.gridArgBuffer, offset: 0, index: 2)
 
     // Lowest glass first, so each one above finds the backdrops below it finished. The encoder
-    // dispatches serially, so every pass sees the textures the one before it wrote. Only when
-    // some glass is shaded: nothing else samples the atlas.
+    // dispatches serially, so every pass sees the textures the one before it wrote. A full
+    // redraw renders every backdrop too: it follows a lost frame or new shaders as often as a
+    // resize, and the atlas may be as stale as the canvas then.
+    self.lastGlassPasses = 0
     if damage == .full || self.glassNeedsPasses {
-      for pass in self.glassPasses {
+      for (i, pass) in self.glassPasses.enumerated() where damage == .full || (i < self.glassPassNeeded.count && self.glassPassNeeded[i]) {
         self.encodeGlass(pass, commandEncoder)
+        self.lastGlassPasses += 1
       }
+    }
+    if self.profiler.isEnabled {
+      self.profiler.set(.glassPasses, self.lastGlassPasses)
     }
 
     if damage == .full {
@@ -1196,6 +1318,7 @@ public class Graphics2D {
     if self.glassAtlas.width != atlasWidth || self.glassAtlas.height < atlasHeight {
       let height = min(max(atlasHeight + atlasHeight / 4, self.glassAtlas.width == atlasWidth ? self.glassAtlas.height : 0), Self.maxTextureSize)
       self.glassAtlas = Self.makeGlassTexture(self.device, width: atlasWidth, height: height, label: "Glass atlas")
+      self.glassAtlasReset = true
     }
     var largest = SIMD2<Int>(1, 1)
     for pass in self.glassPasses {
@@ -1223,13 +1346,13 @@ public class Graphics2D {
   /// panel's visible rect and as far past it as the blur reaches, at a resolution the blur can
   /// spare: about one texel per third of a standard deviation, so the blur's cost does not grow
   /// with its radius. The panel's own edge is never blurred, even under a `BlurElement`.
-  func draw(
-    glass position: float2, size: float2, radii: float4, sigma: Float, tint: float4,
-    saturation: Float, noise: Float, opacity: Float
-  ) {
+  func draw(glass position: float2, size: float2, radii: float4, material: GlassMaterial, sigma: Float, opacity: Float) {
     guard size.x > 0, size.y > 0, opacity > 0 else { return }
     let half = size * 0.5
     let radii = simd_clamp(radii, .zero, float4(repeating: min(half.x, half.y)))
+    // The glass's own shadow is drawn beneath it but is not behind it: a backdrop that took it
+    // in would frost the panel grey.
+    let backdropDepth = self.depth
     if !self.shadows.isEmpty {
       self.drawShadows(of: self.roundedBox(center: position + half, half: half, radii: radii, color: .one), alpha: opacity)
     }
@@ -1257,8 +1380,8 @@ public class Graphics2D {
     let texels = SIMD2<Int>(((regionMax - sceneOrigin) / pointsPerTexel).rounded(.up)) &+ 1
 
     var item = GlassItem(
-      rect: rect, radii: radii, tint: tint, sceneOrigin: sceneOrigin, regionMin: .zero, regionMax: .zero,
-      pointsPerTexel: pointsPerTexel, saturation: saturation, noise: noise, opacity: min(opacity, 1), depth: self.depth
+      rect: rect, radii: radii, material: material, sceneOrigin: sceneOrigin, regionMin: .zero, regionMax: .zero,
+      pointsPerTexel: pointsPerTexel, opacity: min(opacity, 1), depth: self.depth
     )
     // Without room in the atlas the glass is still drawn, as its tint alone.
     if let origin = self.allocateGlassRegion(texels) {
@@ -1266,7 +1389,7 @@ public class Graphics2D {
       item.regionMax = item.regionMin + float2(Float(texels.x), Float(texels.y))
       self.glassPasses.append(GlassPass(
         atlasOrigin: SIMD2<Int32>(Int32(origin.x), Int32(origin.y)), size: SIMD2<Int32>(Int32(texels.x), Int32(texels.y)),
-        sceneOrigin: sceneOrigin, pointsPerTexel: pointsPerTexel, maxDepth: self.depth, sigma: sigmaPixels / Float(downsample)
+        sceneOrigin: sceneOrigin, pointsPerTexel: pointsPerTexel, maxDepth: backdropDepth, sigma: sigmaPixels / Float(downsample)
       ))
     }
     self.glasses.append(item)
@@ -1331,14 +1454,25 @@ public class Graphics2D {
   }
 
   /// Circles and lines are hard-edged debug primitives: they cast no shadow and take no blur.
+  /// `color` as drawn: a `ThemeColor` role (`float4.role`) becomes the current theme's, with
+  /// the alpha the role carries; any other colour is itself. Every draw goes through this, so a
+  /// role reaches the screen in whatever appearance is showing.
+  @inline(__always)
+  public func resolve(_ color: float4) -> float4 {
+    self.theme.resolve(color)
+  }
+
   public func draw(circle: Circle2D) {
     var temp = circle
+    temp.color = self.resolve(temp.color)
     temp.depth = self.depth
     self.circles.append(temp)
     self.depth += 1
   }
 
   public func draw(square: Square) {
+    var square = square
+    square.color = self.resolve(square.color)
     // A square's edge is hard; blurred, it is drawn as the rounded box that has one to widen.
     if self.blur > 0 {
       guard square.size.x > 0, square.size.y > 0, square.color.w > 0 else { return }
@@ -1361,6 +1495,7 @@ public class Graphics2D {
 
   public func draw(line: Line) {
     var temp = line
+    temp.color = self.resolve(temp.color)
     temp.depth = self.depth
     self.lines.append(temp)
     self.depth += 1
@@ -1382,6 +1517,7 @@ public class Graphics2D {
     uvMin: float2 = float2(0, 0), uvMax: float2 = float2(1, 1),
     tint: float4, template: Bool = false, nearest: Bool = false
   ) {
+    let tint = self.resolve(tint)
     guard size.x > 0, size.y > 0, tint.w > 0 else { return }
 
     var index = self.imageTextureIndices[ObjectIdentifier(image.texture)]
@@ -1507,7 +1643,7 @@ public class Graphics2D {
       let clip = self.beginShadow(shadow)
       for layer in icon.layers {
         var shadowColor = shadow.color
-        shadowColor.w *= color(layer).w
+        shadowColor.w *= self.resolve(color(layer)).w
         guard shadowColor.w > 0 else { continue }
         self.appendIconLayer(
           layer, origin: origin + shadow.offset, scale: scale,
@@ -1520,7 +1656,7 @@ public class Graphics2D {
     }
 
     for layer in icon.layers {
-      let layerColor = color(layer)
+      let layerColor = self.resolve(color(layer))
       guard layerColor.w > 0 else { continue }
       self.appendIconLayer(
         layer, origin: origin, scale: scale, clipMin: clipMin, clipMax: clipMax,
@@ -1557,7 +1693,8 @@ public class Graphics2D {
 
   /// Draws one shape of a `VectorCanvas` above everything drawn so far, above its shadows.
   func draw(vector: VectorItem) {
-    let vector = self.blurred(vector)
+    var vector = self.blurred(vector)
+    vector.color = self.resolve(vector.color)
     if !self.shadows.isEmpty {
       self.drawShadows(of: vector, alpha: vector.color.w)
     }
@@ -1586,7 +1723,7 @@ public class Graphics2D {
   /// that wide inside its outline, as SwiftUI's `strokeBorder`. Anti-aliased, and drawn as a
   /// `VectorItem` of the analytic rounded-box kind, so it needs no shader of its own.
   public func draw(roundedRect position: float2, size: float2, radii: float4, color: float4, strokeWidth: Float? = nil) {
-    guard size.x > 0, size.y > 0, color.w > 0 else { return }
+    guard size.x > 0, size.y > 0, color.w != 0 else { return }
     var half = size * 0.5
     let center = position + half
     var radii = simd_clamp(radii, .zero, float4(repeating: min(half.x, half.y)))
@@ -1617,7 +1754,7 @@ public class Graphics2D {
   /// Draws a wavy underline from `start`, window centered, y down, in points, `length` long along
   /// x: the squiggle under a misspelling or an error. One analytic shape, however long.
   public func draw(squiggle start: float2, length: Float, amplitude: Float, wavelength: Float, thickness: Float, color: float4) {
-    guard length > 0, color.w > 0, wavelength > 0 else { return }
+    guard length > 0, color.w != 0, wavelength > 0 else { return }
     let reach = amplitude + thickness + 1 / self.pixelsPerPoint
     var item = VectorItem()
     item.row0 = float4(1, 0, -start.x, 1)
@@ -1633,7 +1770,7 @@ public class Graphics2D {
   /// wide with round caps. Anti-aliased: one rounded box turned along the segment, so a chevron
   /// or a check mark costs two of them.
   public func draw(stroke start: float2, to end: float2, width: Float, color: float4) {
-    guard width > 0, color.w > 0 else { return }
+    guard width > 0, color.w != 0 else { return }
     let delta = end - start
     let half = float2(simd_length(delta) + width, width) * 0.5
     self.draw(vector: self.roundedBox(
@@ -1696,7 +1833,7 @@ public class Graphics2D {
       let baseline = snapToPixelEdge(position.y + line.baseline * scale)
       for glyph in line.glyphs {
         let run = Int(glyph.run)
-        let glyphColor = tinted(run < paintCount ? paints![run].text : color)
+        let glyphColor = tinted(self.resolve(run < paintCount ? paints![run].text : color))
         guard glyphColor.w > 0 else { continue }
         let metrics = glyph.metrics
         let fontSize = glyph.emSize * scale
@@ -1722,7 +1859,7 @@ public class Graphics2D {
       for decoration in line.decorations {
         let run = Int(decoration.run)
         let paint = run < paintCount ? paints![run] : nil
-        let decorationColor = tinted(decoration.isStrikethrough ? paint?.strikethrough ?? color : paint?.underline ?? color)
+        let decorationColor = tinted(self.resolve(decoration.isStrikethrough ? paint?.strikethrough ?? color : paint?.underline ?? color))
         guard decorationColor.w > 0 else { continue }
         let height = max(decoration.size.y * scale, pixel)
         let top = ((position.y + decoration.origin.y * scale + snap) * self.pixelsPerPoint).rounded() / self.pixelsPerPoint

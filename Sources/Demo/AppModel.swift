@@ -10,12 +10,12 @@ final class AppModel {
   var count: Int = 0
   var message: String = "Hello from every window"
   var highlighted: Bool = false
-  var tint: float4 = float4(0.0, 0.48, 1.0, 1)
+  var tint: float4 = float4(0.0, 0.48, 1.0, 1)  // design: a ColorPicker edits a plain colour
 
   func reset() {
     self.count = 0
     self.message = "Hello from every window"
     self.highlighted = false
-    self.tint = float4(0.0, 0.48, 1.0, 1)
+    self.tint = float4(0.0, 0.48, 1.0, 1)  // design: a ColorPicker edits a plain colour
   }
 }

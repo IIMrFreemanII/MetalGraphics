@@ -81,6 +81,10 @@ public class Button : FormControl {
     super.init(content: hit)
     self.label.applyContent(label())
     hit.onTap = { [unowned self] _ in self.performTap() }
+    hit.onHover = { [unowned self] hovered, _ in
+      guard let context = self.context else { return }
+      self.face.setHovered(hovered && !self.isDisabled, context)
+    }
     hit.onPress = { [unowned self] pressed, _ in
       guard let context = self.context else { return }
       let pressed = pressed && !self.isDisabled
@@ -128,6 +132,11 @@ public class Button : FormControl {
     return self
   }
 
+  /// Its label's weight, over the form's: a split view's selected sidebar link is medium.
+  func setLabelWeight(_ weight: TextFont.Weight?, _ context: UIContext) {
+    self.labelStyle.restyleLayout(\.weight, weight, context, nil)
+  }
+
   /// The pointer's shape over the button: a pointing hand when never set.
   public func pointerStyle(_ style: PointerStyle?) -> Self {
     self.hit.pointerStyle = style
@@ -141,9 +150,9 @@ public class Button : FormControl {
   /// What a label's text is colored in `style`.
   private static func labelColor(_ style: ButtonStyle, _ role: ButtonRole?) -> float4 {
     switch style {
-    case .borderedProminent: return float4(1, 1, 1, 1)
-    case .plain: return role == .destructive ? FormMetrics.destructiveColor : FormMetrics.labelColor
-    case .automatic, .borderless, .bordered: return ButtonFace.tint(role)
+    case .borderedProminent: return .accentForeground
+    case .plain, .bordered: return role == .destructive ? FormMetrics.destructiveColor : FormMetrics.labelColor
+    case .automatic, .borderless: return ButtonFace.tint(role)
     }
   }
 }
@@ -152,11 +161,17 @@ public class Button : FormControl {
 /// ones. It is always there, so a style change never rebuilds the button.
 final class ButtonFace : UIRenderableElement {
   static let borderedInset = Inset(vertical: 3, horizontal: 10)
+  /// A split view's sidebar link: a 26 pt row.
+  static let sidebarInset = Inset(vertical: 5, horizontal: 10)
+  /// How far the hover highlight of a borderless button reaches past its label, which has no
+  /// inset of its own.
+  static let hoverOutset = float2(6, 3)
   static let cornerRadius: Float = 6
 
   let role: ButtonRole?
   fileprivate(set) var style: ButtonStyle = .automatic
   private(set) var isPressed = false
+  private(set) var isHovered = false
   /// Marked as a split view's selected sidebar link: drawn on a highlight in any style.
   private(set) var isSelected = false
   /// Takes the whole width it is offered, as a sidebar link does, with the bordered inset.
@@ -178,7 +193,8 @@ final class ButtonFace : UIRenderableElement {
   }
 
   private var inset: Inset {
-    self.style.isBordered || self.fillsWidth ? Self.borderedInset : Inset()
+    if self.style.isBordered { return Self.borderedInset }
+    return self.fillsWidth ? Self.sidebarInset : Inset()
   }
 
   func setSelected(_ value: Bool, _ context: UIContext) {
@@ -204,12 +220,19 @@ final class ButtonFace : UIRenderableElement {
     context.invalidate()
   }
 
+  func setHovered(_ value: Bool, _ context: UIContext) {
+    guard value != self.isHovered else { return }
+    self.isHovered = value
+    context.invalidate()
+  }
+
   override func mount(_ context: UIContext) {
     context.registerRenderableView(self)
   }
 
   override func unmount(_ context: UIContext) {
     self.isPressed = false
+    self.isHovered = false
     context.unregisterRenderableView(self)
   }
 
@@ -240,26 +263,37 @@ final class ButtonFace : UIRenderableElement {
   }
 
   override func render(_ renderer: Graphics2D, _ effect: EffectState) {
-    guard self.style.isBordered || self.isSelected, effect.opacity > 0 else { return }
-    guard self.style.isBordered else {
-      var fill = NavigationMetrics.selectionColor
-      fill.w *= effect.opacity
-      let s = effect.scale
-      renderer.draw(
-        roundedRect: effect.apply(to: self.position) - renderer.size * 0.5, size: self.size * s,
-        radii: float4(repeating: Self.cornerRadius * s), color: fill
-      )
-      return
-    }
-    let tint = Self.tint(self.role)
-    var fill = self.style == .borderedProminent ? tint : float4(tint.x, tint.y, tint.z, 0.15)
-    if self.isPressed {
-      fill = float4(fill.x * 0.8, fill.y * 0.8, fill.z * 0.8, self.style == .borderedProminent ? fill.w : 0.28)
+    guard effect.opacity > 0 else { return }
+    var origin = self.position
+    var size = self.size
+    var fill: float4
+    switch self.style {
+    case .borderedProminent:
+      // The tint, lighter while hovered, darker while pressed.
+      fill = renderer.resolve(Self.tint(self.role))
+      let scale: Float = self.isPressed ? 0.82 : (self.isHovered ? 1.1 : 1)
+      if scale != 1 {
+        fill = float4(min(fill.x * scale, 1), min(fill.y * scale, 1), min(fill.z * scale, 1), fill.w)
+      }
+    case .bordered:
+      fill = renderer.resolve(self.isPressed ? .fillPressed : (self.isHovered ? .fillHover : .fill))
+    case .automatic, .borderless, .plain:
+      if self.isSelected {
+        fill = renderer.resolve(NavigationMetrics.selectionColor)
+      } else if self.isHovered && (self.fillsWidth || self.style != .plain) {
+        fill = renderer.resolve(.hover)
+        if !self.fillsWidth {
+          origin -= Self.hoverOutset
+          size += Self.hoverOutset * 2
+        }
+      } else {
+        return
+      }
     }
     fill.w *= effect.opacity
     let s = effect.scale
     renderer.draw(
-      roundedRect: effect.apply(to: self.position) - renderer.size * 0.5, size: self.size * s,
+      roundedRect: effect.apply(to: origin) - renderer.size * 0.5, size: size * s,
       radii: float4(repeating: Self.cornerRadius * s), color: fill
     )
   }

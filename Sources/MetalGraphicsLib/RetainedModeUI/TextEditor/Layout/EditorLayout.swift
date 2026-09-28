@@ -46,6 +46,8 @@ final class EditorLayout: TextLayoutQueries {
 
   /// A row of the base font: ascent, descent and leading, and the line spacing.
   private(set) var rowHeight: Float = 16
+  /// Below each line: the theme's `lineSpacing`, or what makes a line its `lineHeight`.
+  private(set) var lineSpacing: Float = 3
   /// The width of a digit in the base font: an estimate of an average character.
   private(set) var averageAdvance: Float = 8
 
@@ -94,6 +96,7 @@ final class EditorLayout: TextLayoutQueries {
     let wrapWidth = wrapWidth.map { max($0, 20) }
     guard theme != self.theme || font != self.baseFont || wrapWidth != self.wrapWidth else { return false }
     let fontChanged = font != self.baseFont || theme.lineSpacing != self.theme.lineSpacing
+      || theme.lineHeight != self.theme.lineHeight
     self.theme = theme
     self.baseFont = font
     self.wrapWidth = wrapWidth
@@ -116,7 +119,9 @@ final class EditorLayout: TextLayoutQueries {
   private func measureBaseFont() {
     let face = FontManager.shared.face(for: self.baseFont)
     let font = face.font
-    self.rowHeight = Float(CTFontGetAscent(font) + CTFontGetDescent(font) + CTFontGetLeading(font)) + self.theme.lineSpacing
+    let natural = Float(CTFontGetAscent(font) + CTFontGetDescent(font) + CTFontGetLeading(font))
+    self.lineSpacing = self.theme.lineHeight.map { max($0 - natural, 0) } ?? self.theme.lineSpacing
+    self.rowHeight = natural + self.lineSpacing
     var glyph = CGGlyph(0)
     var zero = UniChar(0x30)
     CTFontGetGlyphsForCharacters(font, &zero, &glyph, 1)
@@ -236,7 +241,7 @@ final class EditorLayout: TextLayoutQueries {
       }
       let runs = self.runs(length: Int32(units.count), spans: self.spans, decorations: self.decorationScratch)
       return shapeLine(units, runs: runs, base: self.baseFont, wrapWidth: self.wrapWidth,
-                       lineSpacing: self.theme.lineSpacing, attachments: self.reservations)
+                       lineSpacing: self.lineSpacing, attachments: self.reservations)
     }
   }
 

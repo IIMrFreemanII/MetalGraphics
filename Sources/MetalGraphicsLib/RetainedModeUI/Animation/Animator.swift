@@ -118,20 +118,32 @@ public final class Animator {
     from current: V, to value: V, _ animation: UIAnimation?, _ context: UIContext,
     apply: @escaping Apply
   ) {
-    let target = value.packed
+    var target = value.packed
+    var from = current.packed
+    // A theme role (`float4.role`) animates through the colours it is in this window's theme,
+    // and lands on the role itself, so it follows the next appearance change.
+    var role: SIMD4<Float>? = nil
+    if property == .color, target.w < 0 || from.w < 0 {
+      let theme = Theme.current
+      if target.w < 0 {
+        role = target
+        target = theme.resolve(target)
+      }
+      from = theme.resolve(from)
+    }
 
     guard let animation else {
       if !self.running.isEmpty, let i = self.index[Key(element: ObjectIdentifier(element), property: property)] {
         if self.running[i].to == target { return }
         self.remove(at: i)
       }
-      apply(element, target, context)
+      apply(element, role ?? target, context)
       return
     }
 
     self.run(
-      element, property, from: current.packed, to: target, animation, context,
-      restart: false, apply: apply, completion: nil
+      element, property, from: from, to: target, animation, context,
+      restart: false, apply: apply, completion: role.map { role in { apply(element, role, context) } }
     )
   }
 

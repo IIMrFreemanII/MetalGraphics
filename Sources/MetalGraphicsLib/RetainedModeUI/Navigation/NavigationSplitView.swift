@@ -186,9 +186,13 @@ public final class NavigationSplitView : NavigationHost {
 }
 
 /// The sidebar column: a fixed width, its own background and an edge, content top-leading.
+/// Under a translucent window's title bar it runs to the window's top, with the traffic lights on
+/// it and its content below them.
 final class NavigationSidebar : UIRenderableElement {
   private(set) var position: float2 = .zero
   private(set) var size: float2 = .zero
+  private var titleBarPlacement = TitleBarPlacement()
+  private weak var context: UIContext?
 
   init(content: UIElement) {
     super.init()
@@ -196,10 +200,12 @@ final class NavigationSidebar : UIRenderableElement {
   }
 
   override func mount(_ context: UIContext) {
+    self.context = context
     context.registerRenderableView(self)
   }
 
   override func unmount(_ context: UIContext) {
+    self.context = nil
     context.unregisterRenderableView(self)
   }
 
@@ -207,15 +213,23 @@ final class NavigationSidebar : UIRenderableElement {
     self.size
   }
 
+  /// Above the content: the title bar's row when it is over the sidebar.
+  private var topInset: Float {
+    self.titleBarPlacement.atTop && TitleBarInsets.current.top > 0
+      ? TitleBarInsets.unifiedBarHeight : NavigationMetrics.sidebarVerticalInset
+  }
+
   private func contentProposal(_ height: Float?) -> ProposedSize {
     let inset = NavigationMetrics.sidebarInset
-    return ProposedSize(width: NavigationMetrics.sidebarWidth - 2 * inset, height: height.map { max($0 - 2 * inset, 0) })
+    let vertical = self.topInset + NavigationMetrics.sidebarVerticalInset
+    return ProposedSize(width: NavigationMetrics.sidebarWidth - 2 * inset, height: height.map { max($0 - vertical, 0) })
   }
 
   override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
     let height = proposal.height.flatMap { $0.isFinite ? $0 : nil }
     let content = self.child?.measure(self.contentProposal(height)) ?? .zero
-    return float2(NavigationMetrics.sidebarWidth, height ?? content.y + 2 * NavigationMetrics.sidebarInset)
+    let vertical = self.topInset + NavigationMetrics.sidebarVerticalInset
+    return float2(NavigationMetrics.sidebarWidth, height ?? content.y + vertical)
   }
 
   override func calcSize(_ proposal: ProposedSize) -> float2 {
@@ -226,7 +240,12 @@ final class NavigationSidebar : UIRenderableElement {
 
   override func calcPosition(_ position: float2) {
     self.position = position
-    self.child?.calcPosition(position + float2(repeating: NavigationMetrics.sidebarInset))
+    self.titleBarPlacement.settle(position.y, self.context)
+    let top = self.topInset
+    if top > NavigationMetrics.sidebarVerticalInset {
+      TitleBarInsets.addDragRegion(float4(position.x, position.y, self.size.x, top))
+    }
+    self.child?.calcPosition(position + float2(NavigationMetrics.sidebarInset, top))
   }
 
   override func render(_ renderer: Graphics2D, _ effect: EffectState) {
@@ -238,7 +257,7 @@ final class NavigationSidebar : UIRenderableElement {
     renderer.draw(square: Square(position: origin + size * 0.5, size: size, color: color))
     var line = NavigationMetrics.separatorColor
     line.w *= effect.opacity
-    renderer.draw(square: Square(position: origin + float2(size.x - 0.5, size.y * 0.5), size: float2(1, size.y), color: line))
+    renderer.draw(square: Square(position: origin + float2(size.x - 0.25, size.y * 0.5), size: float2(0.5, size.y), color: line))
   }
 }
 

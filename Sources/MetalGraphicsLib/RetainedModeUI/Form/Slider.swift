@@ -128,9 +128,9 @@ final class SliderTrack : FormGraphic {
     let knobOrigin = float2(knobX, centerY - knob * 0.5)
     renderer.draw(
       roundedRect: knobOrigin - 0.5 * scale, size: float2(repeating: knob + scale),
-      radii: float4(repeating: (knob + scale) * 0.5), color: float4(0, 0, 0, 0.18 * opacity)
+      radii: float4(repeating: (knob + scale) * 0.5), color: float4.shadow.withAlpha(0.8 * opacity)
     )
-    renderer.draw(roundedRect: knobOrigin, size: float2(repeating: knob), radii: float4(repeating: knob * 0.5), color: float4(1, 1, 1, opacity))
+    renderer.draw(roundedRect: knobOrigin, size: float2(repeating: knob), radii: float4(repeating: knob * 0.5), color: float4.controlKnob.withAlpha(opacity))
   }
 }
 

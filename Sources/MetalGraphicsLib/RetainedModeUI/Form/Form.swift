@@ -22,7 +22,13 @@ public final class Form : SingleChildElement {
     self.applyContent([
       Background(FormMetrics.groupedBackground) {
         ScrollView(.vertical) {
-          stack.padding(FormMetrics.formInset)
+          stack
+            .frame(maxWidth: FormMetrics.maxWidth)
+            .padding(Inset(
+              left: FormMetrics.formInset, top: FormMetrics.formTopInset,
+              right: FormMetrics.formInset, bottom: FormMetrics.formInset
+            ))
+            .frame(maxWidth: .infinity)
         }
       }
     ])

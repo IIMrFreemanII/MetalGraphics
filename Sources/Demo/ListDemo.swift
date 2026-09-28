@@ -33,8 +33,8 @@ final class RowView : SingleChildElement {
   }
 
   private static let labelFont = TextFont.system(size: 12)
-  private static let detailColor = float4(1, 1, 1, 0.8)
-  private static let badgeColor = float4(0, 0, 0, 0.35)
+  private static let detailColor: float4 = .accentForeground.withAlpha(0.8)
+  private static let badgeColor = float4(0, 0, 0, 0.35)  // design: darkens the row's own swatch, alike in both appearances
 
   // A row is a list and a branch at once: the badge and the detail line are `if`s inside it.
   @UIElementBuilder var body: [UIElement] {
@@ -124,11 +124,12 @@ final class ListDemo : SingleChildElement {
     ("leading", .leading), ("center", .center), ("trailing", .trailing),
   ]
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let buttonFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
-  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
-  private static let grey = float4(0.9, 0.9, 0.9, 1)
+  private static let buttonColor: float4 = .fill
+  private static let buttonShape = UIShape.rect(cornerRadius: 6)
+  private static let grey: float4 = .fill
 
   // Not state: only used to name new items, never read by `body`.
   private var nextItem = 4
@@ -150,65 +151,65 @@ final class ListDemo : SingleChildElement {
         HStack(spacing: 6) {
           Text("Append")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.append() }
           Text("Insert first")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.insert(at: 0) }
           Text("Insert middle")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.insert(at: self.items.count / 2) }
           Text("Remove first")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.removeItems(at: 0) }
           Text("Remove last")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.removeItems(at: self.items.count - 1) }
         }
         HStack(spacing: 6) {
           Text("Remove reds")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.removeItems(where: { $0.name.hasPrefix("red") }) }
           Text("Shuffle")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.replaceItems(self.items.shuffled()) }
           Text("Sort")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.replaceItems(self.items.sorted { $0.name < $1.name }) }
           Text("Reverse")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.replaceItems(self.items.reversed()) }
           Text("Clear")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.replaceItems([]) }
         }
 
@@ -223,15 +224,15 @@ final class ListDemo : SingleChildElement {
         HStack(spacing: 6) {
           Text("spacing: \(Int(Self.spacings[self.spacing]))")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.spacing = (self.spacing + 1) % Self.spacings.count }
           Text("alignment: \(Self.alignments[self.alignment].name)")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.alignment = (self.alignment + 1) % Self.alignments.count }
         }
         VList(

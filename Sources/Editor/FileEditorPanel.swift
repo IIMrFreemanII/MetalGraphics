@@ -8,7 +8,7 @@ import SwiftCodeModel
 /// One open file, in a tab: its text in an editor, a find bar over it when searching, and a
 /// status line under it.
 ///
-/// ⌘S saves it. A tab showing unsaved edits reads "● name", and closing it asks first. ⌘F finds
+/// ⌘S saves it. A tab showing unsaved edits has a dot after its name, and closing it asks first. ⌘F finds
 /// (⌘G, ⇧⌘G next and previous, Escape in the text closes the bar), ⌘L goes to a line. A Swift
 /// file is kept in sync with the language server: completions, hovers, ⌘-click and ⌃⌘J to a
 /// definition (`LanguageAssist`), and its diagnostics underlined with the build's. Moved to
@@ -17,13 +17,19 @@ import SwiftCodeModel
 @Component
 final class FileEditorPanel : SingleChildElement {
   private static let statusFont = TextFont.system(size: 11)
-  private static let statusColor = float4(0.42, 0.42, 0.45, 1)
-  private static let errorColor = float4(0.8, 0.2, 0.15, 1)
-  private static let barColor = float4(0.955, 0.955, 0.96, 1)
-  private static let popupColor = float4(0.985, 0.985, 0.99, 1)
-  private static let popupBorder = float4(0, 0, 0, 0.18)
-  private static let tooltipColor = float4(1, 0.99, 0.9, 1)
+  private static let statusColor: float4 = .secondaryLabel
+  private static let errorColor: float4 = .destructive
+  private static let barColor: float4 = .barOverContent
+  private static let popupShape = UIShape.rect(cornerRadius: 10)
+  private static let tooltipShape = UIShape.rect(cornerRadius: 8)
   private static let tooltipFont = TextFont.system(size: 12)
+  private static let findFont = TextFont.system(size: 12)
+  private static let toggleFont = TextFont.system(size: 11.5, weight: .semibold)
+  private static let toggleShape = UIShape.rect(cornerRadius: 5)
+  private static let toggleOn: float4 = .selection
+  private static let toggleOff: float4 = .clear
+  private static let detailFont = TextFont.system(size: 11)
+  private static let completionWidth: Float = 420
 
   let panel: DockPanel
   let file: FileBinding
@@ -57,6 +63,8 @@ final class FileEditorPanel : SingleChildElement {
   @State var completing: Bool = false
   @State var completionRows: [CompletionRow] = []
   @State var completionInset: Inset = Inset()
+  /// The selected completion's detail, under the list.
+  @State var completionDetail: String = ""
   @State var hovering: Bool = false
   @State var hoverText: String = ""
   @State var hoverInset: Inset = Inset()
@@ -101,6 +109,8 @@ final class FileEditorPanel : SingleChildElement {
       if let (rows, inset) = shown {
         self.completionRows = rows
         self.completionInset = inset
+        let detail = rows.first(where: \.isSelected).map(\.detail) ?? ""
+        if detail != self.completionDetail { self.completionDetail = detail }
         if !self.completing { self.completing = true }
       } else if self.completing {
         self.completing = false
@@ -129,31 +139,61 @@ final class FileEditorPanel : SingleChildElement {
   @UIElementBuilder var body: [UIElement] {
     VStack(alignment: .leading, spacing: 0) {
       if self.finding {
-        HStack(spacing: 6) {
-          TextField("Find", text: $query, prompt: "Find")
+        HStack(spacing: 8) {
+          TextField("", text: $query, prompt: "Find")
+            .leadingIcon(.magnifier)
             .focused(self.findFocused)
             .onSubmit { self.controller.findNext() }
-            .frame(width: 200)
+            .frame(width: 220)
           Text(self.matches)
-            .font(Self.statusFont)
+            .font(Self.detailFont)
             .foregroundColor(Self.statusColor)
-            .frame(width: 70, alignment: .leading)
-          Button("◀") { self.controller.findNext(forward: false) }
-          Button("▶") { self.controller.findNext() }
-          Button(self.caseSensitive ? "✓ Aa" : "Aa") { self.caseSensitive.toggle() }
-          Button(self.wholeWord ? "✓ Word" : "Word") { self.wholeWord.toggle() }
-          Button(self.regex ? "✓ .*" : ".*") { self.regex.toggle() }
-          TextField("Replace", text: $replacement, prompt: "Replace")
+            .lineLimit(1)
+            .frame(width: 72, alignment: .leading)
+          Button { self.controller.findNext(forward: false) } label: {
+            Image(icon: .chevronLeft)
+          }
+          .buttonStyle(.bordered)
+          Button { self.controller.findNext() } label: {
+            Image(icon: .chevronRight)
+          }
+          .buttonStyle(.bordered)
+          Button("Aa") { self.caseSensitive.toggle() }
+            .buttonStyle(self.caseSensitive ? .borderless : .plain)
+            .font(Self.toggleFont)
+            .padding(Inset(vertical: 3, horizontal: 8))
+            .background(self.caseSensitive ? Self.toggleOn : Self.toggleOff, in: Self.toggleShape)
+          Button("Word") { self.wholeWord.toggle() }
+            .buttonStyle(self.wholeWord ? .borderless : .plain)
+            .font(Self.toggleFont)
+            .padding(Inset(vertical: 3, horizontal: 8))
+            .background(self.wholeWord ? Self.toggleOn : Self.toggleOff, in: Self.toggleShape)
+          Button(".*") { self.regex.toggle() }
+            .buttonStyle(self.regex ? .borderless : .plain)
+            .font(Self.toggleFont)
+            .padding(Inset(vertical: 3, horizontal: 8))
+            .background(self.regex ? Self.toggleOn : Self.toggleOff, in: Self.toggleShape)
+          Rectangle(.separator)
+            .frame(width: 0.5, height: 18)
+          TextField("", text: $replacement, prompt: "Replace")
             .onSubmit { self.controller.replaceCurrent(with: self.replacement) }
             .frame(width: 160)
           Button("Replace") { self.controller.replaceCurrent(with: self.replacement) }
+            .buttonStyle(.bordered)
           Button("All") { self.controller.replaceAll(with: self.replacement) }
+            .buttonStyle(.bordered)
           Spacer()
           Button("Done") { self.closeFind() }
+            .buttonStyle(.borderless)
         }
-        .padding(Inset(vertical: 5, horizontal: 10))
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .font(Self.findFont)
+        .padding(Inset(horizontal: 12))
+        .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
         .background(Self.barColor)
+        .overlay(alignment: .bottom) {
+          Rectangle(.separator)
+            .frame(height: 0.5)
+        }
       }
       ZStack(alignment: .topLeading) {
         TextEditor(document: self.file.document)
@@ -174,12 +214,26 @@ final class FileEditorPanel : SingleChildElement {
           .onCommandClick { offset in self.assist?.goToDefinition(at: offset) }
           .frame(maxWidth: .infinity, maxHeight: .infinity)
         if self.completing {
-          VList(alignment: .leading, spacing: 0, items: self.completionRows) { [weak self] row in
-            CompletionRowView(row: row) { index in self?.assist?.accept(index) }
+          VStack(alignment: .leading, spacing: 0) {
+            VList(alignment: .leading, spacing: 0, items: self.completionRows) { [weak self] row in
+              CompletionRowView(row: row) { index in self?.assist?.accept(index) }
+            }
+            if !self.completionDetail.isEmpty {
+              Rectangle(.separator)
+                .frame(height: 0.5)
+                .padding(Inset(top: 4))
+              Text(self.completionDetail)
+                .font(Self.detailFont)
+                .foregroundColor(Self.statusColor)
+                .lineLimit(1)
+                .padding(Inset(left: 8, top: 6, right: 8, bottom: 2))
+            }
           }
-          .background(Self.popupColor)
-          .padding(1)
-          .background(Self.popupBorder)
+          .frame(width: Self.completionWidth)
+          .padding(5)
+          .glass(.menu, in: Self.popupShape)
+          .border(.separator, width: 0.5, in: Self.popupShape)
+          .shadow(color: .shadow, radius: 12, y: 6)
           .padding(self.completionInset)
         }
         if self.hovering {
@@ -187,9 +241,9 @@ final class FileEditorPanel : SingleChildElement {
             .font(Self.tooltipFont)
             .padding(Inset(vertical: 6, horizontal: 8))
             .frame(maxWidth: 420, alignment: .leading)
-            .background(Self.tooltipColor)
-            .padding(1)
-            .background(Self.popupBorder)
+            .glass(.tooltip, in: Self.tooltipShape)
+            .border(.separator, width: 0.5, in: Self.tooltipShape)
+            .shadow(color: .shadow, radius: 8, y: 4)
             .allowsHitTesting(false)
             .padding(self.hoverInset)
         }
@@ -208,9 +262,13 @@ final class FileEditorPanel : SingleChildElement {
           .font(Self.statusFont)
           .foregroundColor(Self.statusColor)
       }
-      .padding(Inset(vertical: 4, horizontal: 10))
-      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(Inset(horizontal: 12))
+      .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading)
       .background(Self.barColor)
+      .overlay(alignment: .top) {
+        Rectangle(.separator)
+          .frame(height: 0.5)
+      }
     }
     .onKeyPress(phases: .down) { press in self.key(press) }
     .sheet(isPresented: $goingToLine) {
@@ -361,10 +419,14 @@ final class FileEditorPanel : SingleChildElement {
     self.panel.close()
   }
 
-  /// "● name" while unsaved, written only when it flips.
+  /// The file's name, and a dot while unsaved, each written only when it changes. The tab's
+  /// icon follows the name (`IDE`'s file kind).
   private func showTitle() {
-    let title = self.file.isDirty ? "● \(self.file.name)" : self.file.name
+    let title = self.file.name
     if self.panel.title != title { self.panel.setTitle(title) }
+    if self.panel.space.layout.panels[self.panel.id]?.isEdited != self.file.isDirty {
+      self.panel.setEdited(self.file.isDirty)
+    }
   }
 
   private func showStatus(_ selection: EditorSelection) {

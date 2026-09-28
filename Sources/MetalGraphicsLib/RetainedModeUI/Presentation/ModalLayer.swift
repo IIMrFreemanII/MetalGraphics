@@ -38,9 +38,9 @@ final class ModalLayer : OverlayLayer {
       chrome = ScrollView(.vertical) { content }
         .clipShape(.rect(cornerRadius: radius))
         .background {
-          CardFill(cornerRadius: radius).shadow(color: float4(0, 0, 0, 0.28), radius: 18, y: 8)
+          CardFill(cornerRadius: radius, material: .sheet).shadow(color: .shadow, radius: 22, y: 10)
         }
-        .border(float4(0, 0, 0, 0.14), width: 0.5, in: .rect(cornerRadius: radius))
+        .border(.separator, width: 0.5, in: .rect(cornerRadius: radius))
       self.backdrop = TransitionElement(.opacity) { ModalBackdrop() }
     }
     let backdrop = self.backdrop

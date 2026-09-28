@@ -30,13 +30,14 @@ final class ConditionalDemo : SingleChildElement {
   ]
   private static let phases = ["idle", "loading", "error", "done"]
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let buttonFont = TextFont.system(size: 13)
   private static let labelFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
-  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
-  private static let grey = float4(0.9, 0.9, 0.9, 1)
-  private static let dim = float4(0.6, 0.6, 0.6, 1)
+  private static let buttonColor: float4 = .fill
+  private static let buttonShape = UIShape.rect(cornerRadius: 6)
+  private static let grey: float4 = .fill
+  private static let dim: float4 = .tertiaryLabel
 
   @State var showBanner: Bool = true
   @State var showText: Bool = true
@@ -61,9 +62,9 @@ final class ConditionalDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text("showBanner: \(self.showBanner)")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.showBanner.toggle() }
         VStack(alignment: .leading, spacing: 4) {
           if self.showBanner {
@@ -86,9 +87,9 @@ final class ConditionalDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text("showText: \(self.showText)")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.showText.toggle() }
         Frame(float2(160, 40), .leading) {
           if self.showText {
@@ -108,9 +109,9 @@ final class ConditionalDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text("phase: \(Self.phases[self.phase])")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.cyclePhase() }
         Frame(float2(220, 40), .leading) {
           if self.phase == 0 {
@@ -152,9 +153,9 @@ final class ConditionalDemo : SingleChildElement {
           Rectangle(Self.palette[5].color).frame(width: 22, height: 22).onTap { _ in self.select(5) }
           Text("Clear")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.selected = nil }
         }
         Frame(float2(220, 40), .leading) {
@@ -179,15 +180,15 @@ final class ConditionalDemo : SingleChildElement {
         HStack(spacing: 6) {
           Text("armed: \(self.armed)")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.armed.toggle() }
           Text("fuel: \(self.fuel)")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.fuel = (self.fuel + 1) % 5 }
         }
         Frame(float2(220, 40), .leading) {
@@ -215,15 +216,15 @@ final class ConditionalDemo : SingleChildElement {
         HStack(spacing: 6) {
           Text("outer: \(self.outer)")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.outer.toggle() }
           Text("inner: \(self.inner)")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.inner.toggle() }
         }
         Frame(float2(240, 60), .leading) {
@@ -265,15 +266,15 @@ final class ConditionalDemo : SingleChildElement {
         HStack(spacing: 6) {
           Text("visible: \(self.visible)")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.visible.toggle() }
           Text("+1")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.hits += 1 }
         }
         Frame(float2(240, 40), .leading) {
@@ -295,9 +296,9 @@ final class ConditionalDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text("isOn: \(self.isOn)")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.isOn.toggle() }
         HStack(spacing: 12) {
           Text(self.isOn ? "ON (setText)" : "OFF (setText)")
@@ -330,15 +331,15 @@ final class ConditionalDemo : SingleChildElement {
         HStack(spacing: 6) {
           Text("showMiddle: \(self.showMiddle)")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.showMiddle.toggle() }
           Text("size: \(Int(self.size))")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.stepSize() }
         }
         HStack(spacing: 6) {

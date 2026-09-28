@@ -342,7 +342,7 @@ public final class DockArea : MultiChildElement {
       } else {
         // Held where the tab was: the new group's first tab sits at the bar's inset.
         let tab = view.tabOrigin(panel) ?? view.position
-        let grab = float2(start.x - tab.x + DockMetrics.tabInset, start.y - view.position.y)
+        let grab = float2(start.x - tab.x + view.metrics.inset, start.y - view.barRect.min.y)
         self.undock(.panel(panel), from: view, grab: grab)
       }
     }

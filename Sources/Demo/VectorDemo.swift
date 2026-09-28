@@ -11,13 +11,14 @@ import ReactiveUI
 @Component
 final class VectorDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let buttonFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
-  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
-  private static let orange = float4(0.95, 0.5, 0.1, 1)
-  private static let track = float4(0.85, 0.85, 0.85, 1)
-  private static let venn = [float4(0.95, 0.3, 0.3, 1), float4(0.2, 0.7, 0.3, 1), float4(0.2, 0.45, 0.95, 1)]
+  private static let buttonColor: float4 = .fill
+  private static let buttonShape = UIShape.rect(cornerRadius: 6)
+  private static let orange: float4 = .hue(.orange)
+  private static let track: float4 = .fill
+  private static let venn: [float4] = [.hue(.red), .hue(.green), .hue(.blue)]
   // Same commands in the same order, so one morphs into the other.
   private static let play = "M8 5 L12.5 7.9 L12.5 16.1 L8 19 Z M12.5 7.9 L19 12 L19 12 L12.5 16.1 Z"
   private static let pause = "M7 5 L10.5 5 L10.5 19 L7 19 Z M13.5 5 L17 5 L17 19 L13.5 19 Z"
@@ -52,7 +53,7 @@ final class VectorDemo : SingleChildElement {
             .opacity(self.checked ? 1 : 0)
             .animation(Self.quick, value: self.checked)
           RoundedRectangle(origin: float2(3, 3), size: float2(18, 18), cornerRadius: self.checked ? 5 : 3)
-            .stroke(self.checked ? Self.venn[1] : .black, lineWidth: 1.5)
+            .stroke(self.checked ? Self.venn[1] : .secondaryLabel, lineWidth: 1.5)
             .animation(Self.quick, value: self.checked)
           Path(d: Self.check)
             .stroke(.white, lineWidth: 2.5)
@@ -65,7 +66,7 @@ final class VectorDemo : SingleChildElement {
 
         VectorCanvas(width: 24, height: 24) {
           Circle(center: float2(12, 12), radius: 11.5)
-            .fill(self.playing ? Self.orange : Self.buttonColor)
+            .fill(self.playing ? Self.orange : .secondaryLabel)
             .animation(Self.quick, value: self.playing)
           Path(d: self.playing ? Self.pause : Self.play)
             .fill(.white)
@@ -113,9 +114,9 @@ final class VectorDemo : SingleChildElement {
       HStack(spacing: 16) {
         Text(self.spinning ? "Stop" : "Spin")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.spinning.toggle() }
         VectorCanvas(width: 24, height: 24) {
           Circle(center: float2(12, 12), radius: 9)
@@ -178,9 +179,9 @@ final class VectorDemo : SingleChildElement {
       HStack(spacing: 8) {
         Text(self.stress ? "Hide stress test" : "Stress test: 200 cells")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.stress.toggle() }
         Text("each: a pulsing circle and a turning path (no bakes); each row: one wave (a bake a frame)")
           .font(Self.captionFont)

@@ -272,7 +272,7 @@ final class ScrollIndicator : UIRenderableElement {
   private static let thickness: Float = 5
   private static let inset: Float = 2
   private static let minLength: Float = 20
-  private static let color = float4(0, 0, 0, 0.45)
+  private static let color: float4 = .scrollIndicator
 
   init(_ scrollView: ScrollView) {
     self.scrollView = scrollView

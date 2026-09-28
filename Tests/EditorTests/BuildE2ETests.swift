@@ -139,10 +139,11 @@ final class BuildE2ETests: EditorAppTestCase {
     XCTAssertEqual(BuildModel.shared.state, .stopped)
     XCTAssertTrue(self.window.shows("Run stopped"))
 
-    try self.window.tap("Product ▾")
+    // The product button, titled with the one Run starts, picks the next.
+    try self.window.tap("App")
     self.app.step()
     XCTAssertEqual(BuildModel.shared.product, "Tool")
-    XCTAssertTrue(self.window.shows("Run Tool"))
+    XCTAssertTrue(self.window.shows("Tool"))
   }
 
   // MARK: - Changes on disk

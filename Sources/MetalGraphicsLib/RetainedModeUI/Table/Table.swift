@@ -28,7 +28,7 @@ public final class Table<T: Identifiable> : SingleChildElement {
   public var onSelectionChange: ((Set<T.ID>) -> Void)?
   public var onSortOrderChange: (([KeyPathComparator<T>]) -> Void)?
   /// Drawn behind selected rows.
-  public var selectionColor = float4(0.25, 0.5, 0.95, 0.3)
+  public var selectionColor: float4 = .selection
 
   public var items: [T] { self.rows.items }
 
@@ -92,7 +92,7 @@ public final class Table<T: Identifiable> : SingleChildElement {
     self.titles = self.columns.indices.map { index in
       Text(self.title(index))
         .font(TableMetrics.headerFont)
-        .foregroundColor(.black)
+        .foregroundColor(.secondaryLabel)
     }
     let titleCells = self.columns.indices.map { index in
       TableCell(alignment: self.columns[index].alignment, content: self.titles[index])

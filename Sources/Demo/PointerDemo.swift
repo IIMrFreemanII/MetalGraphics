@@ -7,10 +7,11 @@ import ReactiveUI
 @Component
 final class PointerDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
-  private static let chipColor = float4(0.9, 0.9, 0.92, 1)
+  private static let captionColor: float4 = .secondaryLabel
+  private static let chipColor: float4 = .fill
+  private static let chipShape: UIShape = .rect(cornerRadius: 6)
   private static let chipInset = Inset(vertical: 6, horizontal: 10)
-  private static let accent = float4(0.2, 0.4, 0.9, 1)
+  private static let accent: float4 = .accent
 
   @State var cardOffset: float2 = .zero
   @State var cardRest: float2 = .zero
@@ -29,17 +30,17 @@ final class PointerDemo : SingleChildElement {
           .font(Self.captionFont)
           .foregroundColor(Self.captionColor)
         HStack(spacing: 6) {
-          Text("link").padding(Self.chipInset).background(Self.chipColor).pointerStyle(.link)
-          Text("text").padding(Self.chipInset).background(Self.chipColor).pointerStyle(.horizontalText)
-          Text("crosshair").padding(Self.chipInset).background(Self.chipColor).pointerStyle(.rectSelection)
-          Text("grab").padding(Self.chipInset).background(Self.chipColor).pointerStyle(.grabIdle)
+          Text("link").padding(Self.chipInset).background(Self.chipColor, in: Self.chipShape).pointerStyle(.link)
+          Text("text").padding(Self.chipInset).background(Self.chipColor, in: Self.chipShape).pointerStyle(.horizontalText)
+          Text("crosshair").padding(Self.chipInset).background(Self.chipColor, in: Self.chipShape).pointerStyle(.rectSelection)
+          Text("grab").padding(Self.chipInset).background(Self.chipColor, in: Self.chipShape).pointerStyle(.grabIdle)
         }
         HStack(spacing: 6) {
-          Text("columns").padding(Self.chipInset).background(Self.chipColor).pointerStyle(.columnResize)
-          Text("rows").padding(Self.chipInset).background(Self.chipColor).pointerStyle(.rowResize)
-          Text("corner").padding(Self.chipInset).background(Self.chipColor)
+          Text("columns").padding(Self.chipInset).background(Self.chipColor, in: Self.chipShape).pointerStyle(.columnResize)
+          Text("rows").padding(Self.chipInset).background(Self.chipColor, in: Self.chipShape).pointerStyle(.rowResize)
+          Text("corner").padding(Self.chipInset).background(Self.chipColor, in: Self.chipShape)
             .pointerStyle(.frameResize(position: .bottomTrailing))
-          Text("zoom").padding(Self.chipInset).background(Self.chipColor).pointerStyle(.zoomIn)
+          Text("zoom").padding(Self.chipInset).background(Self.chipColor, in: Self.chipShape).pointerStyle(.zoomIn)
         }
 
         Text("Drag gesture")
@@ -47,9 +48,9 @@ final class PointerDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Frame(float2(300, 140), .topLeading) {
           Text(self.dragging ? "Dragging" : "Drag me")
-            .foregroundColor(.white)
+            .foregroundColor(.accentForeground)
             .padding(Inset(vertical: 20, horizontal: 24))
-            .background(Self.accent)
+            .background(Self.accent, in: Self.chipShape)
             .offset(self.cardOffset)
             .gesture(
               DragGesture(minimumDistance: 2, coordinateSpace: .global)
@@ -65,18 +66,18 @@ final class PointerDemo : SingleChildElement {
             )
             .pointerStyle(self.dragging ? .grabActive : .grabIdle)
         }
-        .background(Self.chipColor)
+        .background(Self.chipColor, in: Self.chipShape)
 
         Text("Tap gestures")
           .font(Self.captionFont)
           .foregroundColor(Self.captionColor)
         Text("Double-clicked \(self.doubleTaps) times")
           .padding(Self.chipInset)
-          .background(Self.chipColor)
+          .background(Self.chipColor, in: Self.chipShape)
           .onTapGesture(count: 2) { self.doubleTaps += 1 }
         Text("Tapped at \(self.tapLocation)")
           .padding(Self.chipInset)
-          .background(Self.chipColor)
+          .background(Self.chipColor, in: Self.chipShape)
           .onTapGesture { location in self.tapLocation = "\(Int(location.x)), \(Int(location.y))" }
       }
 
@@ -85,9 +86,10 @@ final class PointerDemo : SingleChildElement {
           .font(Self.captionFont)
           .foregroundColor(Self.captionColor)
         ZStack(alignment: .topLeading) {
-          Rectangle(Self.chipColor)
+          Rectangle(.clear)
             .frame(width: 240, height: 140)
-          Rectangle(.red)
+            .background(Self.chipColor, in: Self.chipShape)
+          Rectangle(.destructive)
             .frame(width: 8, height: 8)
             .offset(self.hoverPoint - float2(4, 4))
             .opacity(self.hovering ? 1 : 0)
@@ -111,7 +113,7 @@ final class PointerDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         ZStack {
           Button("Tapped \(self.underTaps) times through the overlay") { self.underTaps += 1 }
-          Rectangle(float4(0.2, 0.4, 0.9, 0.15))
+          Rectangle(.selection)
             .frame(width: 280, height: 36)
             .allowsHitTesting(false)
         }
