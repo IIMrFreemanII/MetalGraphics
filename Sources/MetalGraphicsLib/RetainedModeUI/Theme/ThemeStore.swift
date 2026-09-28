@@ -37,6 +37,11 @@ public final class ThemeStore: @unchecked Sendable {
     }
   }
 
+  /// The theme for `appearance`, whichever is showing: what a `.colorScheme(_:)` scope draws with.
+  public func theme(for appearance: Appearance) -> Theme {
+    self.lock.withLock { appearance == .dark ? self.darkTheme : self.lightTheme }
+  }
+
   /// What the system appearance is now. Called by `AppearanceObserver` on the main thread.
   public func setSystemAppearance(_ appearance: Appearance) {
     self.update { $0.systemAppearance = appearance }

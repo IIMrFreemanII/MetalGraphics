@@ -2,12 +2,6 @@ import Foundation
 import MetalGraphicsLib
 import ReactiveUI
 
-enum Theme: Hashable {
-  case system
-  case light
-  case dark
-}
-
 struct AudioSettings {
   var volume: Double = 0.6
   var muted: Bool = false
@@ -23,7 +17,8 @@ struct AudioSettings {
 // - "Reset" is disabled until something changed.
 // - The first rows sit straight in the form, outside any section: they get a card of their own.
 // - "Account" has view-valued header and footer; the footer's warning is a branch.
-// - Pickers default to a menu; Difficulty is segmented, Theme a menu.
+// - Pickers default to a menu; Difficulty is segmented, Theme a menu. Theme is the app's: it
+//   sets `ThemeStore.shared.appearanceOverride`, so every window follows it.
 // - Dates open a calendar or time steppers in a popover; Start shows the calendar inline.
 // - The tint opens a colour popover; the preview row follows it.
 // - "Buttons" shows each button style, and a button with a view label whose text and style follow
@@ -38,7 +33,6 @@ final class FormDemo : SingleChildElement {
   @State var submitted: String = "nothing yet"
   @State var online: Bool = true
   @State var difficulty: Int = 1
-  @State var theme: Theme = .system
   @State var audio: AudioSettings = AudioSettings()
   @State var lives: Int = 3
   @State var advanced: Bool = false
@@ -50,6 +44,7 @@ final class FormDemo : SingleChildElement {
   @State var tint: float4 = float4(0.0, 0.48, 1.0, 1)  // design: a ColorPicker edits a plain colour
   @State var taps: Int = 0
   @State var prominent: Bool = false
+  @Bindable let themes: ThemeStore = .shared
 
   @UIElementBuilder var body: [UIElement] {
     Form {
@@ -76,10 +71,10 @@ final class FormDemo : SingleChildElement {
         }
         .pickerStyle(.segmented)
         Stepper("Lives: \(self.lives)", value: $lives, in: 1 ... 9)
-        Picker("Theme", selection: $theme) {
-          Text("System").tag(Theme.system)
-          Text("Light").tag(Theme.light)
-          Text("Dark").tag(Theme.dark)
+        Picker("Theme", selection: $themes.appearanceOverride) {
+          Text("System").tag(Appearance?.none)
+          Text("Light").tag(Optional(Appearance.light))
+          Text("Dark").tag(Optional(Appearance.dark))
         }
       }
       Section("Schedule") {
