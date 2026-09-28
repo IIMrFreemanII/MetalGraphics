@@ -31,8 +31,8 @@ final class NavigationTests: XCTestCase {
     return true
   }
 
-  private func bar(_ h: UIHarness) -> NavigationBar {
-    h.first(NavigationBar.self)!
+  private func bar(_ h: UIHarness) -> StackNavigationBar {
+    h.first(StackNavigationBar.self)!
   }
 
   // MARK: - Parent pointers

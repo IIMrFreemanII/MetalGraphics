@@ -121,6 +121,51 @@ final class DesignComponentsTests: XCTestCase {
     XCTAssertLessThan(plain.getSize().x, chevrons.getSize().x, "no ⌃⌄ tile")
   }
 
+  // MARK: - Navigation
+
+  func testAPagesToolbarItemsShowInItsBarAndTap() {
+    var taps = 0
+    let h = UIHarness(size: float2(480, 200)) {
+      NavigationStack {
+        Text("Page")
+          .navigationTitle("Stories")
+          .toolbar {
+            Button("Canvas") {}
+          } trailing: {
+            Button("Reset") { taps += 1 }
+          }
+      }
+    }
+    h.settle()
+    let bar = try! XCTUnwrap(h.first(StackNavigationBar.self))
+    let reset = try! XCTUnwrap(h.all(Text.self).first { $0.text == "Reset" })
+    let canvas = try! XCTUnwrap(h.all(Text.self).first { $0.text == "Canvas" })
+    let title = try! XCTUnwrap(h.all(Text.self).first { $0.text == "Stories" })
+    XCTAssertLessThan(reset.position.y, bar.size.y, "in the bar")
+    XCTAssertGreaterThan(reset.position.x, title.position.x + title.size.x)
+    XCTAssertLessThan(canvas.position.x, title.position.x)
+    h.click(at: reset.position + reset.size * 0.5)
+    XCTAssertEqual(taps, 1)
+  }
+
+  func testSidebarAndNavigationBarInPlace() {
+    let link = SidebarLink("Form", icon: .document, selected: true)
+    let h = UIHarness(size: float2(480, 300)) {
+      HStack(alignment: .top, spacing: 0) {
+        Sidebar(title: "Demos") {
+          SidebarLink("Text")
+          link
+        }
+        .frame(height: 300)
+        NavigationBar("Form", back: "Demos") {} trailing: { Button("Done") {} }
+      }
+    }
+    h.settle()
+    XCTAssertEqual(h.first(Sidebar.self)?.getSize().x, NavigationMetrics.sidebarWidth)
+    XCTAssertTrue(h.all(Text.self).contains { $0.text == "‹ Demos" })
+    XCTAssertEqual(link.getSize().y, NavigationMetrics.sidebarRowHeight)
+  }
+
   // MARK: - Looks
 
   private func gallery() -> UIElement {

@@ -40,7 +40,7 @@ final class FormLooksTests: AppTestCase {
   }
 
   func testSidebar() throws {
-    try self.assertLooks({ self.main.all(NavigationSidebar.self).first { $0.mounted } }, named: "sidebar")
+    try self.assertLooks({ self.main.all(Sidebar.self).first { $0.mounted } }, named: "sidebar")
   }
 
   func testForm() throws {

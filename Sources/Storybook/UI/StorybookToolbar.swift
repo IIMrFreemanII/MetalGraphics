@@ -1,14 +1,9 @@
 import MetalGraphicsLib
 import ReactiveUI
 
-/// Above the canvas: Canvas or Docs, the appearance, the background, the width, the zoom, the
-/// layout outline, and Reset. Each is bound to the model; the canvas keeps them in the window's
-/// storage.
+/// The toolbar's leading items, in the detail column's bar: Canvas or Docs, and the appearance.
 @Component
-final class StorybookToolbar : SingleChildElement {
-  static let height: Float = 38
-  static let captionFont = TextFont.system(size: 11)
-
+final class StorybookToolbarLeading : SingleChildElement {
   @Bindable let model: StorybookModel = .shared
 
   @UIElementBuilder var body: [UIElement] {
@@ -25,7 +20,18 @@ final class StorybookToolbar : SingleChildElement {
         Text("Both").tag(CanvasAppearance.sideBySide)
       }
       .pickerStyle(.segmented)
-      Spacer()
+    }
+  }
+}
+
+/// The toolbar's trailing items: the background, the width, the zoom, the layout outline, and
+/// Reset. Each is bound to the model; the canvas keeps them in the window's storage.
+@Component
+final class StorybookToolbarTrailing : SingleChildElement {
+  @Bindable let model: StorybookModel = .shared
+
+  @UIElementBuilder var body: [UIElement] {
+    HStack(spacing: 10) {
       Picker("", selection: $model.background) {
         Text("Content").tag(CanvasBackground.content)
         Text("Grouped").tag(CanvasBackground.grouped)
@@ -52,13 +58,6 @@ final class StorybookToolbar : SingleChildElement {
       ToggleChip("Outline", isOn: $model.outline)
       Button("Reset") { self.model.resetArgs(in: StoryRegistry.catalog()) }
         .buttonStyle(.bordered)
-    }
-    .padding(Inset(horizontal: 12))
-    .frame(maxWidth: .infinity, minHeight: StorybookToolbar.height, alignment: .leading)
-    .background(.barOverContent)
-    .overlay(alignment: .bottom) {
-      Rectangle(.separator)
-        .frame(height: 0.5)
     }
   }
 }

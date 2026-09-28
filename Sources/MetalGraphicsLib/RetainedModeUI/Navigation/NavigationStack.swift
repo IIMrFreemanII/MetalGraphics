@@ -31,7 +31,7 @@ public final class NavigationStack : NavigationHost {
 
   private let rootContent: VStack
   private let pages: NavigationPages
-  private let bar: NavigationBar
+  private let bar: StackNavigationBar
 
   /// How many pages are pushed over the root.
   public var depth: Int { self.pages.entries.count - 1 }
@@ -62,7 +62,7 @@ public final class NavigationStack : NavigationHost {
     self.ownsPath = ownsPath
     self.values = values
     self.rootContent = VStack(spacing: 0, content: root)
-    self.bar = NavigationBar()
+    self.bar = StackNavigationBar()
     self.pages = NavigationPages()
     let column = NavigationColumn(pages: self.pages, bar: self.bar)
     let keys = KeyPressElement(phases: [.down], action: nil) { column }
@@ -232,6 +232,8 @@ public final class NavigationStack : NavigationHost {
     let entries = self.pages.entries
     let previous = entries.count >= 2 ? entries[entries.count - 2].title : nil
     self.bar.show(title: entries.last?.title ?? "", back: previous, context)
+    let toolbar = entries.last?.toolbarSource
+    self.bar.setItems(leading: toolbar?.leading ?? [], trailing: toolbar?.trailing ?? [], context)
   }
 }
 
@@ -247,6 +249,8 @@ final class NavigationEntry : UIRenderableElement {
   private(set) var isResolved: Bool
   private weak var stack: NavigationStack?
   private weak var titleSource: NavigationTitleElement?
+  /// What the bar shows beside the title while this page is on top.
+  private(set) weak var toolbarSource: NavigationToolbarElement?
   /// What it is drawn on, when a `NavigationBackgroundElement` in it says.
   var background: float4?
 
@@ -291,6 +295,17 @@ final class NavigationEntry : UIRenderableElement {
 
   func titleChanged(_ source: NavigationTitleElement) {
     guard self.titleSource === source else { return }
+    self.stack?.titleChanged(self)
+  }
+
+  func adoptToolbar(_ source: NavigationToolbarElement) {
+    self.toolbarSource = source
+    self.stack?.titleChanged(self)
+  }
+
+  func dropToolbar(_ source: NavigationToolbarElement) {
+    guard self.toolbarSource === source else { return }
+    self.toolbarSource = nil
     self.stack?.titleChanged(self)
   }
 
@@ -530,7 +545,7 @@ final class NavigationPages : UIElement {
 
 /// The bar over a stack's pages: the top page's title, centred, and a back button titled after
 /// the page under it.
-final class NavigationBar : UIRenderableElement {
+final class StackNavigationBar : UIRenderableElement {
   let back: Button
   let title: Text
 
@@ -543,6 +558,12 @@ final class NavigationBar : UIRenderableElement {
   /// Whether it shares the title bar's row: it keeps clear of the traffic lights, and its empty
   /// parts drag the window.
   var inTitleBar = false
+  /// The top page's toolbar items: after the back button, and at the trailing edge.
+  private var leadingItems: [UIElement] = []
+  private var trailingItems: [UIElement] = []
+  private var leadingSizes: [float2] = []
+  private var trailingSizes: [float2] = []
+  private static let itemSpacing: Float = 8
 
   private static let inset: Float = 10
 
@@ -574,6 +595,37 @@ final class NavigationBar : UIRenderableElement {
   override func forEachChild(_ body: (UIElement) -> Void) {
     body(self.back)
     body(self.title)
+    self.leadingItems.forEach(body)
+    self.trailingItems.forEach(body)
+  }
+
+  /// Shows `leading` and `trailing` beside the title: a page's `.toolbar`. Mounted here, while
+  /// their page is on top.
+  func setItems(leading: [UIElement], trailing: [UIElement], _ context: UIContext) {
+    let old = self.leadingItems + self.trailingItems
+    let new = leading + trailing
+    guard old.count != new.count || zip(old, new).contains(where: { $0 !== $1 }) else { return }
+    let kept = Set(new.map(ObjectIdentifier.init))
+    for item in old where !kept.contains(ObjectIdentifier(item)) {
+      item.handleUnmount(context)
+    }
+    self.leadingItems = leading
+    self.trailingItems = trailing
+    if self.mounted {
+      for item in new { item.handleMount(context, in: self) }
+    }
+    context.invalidate([.layout, .treeOrder])
+  }
+
+  /// The items' extent from each edge, with the back button's.
+  private var leadingExtent: Float {
+    var x = self.back.isHidden ? 0 : self.backSize.x + Self.itemSpacing
+    for size in self.leadingSizes { x += size.x + Self.itemSpacing }
+    return x
+  }
+
+  private var trailingExtent: Float {
+    self.trailingSizes.reduce(0) { $0 + $1.x + Self.itemSpacing }
   }
 
   override func mount(_ context: UIContext) {
@@ -598,8 +650,11 @@ final class NavigationBar : UIRenderableElement {
   override func calcSize(_ proposal: ProposedSize) -> float2 {
     self.size = self.sizeThatFits(proposal)
     self.backSize = self.back.calcSize(.unspecified)
-    // Centred in the bar, so it keeps clear of the back button on both sides.
-    let side = self.back.isHidden ? Self.inset : self.backSize.x + 2 * Self.inset
+    self.leadingSizes = self.leadingItems.map { $0.calcSize(.unspecified) }
+    self.trailingSizes = self.trailingItems.map { $0.calcSize(.unspecified) }
+    // Centred in the bar, so it keeps clear of the back button and the items on both sides.
+    let side = max(self.back.isHidden ? Self.inset : self.backSize.x + 2 * Self.inset,
+                   self.leadingExtent + Self.inset, self.trailingExtent + Self.inset)
     let room = max(self.size.x - 2 * side, 0)
     self.titleSize = self.title.calcSize(ProposedSize(width: room, height: self.size.y))
     return self.size
@@ -610,9 +665,21 @@ final class NavigationBar : UIRenderableElement {
     let leading = self.leading
     self.back.calcPosition(position + float2(leading, ((self.size.y - self.backSize.y) * 0.5).rounded()))
     self.title.calcPosition(position + ((self.size - self.titleSize) * 0.5).rounded(.toNearestOrAwayFromZero))
+    var x = leading + (self.back.isHidden ? 0 : self.backSize.x + Self.itemSpacing)
+    for (item, size) in zip(self.leadingItems, self.leadingSizes) {
+      item.calcPosition(position + float2(x, ((self.size.y - size.y) * 0.5).rounded()))
+      x += size.x + Self.itemSpacing
+    }
+    var end = self.size.x - Self.inset
+    for (item, size) in zip(self.trailingItems, self.trailingSizes).reversed() {
+      end -= size.x
+      item.calcPosition(position + float2(end, ((self.size.y - size.y) * 0.5).rounded()))
+      end -= Self.itemSpacing
+    }
     if self.inTitleBar {
-      let start = self.back.isHidden ? 0 : leading + self.backSize.x
-      TitleBarInsets.addDragRegion(float4(position.x + start, position.y, self.size.x - start, self.size.y))
+      let start = self.leadingItems.isEmpty ? (self.back.isHidden ? 0 : leading + self.backSize.x) : x
+      let stop = self.trailingItems.isEmpty ? self.size.x : end
+      TitleBarInsets.addDragRegion(float4(position.x + start, position.y, max(stop - start, 0), self.size.y))
     }
   }
 
@@ -634,7 +701,7 @@ final class NavigationBar : UIRenderableElement {
 /// it takes the top page's.
 final class NavigationColumn : UIElement {
   private let pages: NavigationPages
-  private let bar: NavigationBar
+  private let bar: StackNavigationBar
   private(set) var size: float2 = .zero
   private var titleBarPlacement = TitleBarPlacement()
   private weak var context: UIContext?
@@ -652,7 +719,7 @@ final class NavigationColumn : UIElement {
     self.titleBarPlacement.atTop && TitleBarInsets.current.top > 0 ? TitleBarInsets.unifiedBarHeight : NavigationMetrics.barHeight
   }
 
-  init(pages: NavigationPages, bar: NavigationBar) {
+  init(pages: NavigationPages, bar: StackNavigationBar) {
     self.pages = pages
     self.bar = bar
     super.init()

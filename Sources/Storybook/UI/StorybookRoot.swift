@@ -7,24 +7,40 @@ import simd
 ///
 /// Built by hand rather than as a `@Component`: its parts are made from stories, which a body
 /// cannot hold.
-final class StorybookRoot : SingleChildElement {
+final class StorybookRoot : ModelWatcher {
+  private let title: NavigationTitleElement
+
+  override var watched: [String] { ["selection"] }
+
   init(scene: WindowScene) {
     let model = StorybookModel.shared
     model.restore(from: scene.storage, catalog: StoryRegistry.catalog())
-    super.init()
     let search = TextField("", text: Binding(get: { model.search }, set: { model.search = $0 }), prompt: "Search")
       .leadingIcon(.magnifier)
+    // The toolbar shares the detail column's bar, in the title bar's row, the story's name
+    // between its items.
+    let title = DockArea(StorybookDock.space, host: StorybookDock.host)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .navigationTitle(Self.title(model.selection))
+    self.title = title
+    super.init()
     self.child = NavigationSplitView {
-        SidebarTitle("Storybook")
-        search.padding(Inset(left: 4, top: 0, right: 4, bottom: 8))
-        SidebarList()
-      } detail: {
-        VStack(spacing: 0) {
-          StorybookToolbar()
-          DockArea(StorybookDock.space, host: StorybookDock.host)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+      SidebarTitle("Storybook")
+      search.padding(Inset(left: 4, top: 0, right: 4, bottom: 8))
+      SidebarList()
+    } detail: {
+      title.toolbar {
+        StorybookToolbarLeading()
+      } trailing: {
+        StorybookToolbarTrailing()
       }
+    }
+  }
+
+  static func title(_ id: StoryID) -> String { "\(id.component) — \(id.story)" }
+
+  override func update(_ token: Int, _ context: UIContext) {
+    self.title.setTitle(Self.title(self.model.selection), context)
   }
 }
 

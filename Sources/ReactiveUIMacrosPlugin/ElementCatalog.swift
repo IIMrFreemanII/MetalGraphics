@@ -484,6 +484,12 @@ enum ElementCatalog {
       arity: .leaf
     ),
     "MenuSeparator": TypeSpec(name: "MenuSeparator", args: [], arity: .leaf),
+    "SidebarLink": TypeSpec(
+      name: "SidebarLink",
+      args: [ArgSpec(nil, "setTitle", animatable: true), ArgSpec("icon", nil), ArgSpec("selected", "setSelected", animatable: true),
+             ArgSpec("action", nil, handler: HandlerSpec(property: "action", placeholder: ""))],
+      arity: .leaf
+    ),
     "InsertionLine": TypeSpec(name: "InsertionLine", args: [ArgSpec("indent", "setIndent", animatable: true)], arity: .leaf),
     "ScrollIndicator": TypeSpec(
       name: "ScrollIndicator", args: [ArgSpec("length", "setLength", animatable: true), ArgSpec("vertical", nil)], arity: .leaf

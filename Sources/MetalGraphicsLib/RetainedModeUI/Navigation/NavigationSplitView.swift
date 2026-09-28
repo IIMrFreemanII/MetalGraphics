@@ -78,7 +78,7 @@ public final class NavigationSplitView : NavigationHost {
     self.sidebarContent = VStack(alignment: .leading, spacing: 2, content: sidebar)
     let placeholder = self.placeholder
     self.detailStack = NavigationStack { return placeholder }
-    let column = NavigationSidebar(content: self.sidebarContent)
+    let column = Sidebar(content: self.sidebarContent)
     super.init()
     self.applyContent([NavigationSplitLayout(sidebar: column, detail: self.detailStack)])
     self.detailStack.outerHost = self
@@ -185,10 +185,15 @@ public final class NavigationSplitView : NavigationHost {
   }
 }
 
-/// The sidebar column: a fixed width, its own background and an edge, content top-leading.
-/// Under a translucent window's title bar it runs to the window's top, with the traffic lights on
-/// it and its content below them.
-final class NavigationSidebar : UIRenderableElement {
+/// The sidebar column: 232 wide, the sidebar tint and a hairline at its trailing edge, content
+/// top-leading, inset 10. Under a translucent window's title bar it runs to the window's top,
+/// with the traffic lights on it and its content below them. What `NavigationSplitView` puts its
+/// sidebar in; on its own, a sidebar for a layout of an app's own.
+///
+///     Sidebar(title: "Demos") {
+///       SidebarLink("Form", selected: true) { … }
+///     }
+public final class Sidebar : UIRenderableElement {
   private(set) var position: float2 = .zero
   private(set) var size: float2 = .zero
   private var titleBarPlacement = TitleBarPlacement()
@@ -199,17 +204,24 @@ final class NavigationSidebar : UIRenderableElement {
     self.applyContent([content])
   }
 
-  override func mount(_ context: UIContext) {
+  /// A sidebar with `title` over its content, as `SidebarTitle` draws it.
+  public convenience init(title: String? = nil, @UIElementBuilder content: () -> [UIElement] = { [] }) {
+    let column = VStack(alignment: .leading, spacing: 0)
+    column.applyContent((title.map { [SidebarTitle($0) as UIElement] } ?? []) + content())
+    self.init(content: column)
+  }
+
+  public override func mount(_ context: UIContext) {
     self.context = context
     context.registerRenderableView(self)
   }
 
-  override func unmount(_ context: UIContext) {
+  public override func unmount(_ context: UIContext) {
     self.context = nil
     context.unregisterRenderableView(self)
   }
 
-  override func getSize() -> float2 {
+  public override func getSize() -> float2 {
     self.size
   }
 
@@ -225,20 +237,20 @@ final class NavigationSidebar : UIRenderableElement {
     return ProposedSize(width: NavigationMetrics.sidebarWidth - 2 * inset, height: height.map { max($0 - vertical, 0) })
   }
 
-  override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
+  public override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
     let height = proposal.height.flatMap { $0.isFinite ? $0 : nil }
     let content = self.child?.measure(self.contentProposal(height)) ?? .zero
     let vertical = self.topInset + NavigationMetrics.sidebarVerticalInset
     return float2(NavigationMetrics.sidebarWidth, height ?? content.y + vertical)
   }
 
-  override func calcSize(_ proposal: ProposedSize) -> float2 {
+  public override func calcSize(_ proposal: ProposedSize) -> float2 {
     self.size = self.sizeThatFits(proposal)
     _ = self.child?.calcSize(self.contentProposal(self.size.y))
     return self.size
   }
 
-  override func calcPosition(_ position: float2) {
+  public override func calcPosition(_ position: float2) {
     self.position = position
     self.titleBarPlacement.settle(position.y, self.context)
     let top = self.topInset
@@ -248,7 +260,7 @@ final class NavigationSidebar : UIRenderableElement {
     self.child?.calcPosition(position + float2(NavigationMetrics.sidebarInset, top))
   }
 
-  override func render(_ renderer: Graphics2D, _ effect: EffectState) {
+  public override func render(_ renderer: Graphics2D, _ effect: EffectState) {
     guard effect.opacity > 0 else { return }
     let size = self.size * effect.scale
     let origin = effect.apply(to: self.position) - renderer.size * 0.5
@@ -263,11 +275,11 @@ final class NavigationSidebar : UIRenderableElement {
 
 /// The sidebar at its width, the detail column in the rest.
 final class NavigationSplitLayout : UIElement {
-  private let sidebar: NavigationSidebar
+  private let sidebar: Sidebar
   private let detail: NavigationStack
   private(set) var size: float2 = .zero
 
-  init(sidebar: NavigationSidebar, detail: NavigationStack) {
+  init(sidebar: Sidebar, detail: NavigationStack) {
     self.sidebar = sidebar
     self.detail = detail
     super.init()

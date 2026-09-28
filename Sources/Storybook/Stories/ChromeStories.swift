@@ -186,7 +186,84 @@ enum SurfaceStories {
 }
 
 enum NavigationStories {
-  static let all: [ComponentStories] = [sidebarTitle, splitView]
+  static let all: [ComponentStories] = [sidebar, sidebarTitle, sidebarLink, navigationBar, splitView, toolbar]
+
+  static let sidebar = ComponentStories(
+    .navigation, "Sidebar", summary: "The sidebar column: 232 wide on the sidebar tint with a hairline, a title and links.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Navigation/NavigationSplitView.swift",
+    args: [
+      ArgType("title", .text, .text("Demos"), "Its title."),
+      ArgType("selection", .options(["Text", "Form", "Docking"]), .option("Form"), "The selected link: a binding."),
+    ],
+    stories: [Story("Links", layout: .padded)],
+    render: { args, context in
+      let links: [UIElement] = ["Text", "Form", "Docking"].map { name in
+        SidebarLink(name, icon: .document, selected: args.option("selection") == name) { context.option("selection").wrappedValue = name }
+      }
+      return Sidebar(title: args.string("title"), content: { () -> [UIElement] in return links }).frame(height: 240)
+    },
+    snippet: { args in "Sidebar(title: \(swiftString(args.string("title")))) {\n  SidebarLink(\"Form\", icon: .document, selected: page == .form) { page = .form }\n}" }
+  )
+
+  static let sidebarLink = ComponentStories(
+    .navigation, "SidebarLink", summary: "A sidebar's link: 26 tall, a glyph before its title, the selection's highlight.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Navigation/Sidebar.swift",
+    args: [
+      ArgType("title", .text, .text("Form"), "Its title."),
+      ArgType("icon", .options(["none"] + iconNames), .option("document"), "A glyph before it."),
+      ArgType("selected", .bool, .bool(true), "Highlighted."),
+    ],
+    stories: [Story("Selected"), Story("Plain", ["selected": .bool(false), "icon": .option("none")])],
+    render: { args, context in
+      SidebarLink(
+        args.string("title"), icon: ThemeIcon.allCases.first { "\($0)" == args.option("icon") }, selected: args.bool("selected"),
+        action: context.action("tapped")
+      )
+      .frame(width: NavigationMetrics.sidebarWidth - 2 * NavigationMetrics.sidebarInset)
+    },
+    snippet: { args in "SidebarLink(\(swiftString(args.string("title")))\(args.option("icon") == "none" ? "" : ", icon: .\(args.option("icon"))"), selected: \(args.bool("selected"))) { open() }" }
+  )
+
+  static let navigationBar = ComponentStories(
+    .navigation, "NavigationBar", summary: "A stack's bar: 38 tall, the title centred, a back button and toolbar items at the edges.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Navigation/Sidebar.swift",
+    args: [
+      ArgType("title", .text, .text("Routes"), "Its title."),
+      ArgType("back", .text, .text("Demos"), "The page under it; empty for none."),
+      ArgType("trailing", .bool, .bool(true), "An item at the trailing edge."),
+    ],
+    stories: [Story("With back", layout: .padded)],
+    render: { args, context in
+      NavigationBar(args.string("title"), back: args.string("back").isEmpty ? nil : args.string("back"), leading: { () -> [UIElement] in
+        return []
+      }, trailing: { () -> [UIElement] in
+        return args.bool("trailing") ? [Button("Add", action: context.action("add"))] : []
+      })
+      .frame(width: 520)
+    },
+    snippet: { args in "Text(\"…\")\n  .navigationTitle(\(swiftString(args.string("title"))))\n  .toolbar(trailing: { Button(\"Add\") { add() } })" }
+  )
+
+  static let toolbar = ComponentStories(
+    .navigation, "Toolbar", summary: ".toolbar(leading:trailing:): a page's items in its stack's bar, beside the title.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Navigation/NavigationDestination.swift",
+    args: [ArgType("title", .text, .text("Library"), "The page's title.")],
+    stories: [Story("In a stack", layout: .fullscreen)],
+    render: { args, context in
+      NavigationStack {
+        Text("Page content").foregroundColor(.secondaryLabel)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .navigationTitle(args.string("title"))
+          .toolbar {
+            Button("Edit", action: context.action("edit"))
+          } trailing: {
+            Button("Add", action: context.action("add")).buttonStyle(.bordered)
+          }
+      }
+      .frame(height: 280)
+    },
+    snippet: { args in "content\n  .navigationTitle(\(swiftString(args.string("title"))))\n  .toolbar {\n    Button(\"Edit\") { … }\n  } trailing: {\n    Button(\"Add\") { … }\n  }" }
+  )
 
   static let sidebarTitle = ComponentStories(
     .navigation, "SidebarTitle", web: "Sidebar", summary: "The small heading over a sidebar's links.",
