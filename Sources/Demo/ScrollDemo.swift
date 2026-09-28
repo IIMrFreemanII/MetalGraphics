@@ -56,9 +56,9 @@ func makeScrollToDemo(rows: [ScrollRow]) -> UIElement {
   let button = { (title: String, action: @escaping () -> Void) -> UIElement in
     Text(title)
       .font(font)
-      .foregroundColor(.white)
+      .foregroundColor(.label)
       .padding(Inset(vertical: 4, horizontal: 8))
-      .background(float4(0.25, 0.25, 0.25, 1))
+      .background(.fill, in: .rect(cornerRadius: 6))
       .onTap { _ in action() }
   }
 
@@ -88,10 +88,11 @@ func makeScrollToDemo(rows: [ScrollRow]) -> UIElement {
 @Component
 final class ScrollDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let buttonFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
-  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
+  private static let buttonColor: float4 = .fill
+  private static let buttonShape = UIShape.rect(cornerRadius: 6)
   private static let chipFont = TextFont.system(size: 12)
 
   @State var disabled: Bool = false
@@ -108,15 +109,15 @@ final class ScrollDemo : SingleChildElement {
       HStack(spacing: 6) {
         Text(self.disabled ? "Enable scrolling" : "Disable scrolling")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.disabled.toggle() }
         Text(self.indicators ? "Hide indicators" : "Show indicators")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.indicators.toggle() }
         Spacer()
       }

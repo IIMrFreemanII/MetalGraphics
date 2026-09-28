@@ -71,29 +71,48 @@ public class Background : UIRenderableElement {
 }
 
 /// What a frosted glass panel is made of: the scene behind it blurred, made more vivid, under a
-/// tint, with a little grain. The presets go from nearly clear to nearly opaque, like SwiftUI's
-/// materials.
-public struct GlassMaterial: Equatable, Sendable {
+/// tint, with a little grain, and a light rim along its edge. The presets go from nearly clear to
+/// nearly opaque, like SwiftUI's materials; `Theme.materials` has one per kind of panel.
+public struct GlassMaterial: Hashable, Sendable {
   /// About the backdrop blur's standard deviation, in points, as a SwiftUI blur radius.
   public var blurRadius: Float
   /// Composited over the blurred backdrop; its alpha is how much of it covers the backdrop.
   public var tint: float4
+  /// The tint at the bottom edge, for a vertical gradient from `tint`; nil for none.
+  public var tintBottom: float4?
   /// 1 leaves the backdrop's colors as they are, more makes them more vivid, 0 grey.
   public var saturation: Float
   /// Grain amplitude, 0...1: a little hides banding and reads as frost.
   public var noise: Float
+  /// A light inner edge, strongest along the top: light catching the glass. Clear for none.
+  public var rim: float4
+  /// The rim's width, in points.
+  public var rimWidth: Float
+  /// How much of the rim's alpha is left at the bottom edge.
+  public var rimBottom: Float
+  /// Under the backdrop where the window lets the desktop through, which the library cannot
+  /// see: opaque for a panel whose text must read over any desktop, clear to show the desktop.
+  public var fallback: float4
 
-  public init(blurRadius: Float, tint: float4 = float4(1, 1, 1, 0.3), saturation: Float = 1.8, noise: Float = 0.015) {
+  public init(
+    blurRadius: Float, tint: float4 = float4(1, 1, 1, 0.3), tintBottom: float4? = nil, saturation: Float = 1.8,  // design: a material is a token itself
+    noise: Float = 0.015, rim: float4 = .clear, rimWidth: Float = 1, rimBottom: Float = 0.25, fallback: float4 = .clear
+  ) {
     self.blurRadius = blurRadius
     self.tint = tint
+    self.tintBottom = tintBottom
     self.saturation = saturation
     self.noise = noise
+    self.rim = rim
+    self.rimWidth = rimWidth
+    self.rimBottom = rimBottom
+    self.fallback = fallback
   }
 
-  public static let ultraThin = GlassMaterial(blurRadius: 10, tint: float4(1, 1, 1, 0.1))
-  public static let thin = GlassMaterial(blurRadius: 16, tint: float4(1, 1, 1, 0.25))
-  public static let regular = GlassMaterial(blurRadius: 24, tint: float4(1, 1, 1, 0.4))
-  public static let thick = GlassMaterial(blurRadius: 32, tint: float4(1, 1, 1, 0.6))
+  public static let ultraThin = GlassMaterial(blurRadius: 10, tint: float4(1, 1, 1, 0.1))  // design: SwiftUI's materials; the theme's are `.glass(role)`
+  public static let thin = GlassMaterial(blurRadius: 16, tint: float4(1, 1, 1, 0.25))  // design: SwiftUI's materials; the theme's are `.glass(role)`
+  public static let regular = GlassMaterial(blurRadius: 24, tint: float4(1, 1, 1, 0.4))  // design: SwiftUI's materials; the theme's are `.glass(role)`
+  public static let thick = GlassMaterial(blurRadius: 32, tint: float4(1, 1, 1, 0.6))  // design: SwiftUI's materials; the theme's are `.glass(role)`
 }
 
 /// A frosted glass panel behind its content, fitted to it like a `Background`: what is drawn
@@ -104,6 +123,8 @@ public struct GlassMaterial: Equatable, Sendable {
 /// `Graphics2D.draw(glass:...)` for the cost, which grows with the panels' area, not the blur.
 public class GlassBackground : Background {
   public var material: GlassMaterial = .regular
+  /// The theme's material to draw instead of `material`, resolved when drawn.
+  public var materialRole: ThemeMaterial? = nil
 
   public init(_ material: GlassMaterial = .regular, in shape: UIShape = .rect, @UIElementBuilder content: () -> [UIElement] = { [] }) {
     super.init(.zero, in: shape, content: content)
@@ -119,13 +140,12 @@ public class GlassBackground : Background {
   public override func render(_ renderer: Graphics2D, _ effect: EffectState) {
     guard effect.opacity > 0 else { return }
     let resolved = self.shape.resolve(in: ClipRect(position: self.position, size: self.size))
-    let material = self.material
+    let material = self.materialRole.map { renderer.theme[$0] } ?? self.material
     renderer.draw(
       glass: effect.apply(to: resolved.rect.min) - renderer.size * 0.5,
       size: (resolved.rect.max - resolved.rect.min) * effect.scale,
-      radii: resolved.radii * effect.scale,
+      radii: resolved.radii * effect.scale, material: material,
       sigma: max(material.blurRadius, 0) * ShadowState.sigmaPerRadius * effect.scale,
-      tint: material.tint, saturation: material.saturation, noise: material.noise,
       opacity: effect.opacity
     )
   }

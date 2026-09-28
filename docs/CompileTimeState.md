@@ -504,17 +504,23 @@ stays hard. Circles and lines, which are debug primitives, stay sharp.
 
 **Glass.** `.glass(_ material:, in: shape)` puts a frosted `GlassBackground` behind content,
 fitted to it like `.background`: what is drawn below it, blurred, made more vivid, under a
-tint, with grain. The presets are `.ultraThin`, `.thin`, `.regular` and `.thick`, or build a
-`GlassMaterial(blurRadius:tint:saturation:noise:)`. The material is bound, but it snaps instead
-of animating; the shape animates.
+tint, with grain and a light rim along its top edge. The presets are `.ultraThin`, `.thin`,
+`.regular` and `.thick`; `.glass(.popover)` takes the theme's material for that role, following
+light and dark (see `docs/DesignSystem.md`); or build a `GlassMaterial` with a tint gradient
+(`tintBottom`), a `rim`, and a `fallback` for where a translucent window shows the desktop. The
+material is bound, but it snaps instead of animating; the shape animates.
 
 - Each glass costs three compute passes over its own area before the frame, plus how far its
   blur reaches: `backdrop2D` renders everything below it, then `glassBlur` blurs that along x
   and then along y into the glass's region of the glass atlas. The main pass then samples that
   region. The backdrop is rendered at a lower resolution (up to 1/8) chosen so the blur stays at
   about 3 to 6 texels, so a large radius is no more expensive than a small one.
+- A backdrop stays in the atlas from frame to frame. It is rendered again only when the glass
+  moved, or the shapes below it in its reach changed, or a lower glass it shows was rendered
+  again: text typed into a glass popover, a caret or a scrolled list over glass costs no pass.
+  `Graphics2D.lastGlassPasses` and the profiler's `glassPasses` count them.
 - Glass stacks. Passes run lowest glass first, so a glass above another sees the lower one
-  already frosted.
+  already frosted. A glass's own shadow is beneath it, not in its backdrop.
 - A frame without glass runs a main-pass pipeline compiled without the glass branch: glass costs
   nothing until one is drawn.
 - Limits: the panel's own edge is never blurred, even under `.blur`. A rounded clip cuts the

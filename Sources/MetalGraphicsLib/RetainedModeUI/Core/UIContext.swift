@@ -298,6 +298,66 @@ public class UIContext {
 
   public init() {}
 
+  /// The look this window draws with: every draw reads it from the renderer, which `render`
+  /// hands it to first. Set by `setTheme`.
+  public private(set) var theme: Theme = Theme.current
+
+  /// Bumped by every `setTheme`, so an element that applied a theme can tell it is stale.
+  public private(set) var themeGeneration = 0
+
+  /// Draws with `theme` from the next frame. Colours are resolved when drawn, so for them this
+  /// is only a render; elements that keep more of a theme (`ThemeObserving`) are told. A theme
+  /// with other type lays the tree out again.
+  public func setTheme(_ theme: Theme) {
+    guard theme !== self.theme else { return }
+    let relayout = theme.typography != self.theme.typography
+    self.theme = theme
+    self.themeGeneration += 1
+    ThreadState.current.theme = theme
+    self.invalidate(relayout ? .layout : .render)
+    // Walks a copy: an observer may mount or unmount others.
+    let observers = self.themeObservers
+    for entry in observers {
+      (entry.element as? ThemeObserving)?.themeDidChange(theme, self)
+    }
+  }
+
+  /// Where the window's title bar is over the tree: see `TitleBarInsets`. Set by
+  /// `setTitleBar`.
+  public private(set) var titleBar = TitleBarInsets.zero
+
+  /// The empty parts of the title bar's row, as the last layout left them: where a press drags
+  /// the window. What `onTitleBarDragRegions` was last told.
+  public private(set) var titleBarDragRegions: [float4] = []
+
+  /// Told when `titleBarDragRegions` changes, after a layout: what the window's view reads a
+  /// press against.
+  public var onTitleBarDragRegions: (([float4]) -> Void)?
+
+  /// Lays the tree out under a title bar where `insets` says, from the next frame. Once per
+  /// window resize or full-screen change at most.
+  public func setTitleBar(_ insets: TitleBarInsets) {
+    guard insets != self.titleBar else { return }
+    self.titleBar = insets
+    self.invalidate(.layout)
+  }
+
+  private struct ThemeObserver {
+    weak var element: UIElement?
+  }
+  /// The mounted elements `setTheme` tells. Touched only on mount, unmount and a theme change.
+  private var themeObservers: [ThemeObserver] = []
+
+  /// Tells `element` of every theme change while it is mounted: call on mount.
+  public func addThemeObserver(_ element: UIElement & ThemeObserving) {
+    self.themeObservers.append(ThemeObserver(element: element))
+  }
+
+  /// Call on unmount.
+  public func removeThemeObserver(_ element: UIElement & ThemeObserving) {
+    self.themeObservers.removeAll { $0.element == nil || $0.element === element }
+  }
+
   // MARK: - Invalidation
 
   /// `animation` is for discrete changes that move other elements: inserting, removing or
@@ -554,12 +614,19 @@ public class UIContext {
       root.size = size
       // A new pass: sizes measured in the last one may be stale.
       LayoutPass.generation &+= 1
+      let thread = ThreadState.current
+      thread.titleBar = self.titleBar
+      thread.titleBarDragRegions.removeAll(keepingCapacity: true)
       _ = root.calcSize(ProposedSize(size))
       if let animation = self.layoutAnimation {
         LayoutPass.current = LayoutPass(context: self, animation: animation, group: self.layoutGroups.last)
       }
       root.calcPosition(.init())
       LayoutPass.current = nil
+      if thread.titleBarDragRegions != self.titleBarDragRegions {
+        self.titleBarDragRegions = thread.titleBarDragRegions
+        self.onTitleBarDragRegions?(self.titleBarDragRegions)
+      }
       // After the tree: a popover is placed by its anchor, which that pass just placed.
       for overlay in self.overlays {
         _ = overlay.calcSize(ProposedSize(size))
@@ -630,6 +697,7 @@ public class UIContext {
 
   /// Draws every registered renderable in paint order, each with the effects above it.
   public func render(root: UIElement, _ renderer: Graphics2D) -> Void {
+    renderer.theme = self.theme
     if self.pending.contains(.treeOrder) {
       self.rebuildTreeOrder(root)
     }

@@ -13,15 +13,17 @@ import simd
 @Component
 final class ConsolePanel : SingleChildElement {
   private static let font = TextFont.system(size: 12, design: .monospaced)
-  private static let statusFont = TextFont.system(size: 12)
-  private static let statusColor = float4(0.42, 0.42, 0.45, 1)
-  private static let barColor = float4(0.955, 0.955, 0.96, 1)
+  private static let statusFont = TextFont.system(size: 11.5)
+  private static let barFont = TextFont.system(size: 12)
+  private static let statusColor: float4 = .secondaryLabel
+  private static let productColor: float4 = .secondaryLabel
+  private static let barColor: float4 = .barOverContent
   private static let theme: EditorTheme = {
     var theme = EditorTheme.dark
     theme.currentLine = nil
     theme.lineSpacing = 2
     theme.textInset = float2(10, 8)
-    theme[.output] = SpanStyle(foreground: float4(0.6, 0.6, 0.63, 1))
+    theme[.output] = SpanStyle(foreground: float4(0.6, 0.6, 0.63, 1))  // design: an EditorTheme holds plain colours, and the console is always dark
     return theme
   }()
 
@@ -32,29 +34,49 @@ final class ConsolePanel : SingleChildElement {
 
   @State var summary: String = "Ready"
   @State var isActive: Bool = false
-  @State var productTitle: String = "Run"
+  @State var product: String = ""
+  /// The dot beside the summary: how the last build went.
+  @State var statusColor: float4 = .tertiaryLabel
 
   @UIElementBuilder var body: [UIElement] {
     VStack(alignment: .leading, spacing: 0) {
-      HStack(spacing: 8) {
+      HStack(spacing: 6) {
         Button("Build") { BuildController.shared.start(.build) }
+          .buttonStyle(.bordered)
           .disabled(self.isActive)
-        Button(self.productTitle) { BuildController.shared.start(.run(product: nil)) }
+        Button("Run") { BuildController.shared.start(.run(product: nil)) }
+          .buttonStyle(.borderedProminent)
           .disabled(self.isActive)
-        Button("Product ▾") { BuildController.shared.selectNextProduct() }
-          .disabled(self.isActive)
+        // The product Run starts; a click picks the next.
+        Button { BuildController.shared.selectNextProduct() } label: {
+          Text(self.product.isEmpty ? "No Product" : self.product)
+          Image(icon: .upDown)
+            .foregroundColor(Self.productColor)
+        }
+        .buttonStyle(.bordered)
+        .disabled(self.isActive || self.product.isEmpty)
         Button("Stop") { BuildController.shared.stop() }
+          .buttonStyle(.bordered)
           .disabled(!self.isActive)
+        Spacer()
+        Rectangle(.clear)
+          .frame(width: 7, height: 7)
+          .background(self.statusColor, in: .capsule)
         Text(self.summary)
           .font(Self.statusFont)
           .foregroundColor(Self.statusColor)
           .lineLimit(1)
-        Spacer()
         Button("Clear") { self.clear() }
+          .buttonStyle(.borderless)
       }
-      .padding(Inset(vertical: 5, horizontal: 10))
-      .frame(maxWidth: .infinity, alignment: .leading)
+      .font(Self.barFont)
+      .padding(Inset(horizontal: 10))
+      .frame(maxWidth: .infinity, minHeight: 34, alignment: .leading)
       .background(Self.barColor)
+      .overlay(alignment: .bottom) {
+        Rectangle(.separator)
+          .frame(height: 0.5)
+      }
       TextEditor(document: self.document)
         .editorTheme(Self.theme)
         .editable(false)
@@ -89,8 +111,15 @@ final class ConsolePanel : SingleChildElement {
     if summary != self.summary { self.summary = summary }
     let active = model.state.isActive
     if active != self.isActive { self.isActive = active }
-    let title = model.product.isEmpty ? "Run" : "Run \(model.product)"
-    if title != self.productTitle { self.productTitle = title }
+    if model.product != self.product { self.product = model.product }
+    let color: float4 = switch model.state {
+    case .succeeded: .success
+    case .failed: .destructive
+    case .stopped: .warning
+    case .building, .running, .testing: .accent
+    case .idle: .tertiaryLabel
+    }
+    if color != self.statusColor { self.statusColor = color }
     self.pull()
   }
 
@@ -143,7 +172,15 @@ struct ProblemItem : Identifiable {
 @Component
 final class ProblemsPanel : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.47, 1)
+  private static let captionColor: float4 = .secondaryLabel
+
+  /// Its tab, which shows how many problems there are.
+  let panel: DockPanel?
+
+  init(panel: DockPanel? = nil) {
+    self.panel = panel
+    super.init()
+  }
 
   @State var items: [ProblemItem] = []
   @State var summary: String = "No problems"
@@ -183,6 +220,9 @@ final class ProblemsPanel : SingleChildElement {
     let problems = BuildModel.shared.problems.enumerated()
       .sorted { $0.element.severity != $1.element.severity ? $0.element.severity > $1.element.severity : $0.offset < $1.offset }
       .map { ProblemItem($0.element, root: root) }
+    if let panel = self.panel, panel.space.layout.panels[panel.id]?.badge != problems.count {
+      panel.setBadge(problems.count)
+    }
     guard problems.map(\.id) != self.items.map(\.id) else { return }
     self.items = problems
     let errors = problems.count { $0.diagnostic.severity == .error }
@@ -194,17 +234,15 @@ final class ProblemsPanel : SingleChildElement {
 
 @Component
 final class ProblemRow : SingleChildElement {
-  private static let messageFont = TextFont.system(size: 12)
+  private static let messageFont = TextFont.system(size: 13)
   private static let locationFont = TextFont.system(size: 11)
-  private static let locationColor = float4(0.45, 0.45, 0.47, 1)
-  private static let errorColor = float4(0.88, 0.19, 0.18, 1)
-  private static let warningColor = float4(0.91, 0.64, 0.0, 1)
-  private static let noteColor = float4(0.35, 0.5, 0.8, 1)
-  private static let hoverColor = float4(0, 0, 0, 0.05)
-  private static let clearColor = float4(0, 0, 0, 0)
+  private static let locationColor: float4 = .secondaryLabel
+  private static let errorColor: float4 = .destructive
+  private static let warningColor: float4 = .warning
+  private static let noteColor: float4 = .info
+  private static let markShape = UIShape.rect(cornerRadius: 2)
 
   let item: ProblemItem
-  @State var hovered: Bool = false
 
   init(item: ProblemItem) {
     self.item = item
@@ -212,29 +250,27 @@ final class ProblemRow : SingleChildElement {
   }
 
   @UIElementBuilder var body: [UIElement] {
-    HStack(alignment: .top, spacing: 8) {
-      Rectangle(self.item.diagnostic.severity == .error ? Self.errorColor
-                : (self.item.diagnostic.severity == .warning ? Self.warningColor : Self.noteColor))
+    ListRow(height: 38, spacing: 10, action: {
+      let diagnostic = self.item.diagnostic
+      IDE.openFile(diagnostic.path, line: diagnostic.line, column: diagnostic.column)
+    }) {
+      Rectangle(.clear)
         .frame(width: 8, height: 8)
-        .padding(Inset(top: 4))
+        .background(
+          self.item.diagnostic.severity == .error ? Self.errorColor
+            : (self.item.diagnostic.severity == .warning ? Self.warningColor : Self.noteColor),
+          in: Self.markShape
+        )
       VStack(alignment: .leading, spacing: 1) {
         Text(self.item.diagnostic.message)
           .font(Self.messageFont)
-          .lineLimit(2)
+          .lineLimit(1)
         Text(self.item.location)
           .font(Self.locationFont)
           .foregroundColor(Self.locationColor)
           .lineLimit(1)
       }
       Spacer()
-    }
-    .padding(Inset(vertical: 4, horizontal: 10))
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(self.hovered ? Self.hoverColor : Self.clearColor)
-    .onHover { hovered, _ in self.hovered = hovered }
-    .onTap { _ in
-      let diagnostic = self.item.diagnostic
-      IDE.openFile(diagnostic.path, line: diagnostic.line, column: diagnostic.column)
     }
   }
 }

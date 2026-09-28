@@ -1,0 +1,30 @@
+{
+  "name": "@metalgraphics/frosted-glass",
+  "private": true,
+  "description": "The MetalGraphics Frosted Glass design system for the web: tokens exported from the Swift theme and React versions of its components, synced to claude.ai/design with /design-sync.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@types/react": "^18.3.31",
+    "esbuild": "^0.25.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "typescript": "^5.9.3"
+  },
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  }
+}

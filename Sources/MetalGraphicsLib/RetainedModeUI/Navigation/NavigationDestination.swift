@@ -92,7 +92,47 @@ public final class NavigationTitleElement : SingleChildElement {
   }
 }
 
+/// Gives the page it is in its background: what the page is drawn on, edge to edge, under
+/// the stack's bar. `.contentBackground` when no page element sets one. Made by
+/// `.navigationBackground(_:)`. Not in SwiftUI.
+public final class NavigationBackgroundElement : SingleChildElement {
+  public private(set) var background: float4
+  private weak var entry: NavigationEntry?
+
+  public init(_ background: float4, @UIElementBuilder content: () -> [UIElement]) {
+    self.background = background
+    super.init()
+    self.applyContent(content())
+  }
+
+  public func setBackground(_ value: float4, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.background else { return }
+    self.background = value
+    self.entry?.background = value
+    context.invalidate()
+  }
+
+  public override func mount(_ context: UIContext) {
+    let entry = self.nearestAncestor(NavigationEntry.self)
+    self.entry = entry
+    entry?.background = self.background
+  }
+
+  public override func unmount(_ context: UIContext) {
+    if self.entry?.background == self.background {
+      self.entry?.background = nil
+    }
+    self.entry = nil
+  }
+}
+
 extension UIElementWrapping where Self: UIElement {
+  /// What the page this is in is drawn on: `.navigationBackground(.groupedBackground)` for a
+  /// form. Not in SwiftUI.
+  public func navigationBackground(_ color: float4) -> NavigationBackgroundElement {
+    NavigationBackgroundElement(color) { self }
+  }
+
   /// What a value link of type `D` inside the same navigation stack or split view pushes:
   /// `.navigationDestination(for: Route.self) { route in RouteView(route: route) }`.
   public func navigationDestination<D: Hashable>(

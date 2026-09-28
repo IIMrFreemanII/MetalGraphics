@@ -110,7 +110,7 @@ public struct ShadowState: Equatable, Sendable {
 /// distance field, so no pass is added.
 public class ShadowElement : SingleChildElement {
   /// SwiftUI's default: black at a third opacity.
-  public static let defaultColor = float4(0, 0, 0, 0.33)
+  public static let defaultColor = float4(0, 0, 0, 0.33)  // design: SwiftUI's default
 
   public var color: float4 = ShadowElement.defaultColor
   public var radius: Float = 0

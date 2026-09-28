@@ -8,11 +8,11 @@ enum TableMetrics {
   static let cellPadding = float2(6, 3)
   /// How wide the grab area of a header divider is, centred on the column edge.
   static let handleWidth: Float = 8
-  static let headerColor = float4(0.94, 0.94, 0.94, 1)
-  static let dividerColor = float4(0, 0, 0, 0.12)
-  static let headerFont = TextFont.system(size: 12)
+  static let headerColor: float4 = .barOverContent
+  static let dividerColor: float4 = .separator
+  static var headerFont: TextFont { Theme.current.typography.callout }
   /// For the cells of a column made from a key path to text.
-  static let cellFont = TextFont.system(size: 13)
+  static var cellFont: TextFont { Theme.current.typography.body }
 }
 
 /// One cell: its content at its ideal size, aligned in the box its row gives it — column width by

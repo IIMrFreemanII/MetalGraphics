@@ -116,7 +116,7 @@ final class MarkdownAttachments : TextAttachmentProvider {
 @Component
 final class Chip : SingleChildElement {
   private static let font = TextFont.system(size: 11, weight: .semibold)
-  private static let color = float4(0.2, 0.45, 0.95, 1)
+  private static let color: float4 = .accent
 
   let number: Int
   @State var taps: Int = 0

@@ -81,7 +81,7 @@ final class BorderLayer : UIRenderableElement {
   override func render(_ renderer: Graphics2D, _ effect: EffectState) {
     var color = self.color
     color.w *= effect.opacity
-    guard color.w > 0, self.lineWidth > 0 else { return }
+    guard color.w != 0, self.lineWidth > 0 else { return }
     let resolved = self.shape.resolve(in: ClipRect(position: self.position, size: self.size))
     renderer.draw(
       roundedRect: effect.apply(to: resolved.rect.min) - renderer.size * 0.5,

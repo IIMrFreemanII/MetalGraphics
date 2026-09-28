@@ -9,7 +9,7 @@ import simd
 @Component
 final class CodeEditorDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.47, 1)
+  private static let captionColor: float4 = .secondaryLabel
 
   let document = TextDocument(CodeEditorDemo.sample)
 

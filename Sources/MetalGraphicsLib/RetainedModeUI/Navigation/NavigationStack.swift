@@ -247,6 +247,8 @@ final class NavigationEntry : UIRenderableElement {
   private(set) var isResolved: Bool
   private weak var stack: NavigationStack?
   private weak var titleSource: NavigationTitleElement?
+  /// What it is drawn on, when a `NavigationBackgroundElement` in it says.
+  var background: float4?
 
   /// How far it is drawn from where it was laid out, along x, while it slides in or out.
   var slide: Float = 0
@@ -336,7 +338,7 @@ final class NavigationEntry : UIRenderableElement {
   override func render(_ renderer: Graphics2D, _ effect: EffectState) {
     guard effect.opacity > 0 else { return }
     let size = self.size * effect.scale
-    var color = NavigationMetrics.contentBackground
+    var color = renderer.resolve(self.background ?? NavigationMetrics.contentBackground)
     color.w *= effect.opacity
     let center = effect.apply(to: self.position) - renderer.size * 0.5 + size * 0.5
     renderer.draw(square: Square(position: center, size: size, color: color))
@@ -536,8 +538,19 @@ final class NavigationBar : UIRenderableElement {
   private(set) var size: float2 = .zero
   private var backSize: float2 = .zero
   private var titleSize: float2 = .zero
+  /// Set by its column: taller in a title bar's row.
+  var height: Float = NavigationMetrics.barHeight
+  /// Whether it shares the title bar's row: it keeps clear of the traffic lights, and its empty
+  /// parts drag the window.
+  var inTitleBar = false
 
   private static let inset: Float = 10
+
+  /// Where its content starts: past the traffic lights when they are over it.
+  private var leading: Float {
+    guard self.inTitleBar else { return Self.inset }
+    return max(Self.inset, TitleBarInsets.current.leading - self.position.x)
+  }
 
   override init() {
     self.back = Button("‹ Back")
@@ -579,7 +592,7 @@ final class NavigationBar : UIRenderableElement {
     let back = self.back.measure(.unspecified)
     let title = self.title.measure(.unspecified)
     let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? (title.x + 2 * (back.x + 2 * Self.inset))
-    return float2(width, NavigationMetrics.barHeight)
+    return float2(width, self.height)
   }
 
   override func calcSize(_ proposal: ProposedSize) -> float2 {
@@ -594,8 +607,13 @@ final class NavigationBar : UIRenderableElement {
 
   override func calcPosition(_ position: float2) {
     self.position = position
-    self.back.calcPosition(position + float2(Self.inset, ((self.size.y - self.backSize.y) * 0.5).rounded()))
+    let leading = self.leading
+    self.back.calcPosition(position + float2(leading, ((self.size.y - self.backSize.y) * 0.5).rounded()))
     self.title.calcPosition(position + ((self.size - self.titleSize) * 0.5).rounded(.toNearestOrAwayFromZero))
+    if self.inTitleBar {
+      let start = self.back.isHidden ? 0 : leading + self.backSize.x
+      TitleBarInsets.addDragRegion(float4(position.x + start, position.y, self.size.x - start, self.size.y))
+    }
   }
 
   override func render(_ renderer: Graphics2D, _ effect: EffectState) {
@@ -607,8 +625,8 @@ final class NavigationBar : UIRenderableElement {
     renderer.draw(square: Square(position: origin + size * 0.5, size: size, color: color))
     var line = NavigationMetrics.separatorColor
     line.w *= effect.opacity
-    let lineSize = float2(size.x, 1)
-    renderer.draw(square: Square(position: origin + float2(size.x * 0.5, size.y - 0.5), size: lineSize, color: line))
+    let lineSize = float2(size.x, 0.5)
+    renderer.draw(square: Square(position: origin + float2(size.x * 0.5, size.y - 0.25), size: lineSize, color: line))
   }
 }
 
@@ -618,6 +636,21 @@ final class NavigationColumn : UIElement {
   private let pages: NavigationPages
   private let bar: NavigationBar
   private(set) var size: float2 = .zero
+  private var titleBarPlacement = TitleBarPlacement()
+  private weak var context: UIContext?
+
+  override func mount(_ context: UIContext) {
+    self.context = context
+  }
+
+  override func unmount(_ context: UIContext) {
+    self.context = nil
+  }
+
+  /// The bar's height: the title bar's row when the column is at the window's top under one.
+  private var barHeight: Float {
+    self.titleBarPlacement.atTop && TitleBarInsets.current.top > 0 ? TitleBarInsets.unifiedBarHeight : NavigationMetrics.barHeight
+  }
 
   init(pages: NavigationPages, bar: NavigationBar) {
     self.pages = pages
@@ -635,24 +668,28 @@ final class NavigationColumn : UIElement {
   }
 
   private func pageProposal(_ proposal: ProposedSize) -> ProposedSize {
-    ProposedSize(width: proposal.width, height: proposal.height.map { max($0 - NavigationMetrics.barHeight, 0) })
+    let barHeight = self.barHeight
+    return ProposedSize(width: proposal.width, height: proposal.height.map { max($0 - barHeight, 0) })
   }
 
   override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
     let page = self.pages.measure(self.pageProposal(proposal))
-    return NavigationEntry.fill(proposal, page + float2(0, NavigationMetrics.barHeight))
+    return NavigationEntry.fill(proposal, page + float2(0, self.barHeight))
   }
 
   override func calcSize(_ proposal: ProposedSize) -> float2 {
     self.size = self.sizeThatFits(proposal)
-    let barHeight = NavigationMetrics.barHeight
+    let barHeight = self.barHeight
+    self.bar.height = barHeight
+    self.bar.inTitleBar = barHeight == TitleBarInsets.unifiedBarHeight
     _ = self.pages.calcSize(ProposedSize(width: self.size.x, height: max(self.size.y - barHeight, 0)))
     _ = self.bar.calcSize(ProposedSize(width: self.size.x, height: barHeight))
     return self.size
   }
 
   override func calcPosition(_ position: float2) {
+    self.titleBarPlacement.settle(position.y, self.context)
     self.bar.calcPosition(position)
-    self.pages.calcPosition(position + float2(0, NavigationMetrics.barHeight))
+    self.pages.calcPosition(position + float2(0, self.bar.height))
   }
 }

@@ -9,15 +9,16 @@ import ReactiveUI
 @Component
 final class LayoutDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let buttonFont = TextFont.system(size: 13)
   private static let labelFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
-  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
-  private static let grey = float4(0.9, 0.9, 0.9, 1)
-  private static let amber = float4(0.85, 0.6, 0.1, 1)
-  private static let purple = float4(0.6, 0.3, 0.9, 1)
-  private static let lightBlue = float4(0.7, 0.82, 1, 1)
+  private static let buttonColor: float4 = .fill
+  private static let buttonShape = UIShape.rect(cornerRadius: 6)
+  private static let grey: float4 = .fill
+  private static let amber: float4 = .hue(.orange)
+  private static let purple: float4 = .hue(.purple)
+  private static let lightBlue: float4 = .hue(.blue, alpha: 0.3)
 
   // Settings are indices into these tables, which keeps each value and its name together.
   private static let horizontalAlignments: [(name: String, value: HorizontalAlignment)] = [
@@ -56,15 +57,15 @@ final class LayoutDemo : SingleChildElement {
         HStack(spacing: 6) {
           Text("alignment: \(Self.horizontalAlignments[self.vStackAlignment].name)")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.cycleVStackAlignment() }
           Text("spacing: \(Int(Self.spacings[self.spacing]))")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.cycleSpacing() }
         }
         VStack(alignment: Self.horizontalAlignments[self.vStackAlignment].value, spacing: Self.spacings[self.spacing]) {
@@ -81,9 +82,9 @@ final class LayoutDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text("alignment: \(Self.verticalAlignments[self.hStackAlignment].name)")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.cycleHStackAlignment() }
         HStack(alignment: Self.verticalAlignments[self.hStackAlignment].value, spacing: Self.spacings[self.spacing]) {
           Rectangle(.red).frame(width: 24, height: 20)
@@ -139,9 +140,9 @@ final class LayoutDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text("alignment: \(Self.alignments[self.frameAlignment].name)")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.cycleFrameAlignment() }
         Frame(float2(180, 110), Self.alignments[self.frameAlignment].value) {
           Rectangle(.blue).frame(width: 36, height: 36)
@@ -153,9 +154,9 @@ final class LayoutDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text("size: \(Int(Self.frameSizes[self.frameSize].x))×\(Int(Self.frameSizes[self.frameSize].y))")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.cycleFrameSize() }
         Frame(Self.frameSizes[self.frameSize], .center) {
           Text("centred")
@@ -168,9 +169,9 @@ final class LayoutDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text("inset: \(Int(Self.insets[self.inset]))")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.cycleInset() }
         HStack(alignment: .top, spacing: 12) {
           Text("padded")
@@ -192,9 +193,9 @@ final class LayoutDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text("axis: \(Self.axes[self.axis].name)")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.cycleAxis() }
         Frame(float2(220, 90), .topLeading) {
           ExpandedFrame(Self.axes[self.axis].value, .center) {

@@ -17,15 +17,16 @@ import ReactiveUI
 @Component
 final class ContainersDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let buttonFont = TextFont.system(size: 13)
   private static let bodyFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
-  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
-  private static let grey = float4(0.9, 0.9, 0.9, 1)
-  private static let amber = float4(0.85, 0.6, 0.1, 1)
-  private static let purple = float4(0.6, 0.3, 0.9, 1)
-  private static let green = float4(0.2, 0.65, 0.35, 1)
+  private static let buttonColor: float4 = .fill
+  private static let buttonShape = UIShape.rect(cornerRadius: 6)
+  private static let grey: float4 = .fill
+  private static let amber: float4 = .hue(.orange)
+  private static let purple: float4 = .hue(.purple)
+  private static let green: float4 = .hue(.green)
   private static let animation = UIAnimation.easeInOut(0.35)
 
   private static let alignments: [(name: String, value: Alignment)] = [
@@ -53,9 +54,9 @@ final class ContainersDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text(self.wideRect ? "rectangle: 160" : "rectangle: 60")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.wideRect.toggle() }
         HStack(alignment: .top, spacing: 8) {
           Text("Every glyph is baked once into a shared distance field atlas and drawn at any size.")
@@ -72,9 +73,9 @@ final class ContainersDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text(self.priorityRight ? "priority: right" : "priority: left")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.priorityRight.toggle() }
         HStack(alignment: .top, spacing: 8) {
           Text("Sized first when it has priority")
@@ -95,9 +96,9 @@ final class ContainersDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text("alignment: \(Self.alignments[self.fillAlignment].name)")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.fillAlignment = (self.fillAlignment + 1) % Self.alignments.count }
         Text("fills the width")
           .font(Self.bodyFont)
@@ -114,9 +115,9 @@ final class ContainersDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text(self.baselines ? "alignment: firstTextBaseline" : "alignment: center")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.baselines.toggle() }
         HStack(alignment: self.baselines ? .firstTextBaseline : .center, spacing: 8) {
           Text("Big")
@@ -136,9 +137,9 @@ final class ContainersDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text(self.indented ? "guide: leading - 40" : "guide: default")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.indented.toggle() }
         // A guide's closure runs at layout time and is not bound to state, so the row is
         // swapped rather than its guide changed.
@@ -167,15 +168,15 @@ final class ContainersDemo : SingleChildElement {
         HStack(spacing: 6) {
           Text("alignment: \(Self.zAlignments[self.zAlignment].name)")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.zAlignment = (self.zAlignment + 1) % Self.zAlignments.count }
           Text(self.purpleInFront ? "purple in front" : "purple behind")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.purpleInFront.toggle() }
         }
         ZStack(alignment: Self.zAlignments[self.zAlignment].value) {
@@ -197,15 +198,15 @@ final class ContainersDemo : SingleChildElement {
         HStack(spacing: 6) {
           Text("+1")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.unread += 1 }
           Text("read all")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.unread = 0 }
         }
         Text("Inbox")
@@ -267,9 +268,9 @@ final class ContainersDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text("move")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.dotX = self.dotX > 100 ? 20 : self.dotX + 60 }
         Rectangle(Self.green)
           .frame(width: 16, height: 16)

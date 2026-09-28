@@ -49,7 +49,7 @@ public final class Image : UIRenderableElement {
   /// Set by `.interpolation(_:)`. Only bitmaps are filtered; SVGs are sharp at any size.
   public private(set) var interpolation: Interpolation = .high
   /// Set by `.foregroundColor(_:)`: the color of a template, and of an SVG's `currentColor`.
-  public internal(set) var color: float4 = .black
+  public internal(set) var color: float4 = .label
 
   public var position: float2 = .init()
   public var size: float2 = .init()

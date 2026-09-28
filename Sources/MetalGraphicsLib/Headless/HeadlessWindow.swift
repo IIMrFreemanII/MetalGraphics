@@ -297,10 +297,35 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
     self.app.step()
   }
 
+  /// Lays the content out under a title bar where `insets` says, as a translucent window's view
+  /// reports it. `HeadlessApp` gives its translucent scenes `.standard`.
+  public func setTitleBar(_ insets: TitleBarInsets) {
+    self.handle.post { $0.setTitleBar(insets) }
+  }
+
+  /// Presses on the title bar's empty parts: what would have dragged the window. The tree never
+  /// hears of them.
+  public private(set) var titleBarPresses = 0
+
+  /// Whether `point` is on the title bar's empty parts, as the tree last reported them.
+  public func isTitleBarDragRegion(_ point: float2) -> Bool {
+    self.handle.titleBarDragRegions.contains { r in
+      point.x >= r.x && point.x < r.x + r.z && point.y >= r.y && point.y < r.y + r.w
+    }
+  }
+
   /// The left button going down at `point`, and staying down until `mouseUp`. With a
-  /// presentation shown from this window, the presentation takes it, as a click outside it.
+  /// presentation shown from this window, the presentation takes it, as a click outside it. On
+  /// the title bar's empty parts it would drag the window: counted, and not sent.
   public func mouseDown(at point: float2, count: Int = 1) {
     if self.takeClick(at: point) { return }
+    if self.isTitleBarDragRegion(point) {
+      self.activate()
+      self.titleBarPresses += 1
+      self.pressTaken = true
+      self.app.step()
+      return
+    }
     self.activate()
     let (position, inView) = self.pin(point)
     self.pointer = inView ? position : nil

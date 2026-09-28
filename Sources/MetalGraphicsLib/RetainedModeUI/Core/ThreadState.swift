@@ -1,4 +1,5 @@
 import Foundation
+import simd
 
 /// What a layout or render pass keeps for its own duration, one per thread.
 ///
@@ -59,6 +60,19 @@ public final class ThreadState {
   /// See `LazyStackViewport`.
   var lazyViewport: ClipRect? = nil
   var inScrollView = false
+
+  // MARK: Theme
+
+  /// The theme of the window this thread runs: see `Theme.current`. A window's thread keeps it
+  /// equal to its `UIContext.theme`.
+  public internal(set) lazy var theme: Theme = ThemeStore.shared.theme
+
+  // MARK: Title bar
+
+  /// See `TitleBarInsets.current`: the window being laid out's.
+  var titleBar = TitleBarInsets.zero
+  /// Filled during a layout pass by `TitleBarInsets.addDragRegion`.
+  var titleBarDragRegions: [float4] = []
 
   // MARK: Transactions
 

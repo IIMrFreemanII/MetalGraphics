@@ -8,7 +8,7 @@ only AppKit and SwiftUI work.
 
 | Thread | What runs there |
 |---|---|
-| Main | SwiftUI scenes and `RetainedView`; `RetainedLayerView`'s AppKit side: events, size, key status, occlusion, the cursor; `@SceneStorage`; `openWindow`; the pasteboard; hot reload's watchers |
+| Main | SwiftUI scenes and `RetainedView`; `RetainedLayerView`'s AppKit side: events, size, key status, occlusion, the cursor; `@SceneStorage`; `openWindow`; the pasteboard; hot reload's watchers; the system appearance, written to `ThemeStore.shared` (`AppearanceObserver`), which each window's thread then takes as its theme |
 | A window's `WindowThread` | Everything of that window's tree: its elements, `UIContext`, `Input`, `Graphics2D`, `UISceneStorage`, `RootViewRenderer`. Its frames, driven by a `CAMetalDisplayLink` on the thread's run loop. And the windows of the presentations shown from it, each with a renderer and display link of its own |
 | The shared bake queue | Glyph and icon bakes into the shared SDF atlas, and image uploads (`SharedGPUWork`) |
 

@@ -27,7 +27,7 @@ final class WindowsDemo : SingleChildElement {
       Section("Preview") {
         LabeledContent("Message", value: self.model.message)
         LabeledContent("Swatch") {
-          Rectangle(self.model.highlighted ? self.model.tint : float4(0.6, 0.6, 0.6, 1))
+          Rectangle(self.model.highlighted ? self.model.tint : .fill)
             .frame(width: 24 + Float(self.model.count) * 4, height: 18)
             .cornerRadius(4)
         }

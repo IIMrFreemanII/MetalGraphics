@@ -12,15 +12,16 @@ import ReactiveUI
 @Component
 final class GridsDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let buttonFont = TextFont.system(size: 13)
   private static let bodyFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
-  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
-  private static let grey = float4(0.9, 0.9, 0.9, 1)
-  private static let amber = float4(0.85, 0.6, 0.1, 1)
-  private static let purple = float4(0.6, 0.3, 0.9, 1)
-  private static let green = float4(0.2, 0.65, 0.35, 1)
+  private static let buttonColor: float4 = .fill
+  private static let buttonShape = UIShape.rect(cornerRadius: 6)
+  private static let grey: float4 = .fill
+  private static let amber: float4 = .hue(.orange)
+  private static let purple: float4 = .hue(.purple)
+  private static let green: float4 = .hue(.green)
   private static let animation = UIAnimation.easeInOut(0.35)
 
   private static let columnSets: [(name: String, value: [GridItem])] = [
@@ -43,15 +44,15 @@ final class GridsDemo : SingleChildElement {
         HStack(spacing: 6) {
           Text(self.trailingNumbers ? "numbers: trailing" : "numbers: leading")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.trailingNumbers.toggle() }
           Text(self.spanNotes ? "notes: over Qty" : "notes: 1 column")
             .font(Self.buttonFont)
-            .foregroundColor(.white)
+            .foregroundColor(.label)
             .padding(Self.buttonInset)
-            .background(Self.buttonColor)
+            .background(Self.buttonColor, in: Self.buttonShape)
             .onTap { _ in self.spanNotes.toggle() }
         }
         Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 6) {
@@ -98,9 +99,9 @@ final class GridsDemo : SingleChildElement {
           .foregroundColor(Self.captionColor)
         Text("columns: \(Self.columnSets[self.columnSet].name)")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.nextColumns() }
         LazyVGrid(columns: self.columns, spacing: 6) {
           Rectangle(Self.purple).frame(height: 30)

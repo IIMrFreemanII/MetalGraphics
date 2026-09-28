@@ -29,12 +29,15 @@ enum IDE {
     DockSpace(
       name: "editor",
       kinds: [
-        DockPanelKind(navigatorKind, title: "Files") { panel in NavigatorPanel(panel: panel) },
-        DockPanelKind(fileKind, title: "Untitled") { panel in FileEditorPanel(panel: panel) },
-        DockPanelKind(welcomeKind, title: "Welcome") { _ in WelcomePanel() },
+        DockPanelKind(navigatorKind, title: "Files", background: .sidebarTint) { panel in NavigatorPanel(panel: panel) },
+        DockPanelKind(
+          fileKind, title: "Untitled", tabStyle: .document,
+          tabIcon: { title in (.document, FileRowView.documentColor(title)) }
+        ) { panel in FileEditorPanel(panel: panel) },
+        DockPanelKind(welcomeKind, title: "Welcome", tabStyle: .document) { _ in WelcomePanel() },
         DockPanelKind(consoleKind, title: "Console") { _ in ConsolePanel() },
-        DockPanelKind(problemsKind, title: "Problems") { _ in ProblemsPanel() },
-        DockPanelKind(outlineKind, title: "Outline") { _ in OutlinePanel() },
+        DockPanelKind(problemsKind, title: "Problems") { panel in ProblemsPanel(panel: panel) },
+        DockPanelKind(outlineKind, title: "Outline", background: .sidebarTint) { _ in OutlinePanel() },
       ]
     ) {
       var layout = DockLayout()

@@ -15,7 +15,7 @@ final class NavigatorPanel : SingleChildElement {
   static let expandedKey = "Navigator.expanded"
   private static let titleFont = TextFont.system(size: 12, weight: .semibold)
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.47, 1)
+  private static let captionColor: float4 = .secondaryLabel
 
   let panel: DockPanel
   /// Which folders show their contents, by path.
@@ -37,12 +37,13 @@ final class NavigatorPanel : SingleChildElement {
       HStack(spacing: 6) {
         Text(self.title)
           .font(Self.titleFont)
+          .foregroundColor(Self.captionColor)
           .lineLimit(1)
         Spacer()
         Button("Open…") { IDE.chooseFolder() }
           .buttonStyle(.bordered)
       }
-      .padding(Inset(vertical: 6, horizontal: 10))
+      .padding(Inset(left: 18, top: 6, right: 12, bottom: 6))
       if self.hasFolder {
         ScrollView(.vertical) {
           LazyVStack(alignment: .leading, spacing: 0, items: self.rows) { [weak self] row in
@@ -108,23 +109,18 @@ final class NavigatorPanel : SingleChildElement {
   }
 }
 
-/// One file or folder in the navigator: indented by its depth, a disclosure for a folder, and
-/// marked when its file is the one being edited.
+/// One file or folder in the navigator: indented by its depth, a disclosure chevron and a
+/// folder for a folder, a document for a file, and marked when its file is the one being edited.
 @Component
 final class FileRowView : SingleChildElement {
-  private static let font = TextFont.system(size: 12)
-  private static let chevronFont = TextFont.system(size: 9)
-  private static let textColor = float4(0.13, 0.13, 0.15, 1)
-  private static let folderColor = float4(0.35, 0.45, 0.62, 1)
-  private static let hoverColor = float4(0, 0, 0, 0.05)
-  private static let activeColor = float4(0.0, 0.48, 1.0, 0.16)
-  private static let clearColor = float4(0, 0, 0, 0)
+  private static let font = TextFont.system(size: 13)
+  private static let chevronColor: float4 = .tertiaryLabel
+  private static let folderColor: float4 = .hue(.folder)
   private static let indent: Float = 14
 
   let row: FileTreeRow
   let onTap: (FileTreeRow) -> Void
   @Bindable let workspace: WorkspaceModel = .shared
-  @State var hovered: Bool = false
 
   init(row: FileTreeRow, onTap: @escaping (FileTreeRow) -> Void) {
     self.row = row
@@ -132,22 +128,36 @@ final class FileRowView : SingleChildElement {
     super.init()
   }
 
+  /// A file's document icon, tinted by its type as the design's navigator does.
+  static func documentColor(_ name: String) -> float4 {
+    switch (name as NSString).pathExtension.lowercased() {
+    case "swift": .hue(.orange)
+    case "metal", "h", "c", "m", "cpp": .hue(.teal)
+    case "md", "markdown", "txt": .hue(.blue)
+    default: .secondaryLabel
+    }
+  }
+
   @UIElementBuilder var body: [UIElement] {
-    HStack(spacing: 4) {
-      Text(self.row.isDirectory ? (self.row.isExpanded ? "▼" : "▶") : "")
-        .font(Self.chevronFont)
-        .foregroundColor(Self.folderColor)
-        .frame(width: 10)
+    ListRow(
+      selected: self.workspace.activeFile == self.row.path, indent: Float(self.row.depth) * Self.indent, spacing: 5,
+      action: { self.onTap(self.row) }
+    ) {
+      if self.row.isDirectory {
+        Image(icon: self.row.isExpanded ? .chevronDown : .chevronRight)
+          .foregroundColor(Self.chevronColor)
+        Image(icon: .folder)
+          .foregroundColor(Self.folderColor)
+      } else {
+        Spacer(minLength: 10)
+          .frame(width: 10)
+        Image(icon: .document)
+          .foregroundColor(Self.documentColor(self.row.name))
+      }
       Text(self.row.name)
         .font(Self.font)
-        .foregroundColor(self.row.isDirectory ? Self.folderColor : Self.textColor)
         .lineLimit(1)
       Spacer()
     }
-    .padding(Inset(left: 8 + Float(self.row.depth) * Self.indent, top: 3, right: 8, bottom: 3))
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(self.workspace.activeFile == self.row.path ? Self.activeColor : (self.hovered ? Self.hoverColor : Self.clearColor))
-    .onHover { hovered, _ in self.hovered = hovered }
-    .onTap { _ in self.onTap(self.row) }
   }
 }

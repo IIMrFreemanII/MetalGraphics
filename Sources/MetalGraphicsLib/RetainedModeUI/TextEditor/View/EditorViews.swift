@@ -269,7 +269,7 @@ final class EditorContentView : UIRenderableElement {
         else { continue }
         let (fragment, x) = visible.layout.caretX(Int32(range.head - visible.start), affinity: range.affinity)
         let rows = visible.layout.rowTops
-        let inset = editor.theme.lineSpacing * 0.5
+        let inset = editor.layout.lineSpacing * 0.5
         let top = origin.y + Float(visible.top) + rows[fragment] + inset * 0.5
         let height = rows[fragment + 1] - rows[fragment] - inset
         fill(float2(origin.x + x - TextEditor.caretWidth * 0.5, top), float2(TextEditor.caretWidth, height), theme.caret)
@@ -348,7 +348,8 @@ final class EditorGutterView : UIRenderableElement {
     let count = max(self.editor.document.lineCount, 1)
     let places = max(3, String(count).count)
     let numbers = self.editor.showsLineNumbers ? Float(places) * self.digitAdvance + Self.padding * 2 : Self.padding
-    return numbers + (folding ? Self.foldColumn : 0)
+    let width = numbers + (folding ? Self.foldColumn : 0)
+    return self.editor.showsLineNumbers ? max(width, self.editor.theme.minGutterWidth) : width
   }
 
   var showsFolding: Bool { !self.editor.foldingRanges.isEmpty || !self.editor.folds.isEmpty }

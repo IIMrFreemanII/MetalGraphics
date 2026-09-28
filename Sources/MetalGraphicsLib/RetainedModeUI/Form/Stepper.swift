@@ -142,7 +142,7 @@ final class StepperGlyph : FormGraphic {
     renderer.draw(
       roundedRect: origin, size: size,
       radii: (self.plus ? float4(5, 5, 0, 0) : float4(0, 0, 5, 5)) * scale,  // trailing corners, or leading
-      color: float4(1, 1, 1, opacity)
+      color: float4.controlButton.withAlpha(opacity)
     )
     var ink = FormMetrics.labelColor
     ink.w *= opacity * (self.enabled ? 1 : 0.3)

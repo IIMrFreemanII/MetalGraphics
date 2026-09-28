@@ -563,6 +563,10 @@ extension Image {
     context.invalidate(.layout, animation: animation)
   }
 
+  public func setIcon(_ value: ThemeIcon, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.setSVG(value.svg, context, animation: animation)
+  }
+
   public func setForegroundColor(_ value: float4, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
     context.animator.set(self, .color, from: self.color, to: value, animation, context) { element, value, context in
       unsafeDowncast(element, to: Image.self).color = float4(packed: value)

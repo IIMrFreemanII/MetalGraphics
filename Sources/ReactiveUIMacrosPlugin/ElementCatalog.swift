@@ -334,7 +334,8 @@ enum ElementCatalog {
     "Image": TypeSpec(
       name: "Image",
       args: [ArgSpec(nil, "setName", animatable: true), ArgSpec("bundle", nil),
-             ArgSpec("nsImage", "setNSImage", animatable: true), ArgSpec("svg", "setSVG", animatable: true)],
+             ArgSpec("nsImage", "setNSImage", animatable: true), ArgSpec("svg", "setSVG", animatable: true),
+             ArgSpec("icon", "setIcon", animatable: true)],
       arity: .leaf
     ),
     "VectorCanvas": TypeSpec(
@@ -402,6 +403,19 @@ enum ElementCatalog {
       args: [ArgSpec(nil, "setTitle", animatable: true), ArgSpec("role", nil),
              ArgSpec("action", nil, handler: HandlerSpec(property: "action", placeholder: ""))],
       arity: .multi, namedContents: ["label": "replaceChildren"]
+    ),
+    // A sidebar, tree or list row: selected state is reactive, its shape constant.
+    "ListRow": TypeSpec(
+      name: "ListRow",
+      args: [ArgSpec("selected", "setSelected", animatable: true), ArgSpec("selectionStyle", nil),
+             ArgSpec("height", nil), ArgSpec("margin", nil), ArgSpec("indent", nil), ArgSpec("spacing", nil),
+             ArgSpec("action", nil, handler: HandlerSpec(property: "action", placeholder: ""))],
+      arity: .multi
+    ),
+    "KindBadge": TypeSpec(
+      name: "KindBadge",
+      args: [ArgSpec(nil, "setLetter", animatable: true), ArgSpec("color", "setColor", animatable: true)],
+      arity: .leaf
     ),
     // The path is a binding, adapted from the stack's type-erased values to the state's own
     // array or `NavigationPath`. Its field stays non-generic: a path is not a list's rows, and
@@ -864,6 +878,11 @@ enum ElementCatalog {
     "lineSpacing": textModifier("lineSpacing", setter: "setLineSpacing"),
     "minimumScaleFactor": textModifier("minimumScaleFactor", setter: "setMinimumScaleFactor"),
     "textCase": textModifier("textCase", setter: "setTextCase"),
+    // A text field's icon: constant, built once with it.
+    "leadingIcon": ModifierSpec(
+      name: "leadingIcon", labels: [nil], produces: "TextField", setter: nil, combine: .identity,
+      inPlaceOn: ["TextField", "SecureField"]
+    ),
     // How an image is sized and drawn: constant, built once with it.
     "resizable": ModifierSpec(
       name: "resizable", labels: [], produces: "Image", setter: nil, combine: .identity,
@@ -1033,6 +1052,10 @@ enum ElementCatalog {
     "navigationTitle": ModifierSpec(
       name: "navigationTitle", labels: [nil],
       produces: "NavigationTitleElement", setter: "setTitle", combine: .identity
+    ),
+    "navigationBackground": ModifierSpec(
+      name: "navigationBackground", labels: [nil],
+      produces: "NavigationBackgroundElement", setter: "setBackground", combine: .identity
     ),
     "popover": presentation("popover", constants: ["attachmentAnchor", "arrowEdge"], onDismiss: false),
     "alert": presentation("alert", main: "actions", title: true, onDismiss: false),

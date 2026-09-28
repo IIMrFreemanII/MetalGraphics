@@ -1,16 +1,23 @@
 import simd
 
-/// How forms and their controls look: one place, like `TableMetrics`. SwiftUI's grouped form
-/// style on macOS, approximately.
+/// How forms and their controls look, as SwiftUI's grouped form style on macOS: the theme's
+/// roles and type, and the form's own geometry. Colours here are `ThemeColor` roles, resolved
+/// when drawn, so a control built once follows light and dark.
 public enum FormMetrics {
   /// Behind the whole form, and between its sections.
-  public static let groupedBackground = float4(0.93, 0.93, 0.94, 1)
+  public static let groupedBackground: float4 = .groupedBackground
   /// A section's card.
-  public static let cardColor = float4(1, 1, 1, 1)
+  public static let cardColor: float4 = .card
   public static let cardCornerRadius: Float = 10
-  public static let separatorColor = float4(0, 0, 0, 0.1)
+  public static let separatorColor: float4 = .separator
 
   public static let formInset: Float = 20
+  /// Above the first section.
+  public static let formTopInset: Float = 18
+  /// The widest a form's column of sections gets; it is centred in a wider form.
+  public static let maxWidth: Float = 600
+  /// A labelled text field in a row: at most this wide, at the row's trailing edge.
+  public static let fieldWidth: Float = 240
   public static let sectionSpacing: Float = 20
   /// Around each row's content, inside the card.
   public static let rowInset = Inset(vertical: 9, horizontal: 14)
@@ -19,17 +26,24 @@ public enum FormMetrics {
   /// Between a section's header or footer and its card.
   public static let captionGap: Float = 6
 
-  /// A proportional face, as SwiftUI's controls use, rather than the monospaced default.
-  public static let face = FontManager.shared.font(named: "Helvetica Neue")
-  public static let font = TextFont.custom(face, size: 14)
-  public static let captionFont = TextFont.custom(face, size: 12)
-  public static let labelColor = float4(0.1, 0.1, 0.1, 1)
-  public static let secondaryColor = float4(0.45, 0.45, 0.47, 1)
-  public static let accentColor = float4(0.0, 0.48, 1.0, 1)
-  public static let destructiveColor = float4(0.92, 0.23, 0.2, 1)
-  /// A control's track, a field's border, an off switch.
-  public static let fillColor = float4(0.86, 0.86, 0.88, 1)
-  public static let strokeColor = float4(0, 0, 0, 0.15)
+  /// Controls' labels and values: the theme's body type.
+  public static var font: TextFont { Theme.current.typography.body }
+  /// Section footers, captions under a control.
+  public static var captionFont: TextFont { Theme.current.typography.subheadline }
+  /// Section headers.
+  public static var headerFont: TextFont {
+    var font = Theme.current.typography.callout
+    font.weight = .semibold
+    return font
+  }
+  public static let labelColor: float4 = .label
+  public static let secondaryColor: float4 = .secondaryLabel
+  public static let accentColor: float4 = .accent
+  public static let destructiveColor: float4 = .destructive
+  /// A control's track, a bordered button, an off switch.
+  public static let fillColor: float4 = .fill
+  /// A field's border.
+  public static let strokeColor: float4 = .border
 
   /// Between a control's label and the control.
   public static let labelSpacing: Float = 12

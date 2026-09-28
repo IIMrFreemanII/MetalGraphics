@@ -77,6 +77,8 @@ public final class NavigationLink : Button {
   }
 
   func setSelected(_ value: Bool, _ context: UIContext) {
+    guard value != self.face.isSelected else { return }
     self.face.setSelected(value, context)
+    self.setLabelWeight(value ? .medium : nil, context)
   }
 }

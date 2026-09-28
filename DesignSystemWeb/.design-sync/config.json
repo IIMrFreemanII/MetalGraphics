@@ -1,0 +1,185 @@
+{
+  "projectId": "da15bd76-150e-4be4-81fc-8050f1eac271",
+  "shape": "package",
+  "pkg": "@metalgraphics/frosted-glass",
+  "globalName": "MG",
+  "buildCmd": "npm run build",
+  "cssEntry": "dist/styles.css",
+  "docsDir": "docs",
+  "provider": {
+    "component": "MGRoot",
+    "props": {
+      "mode": "light",
+      "surface": "content"
+    }
+  },
+  "guidelinesGlob": "guides/**/*.md",
+  "overrides": {
+    "Alert": {
+      "cardMode": "column"
+    },
+    "Button": {
+      "cardMode": "column"
+    },
+    "DisclosureGroup": {
+      "cardMode": "column"
+    },
+    "Divider": {
+      "cardMode": "column"
+    },
+    "DockGap": {
+      "cardMode": "column"
+    },
+    "DockTab": {
+      "cardMode": "column"
+    },
+    "DockTabBar": {
+      "cardMode": "column"
+    },
+    "Form": {
+      "cardMode": "column"
+    },
+    "FormRow": {
+      "cardMode": "column"
+    },
+    "Glass": {
+      "cardMode": "column"
+    },
+    "Icon": {
+      "cardMode": "column"
+    },
+    "KindBadge": {
+      "cardMode": "column"
+    },
+    "LabeledContent": {
+      "cardMode": "column"
+    },
+    "ListRow": {
+      "cardMode": "column"
+    },
+    "MGRoot": {
+      "cardMode": "column"
+    },
+    "Menu": {
+      "cardMode": "column"
+    },
+    "MenuItem": {
+      "cardMode": "column"
+    },
+    "MenuSeparator": {
+      "cardMode": "column"
+    },
+    "NavigationBar": {
+      "cardMode": "column"
+    },
+    "Picker": {
+      "cardMode": "column"
+    },
+    "Popover": {
+      "cardMode": "column"
+    },
+    "ProgressView": {
+      "cardMode": "column"
+    },
+    "Scrim": {
+      "cardMode": "column"
+    },
+    "ScrollIndicator": {
+      "cardMode": "column"
+    },
+    "Section": {
+      "cardMode": "column"
+    },
+    "Sheet": {
+      "cardMode": "column"
+    },
+    "Sidebar": {
+      "cardMode": "column"
+    },
+    "SidebarLink": {
+      "cardMode": "column"
+    },
+    "Slider": {
+      "cardMode": "column"
+    },
+    "Stepper": {
+      "cardMode": "column"
+    },
+    "Table": {
+      "cardMode": "column"
+    },
+    "TextField": {
+      "cardMode": "column"
+    },
+    "Toggle": {
+      "cardMode": "column"
+    },
+    "Tooltip": {
+      "cardMode": "column"
+    },
+    "CalendarView": {
+      "cardMode": "column"
+    },
+    "CodeEditor": {
+      "cardMode": "column"
+    },
+    "ColorPicker": {
+      "cardMode": "column"
+    },
+    "ColorPickerPanel": {
+      "cardMode": "column"
+    },
+    "ColorWell": {
+      "cardMode": "column"
+    },
+    "CompletionList": {
+      "cardMode": "column"
+    },
+    "ConfirmationDialog": {
+      "cardMode": "column"
+    },
+    "DatePicker": {
+      "cardMode": "column"
+    },
+    "DropMarkers": {
+      "cardMode": "column"
+    },
+    "DropPreview": {
+      "cardMode": "column"
+    },
+    "FindBar": {
+      "cardMode": "column"
+    },
+    "FloatingPanel": {
+      "cardMode": "column"
+    },
+    "InsertionLine": {
+      "cardMode": "column"
+    },
+    "StatusBar": {
+      "cardMode": "column"
+    },
+    "TimePanel": {
+      "cardMode": "column"
+    },
+    "TitleBar": {
+      "cardMode": "column"
+    },
+    "ToggleChip": {
+      "cardMode": "column"
+    },
+    "TrafficLights": {
+      "cardMode": "column"
+    },
+    "Window": {
+      "cardMode": "column"
+    }
+  },
+  "extraFonts": [
+    "node_modules/@fontsource/jetbrains-mono/400.css",
+    "node_modules/@fontsource/jetbrains-mono/500.css",
+    "node_modules/@fontsource/jetbrains-mono/600.css",
+    "node_modules/@fontsource/jetbrains-mono/700.css"
+  ],
+  "readmeHeader": ".design-sync/conventions.md"
+}

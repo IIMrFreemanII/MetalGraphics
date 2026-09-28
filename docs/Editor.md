@@ -92,7 +92,8 @@ Closing it clears the highlights. A Swift file's editor also matches brackets, t
   - The file takes the keyboard when its tab shows.
   - It marks its row in the navigator (`WorkspaceModel.activeFile`).
 - **Saving.**
-  - A tab with unsaved edits is titled "● name". The title is written only when that flips.
+  - A tab with unsaved edits shows a dot after its name (`panel.setEdited`), written only when
+    that flips. File tabs are `.document` tabs, with a document icon tinted by the file's type.
   - Saving writes atomically, with the file's line endings (`stringWithOriginalLineEndings`),
     encoding and byte order mark.
   - Closing an unsaved tab from its × asks first: Save, Don't Save, Cancel. This is the panel's

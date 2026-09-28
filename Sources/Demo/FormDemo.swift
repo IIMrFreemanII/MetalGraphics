@@ -30,8 +30,6 @@ struct AudioSettings {
 //   state.
 @Component
 final class FormDemo : SingleChildElement {
-  private static let size = float2(560, 640)
-
   @State var name: String = ""
   @State var password: String = ""
   @State var submitted: String = "nothing yet"
@@ -46,7 +44,7 @@ final class FormDemo : SingleChildElement {
   @State var notifications: Bool = true
   @State var due: Date = Date().addingTimeInterval(3 * 24 * 3600)
   @State var start: Date = Date()
-  @State var tint: float4 = float4(0.0, 0.48, 1.0, 1)
+  @State var tint: float4 = float4(0.0, 0.48, 1.0, 1)  // design: a ColorPicker edits a plain colour
   @State var taps: Int = 0
   @State var prominent: Bool = false
 
@@ -64,7 +62,7 @@ final class FormDemo : SingleChildElement {
       } footer: {
         Text("Your name is shown to other players.")
         if self.password.count > 0 && self.password.count < 8 {
-          Text("The password is too short.").foregroundColor(float4(0.92, 0.23, 0.2, 1))
+          Text("The password is too short.").foregroundColor(.destructive)
         }
       }
       Section("Game") {
@@ -130,7 +128,7 @@ final class FormDemo : SingleChildElement {
           .disabled(self.name.isEmpty && self.password.isEmpty && self.lives == 3 && self.difficulty == 1)
       }
     }
-    .frame(width: Self.size.x, height: Self.size.y)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 
   // MARK: - Actions

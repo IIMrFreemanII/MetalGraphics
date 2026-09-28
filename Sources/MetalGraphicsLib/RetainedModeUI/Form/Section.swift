@@ -14,8 +14,8 @@ import simd
 /// own, visited before and after the rows.
 public final class Section : MultiChildElement {
   private let card = SectionCard()
-  private let header = CaptionSlot()
-  private let footer = CaptionSlot()
+  private let header = CaptionSlot(font: FormMetrics.headerFont)
+  private let footer = CaptionSlot(font: FormMetrics.captionFont)
 
   private var size: float2 = .zero
   /// Each live row's height, committed by `calcSize` for `calcPosition`.
@@ -165,16 +165,17 @@ public final class Section : MultiChildElement {
 }
 
 /// A section's header or footer: its caption string, or views in its place. The texts in it
-/// draw in the secondary colour, and the caption font unless they set their own.
+/// draw in the secondary colour, and in `font` unless they set their own: the header's or the
+/// caption's.
 final class CaptionSlot : TextStyleElement {
   let caption = Text("")
   private let stack = VStack(alignment: .leading, spacing: 2)
   private var hasViews = false
 
-  init() {
+  init(font: TextFont) {
     super.init(
       overrides: TextEnvironment().foregroundColor(FormMetrics.secondaryColor),
-      defaults: TextEnvironment().font(FormMetrics.captionFont)
+      defaults: TextEnvironment().font(font)
     )
     self.stack.applyContent([self.caption])
     self.applyContent([self.stack])
@@ -257,9 +258,11 @@ final class SectionCard : FormGraphic {
     guard size.y > 0 else { return }
     var card = FormMetrics.cardColor
     card.w *= opacity
+    let radii = float4(repeating: FormMetrics.cardCornerRadius * scale)
+    renderer.draw(roundedRect: origin, size: size, radii: radii, color: card)
     renderer.draw(
-      roundedRect: origin, size: size,
-      radii: float4(repeating: FormMetrics.cardCornerRadius * scale), color: card
+      roundedRect: origin, size: size, radii: radii,
+      color: FormMetrics.separatorColor.withAlpha(opacity), strokeWidth: 0.5 * scale
     )
     RowLayout.drawSeparators(
       renderer, self.separators, origin: origin, size: size,

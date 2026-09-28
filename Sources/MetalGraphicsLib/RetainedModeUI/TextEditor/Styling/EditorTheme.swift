@@ -65,6 +65,10 @@ public struct EditorTheme: Hashable, Sendable {
   public var diagnosticColors: [float4]
   /// Extra space below every line on screen.
   public var lineSpacing: Float
+  /// Every line this tall, whatever the font's own height: in place of `lineSpacing` when set.
+  public var lineHeight: Float? = nil
+  /// The line number gutter is at least this wide.
+  public var minGutterWidth: Float = 0
   /// Between the text and the edges of the editor.
   public var textInset: float2
   /// The font when nothing around the editor sets one.
@@ -135,7 +139,7 @@ public struct EditorTheme: Hashable, Sendable {
   // MARK: - Presets
 
   private static func rgb(_ hex: UInt32, _ alpha: Float = 1) -> float4 {
-    float4(Float((hex >> 16) & 0xFF) / 255, Float((hex >> 8) & 0xFF) / 255, Float(hex & 0xFF) / 255, alpha)
+    float4(hex: hex, alpha: alpha)
   }
 
   private static func headings(_ color: float4) -> [TextToken: SpanStyle] {

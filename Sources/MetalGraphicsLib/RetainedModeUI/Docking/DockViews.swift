@@ -29,17 +29,16 @@ enum DockMetrics {
   /// How much of a host's content a drop on its edge takes.
   static let edgeFraction: Float = 0.3
 
-  static let gapColor = float4(0.74, 0.74, 0.76, 1)
-  static let barColor = float4(0.88, 0.88, 0.9, 1)
-  static let tabHoverColor = float4(0.93, 0.93, 0.95, 1)
-  static let tabSelectedColor = float4(1, 1, 1, 1)
-  static let contentColor = float4(1, 1, 1, 1)
-  static let titleBarColor = float4(0.84, 0.84, 0.86, 1)
-  static let borderColor = float4(0, 0, 0, 0.18)
-  static let shadowColor = float4(0, 0, 0, 0.28)
-  static let glyphColor = float4(0.35, 0.35, 0.38, 1)
-  static let accent = FormMetrics.accentColor
-  static let font = FormMetrics.captionFont
+  static let gapColor: float4 = .gapTint
+  static let barColor: float4 = .barTint
+  static let tabHoverColor: float4 = .hover
+  static let tabSelectedColor: float4 = .selectedTab
+  static let contentColor: float4 = .contentBackground
+  static let titleBarColor: float4 = .barTint
+  static let borderColor: float4 = .separator
+  static let glyphColor: float4 = .secondaryLabel
+  static let accent: float4 = .accent
+  static var font: TextFont { Theme.current.typography.callout }
   static let animation = UIAnimation.easeOut(0.16)
 }
 
@@ -117,22 +116,69 @@ final class DockPanelHost : SingleChildElement {
 
 // MARK: - Tab group
 
+/// How one of the two tab styles is laid out and drawn: see `DockTabStyle`.
+struct DockTabMetrics {
+  let barHeight: Float
+  let pillHeight: Float
+  let radius: Float
+  let fontSize: Float
+  /// Between the bar's ends and the tabs.
+  let inset: Float
+  let spacing: Float
+  /// Inside a pill, before the title and after the close button.
+  let padding: Float
+  let closeSize: Float
+  let separator: Bool
+
+  static let panel = DockTabMetrics(
+    barHeight: 30, pillHeight: 22, radius: 6, fontSize: 11.5, inset: 10, spacing: 2, padding: 10, closeSize: 14,
+    separator: false
+  )
+  static let document = DockTabMetrics(
+    barHeight: 40, pillHeight: 28, radius: 7, fontSize: 12.5, inset: 10, spacing: 4, padding: 10, closeSize: 16,
+    separator: true
+  )
+
+  static func of(_ style: DockTabStyle) -> DockTabMetrics {
+    style == .document ? .document : .panel
+  }
+
+  /// Between a pill's icon, title, marks and close button.
+  static let gap: Float = 7
+  static let iconSize = float2(12, 14)
+  static let dotSize: Float = 7
+  static let badgeHeight: Float = 16
+}
+
 /// A tab group: a bar of tabs over the shown panel. Pressing a tab shows it and picks it up;
 /// pressing the bar beside the tabs picks the whole group up.
+///
+/// At a translucent window's top it shares the title bar's row: a document bar is that row,
+/// its tabs clear of the traffic lights; a panel bar sits under an empty row the traffic lights
+/// are on. The empty parts of the row drag the window.
 final class DockTabsView : MultiChildElement {
   let id: String
   unowned let area: DockArea
   private(set) var panels: [String] = []
   private(set) var selected: String?
+  /// What the shown panel's content is drawn on: its kind's `background`.
+  private(set) var contentBackground: float4 = DockMetrics.contentColor
+  /// The shown panel's kind's.
+  private(set) var style: DockTabStyle = .panel
+  var metrics: DockTabMetrics { .of(self.style) }
 
   private let chrome = DockTabsChrome()
   private let barHandle: HittableView
   private var items: [String: DockTabItem] = [:]
   private var shownItems: [DockTabItem] = []
   private var content: DockPanelHost?
+  private var titleBarPlacement = TitleBarPlacement()
 
   private(set) var position: float2 = .zero
   private(set) var size: float2 = .zero
+  /// Above the bar: the title bar's empty row, when a panel bar is under it.
+  private(set) var rowHeight: Float = 0
+  private(set) var barHeight: Float = DockTabMetrics.panel.barHeight
 
   init(id: String, area: DockArea) {
     self.id = id
@@ -147,7 +193,9 @@ final class DockTabsView : MultiChildElement {
   var rect: ClipRect { ClipRect(position: self.position, size: self.size) }
 
   /// The bar's rect, window coordinates.
-  var barRect: ClipRect { ClipRect(position: self.position, size: float2(self.size.x, DockMetrics.barHeight)) }
+  var barRect: ClipRect {
+    ClipRect(position: self.position + float2(0, self.rowHeight), size: float2(self.size.x, self.barHeight))
+  }
 
   /// Where the tab of `panel` starts, window coordinates.
   func tabOrigin(_ panel: String) -> float2? {
@@ -159,12 +207,26 @@ final class DockTabsView : MultiChildElement {
     self.panels = tabs.panels
     self.selected = tabs.shown
     self.content = content
+    let shownKind = tabs.shown.flatMap { titles[$0]?.kind }.flatMap { self.area.space.kind($0) }
+    let background = shownKind?.background ?? DockMetrics.contentColor
+    if background != self.contentBackground {
+      self.contentBackground = background
+      context.invalidate()
+    }
+    let style = shownKind?.tabStyle ?? .panel
+    if style != self.style {
+      self.style = style
+      context.invalidate(.layout)
+    }
     var shown: [DockTabItem] = []
     for panel in tabs.panels {
       let item = self.items[panel] ?? DockTabItem(panel: panel, group: self)
       self.items[panel] = item
-      item.setTitle(titles[panel]?.title ?? "", context)
-      item.isSelected = panel == tabs.shown
+      let info = titles[panel]
+      item.setTitle(info?.title ?? "", context)
+      item.setDecoration(info, kind: info.flatMap { self.area.space.kind($0.kind) }, context)
+      item.setSelected(panel == tabs.shown, context)
+      item.setStyle(style, context)
       shown.append(item)
     }
     // Forgotten here, and unmounted by the reconcile that no longer lists them.
@@ -186,54 +248,92 @@ final class DockTabsView : MultiChildElement {
     proposal.replacingUnspecified(with: .zero)
   }
 
+  /// Whether it shares the title bar's row.
+  private var inTitleBar: Bool {
+    self.titleBarPlacement.atTop && TitleBarInsets.current.top > 0
+  }
+
   override func calcSize(_ proposal: ProposedSize) -> float2 {
     self.size = proposal.replacingUnspecified(with: .zero)
-    let barHeight = DockMetrics.barHeight
+    let metrics = self.metrics
+    let row = TitleBarInsets.dockRowHeight
+    if self.inTitleBar {
+      self.rowHeight = self.style == .panel ? row : 0
+      self.barHeight = self.style == .panel ? metrics.barHeight : max(metrics.barHeight, row)
+    } else {
+      self.rowHeight = 0
+      self.barHeight = metrics.barHeight
+    }
+    let top = self.rowHeight + self.barHeight
     _ = self.chrome.calcSize(ProposedSize(self.size))
-    _ = self.barHandle.calcSize(ProposedSize(width: self.size.x, height: barHeight))
+    _ = self.barHandle.calcSize(ProposedSize(width: self.size.x, height: self.barHeight))
 
     // Each tab at its title's width, all of them shrunk alike when they do not fit.
     let ideal = self.shownItems.map { $0.idealWidth() }
-    let spacing = DockMetrics.tabSpacing * Float(max(self.shownItems.count - 1, 0))
-    let available = self.size.x - DockMetrics.tabInset * 2 - spacing
+    let spacing = metrics.spacing * Float(max(self.shownItems.count - 1, 0))
+    let available = self.size.x - metrics.inset * 2 - spacing
     let total = ideal.reduce(0, +)
     let scale = total > available && total > 0 ? max(available, 0) / total : 1
     for (item, width) in zip(self.shownItems, ideal) {
-      _ = item.calcSize(ProposedSize(width: max(width * scale, min(DockMetrics.tabMinWidth, width)), height: barHeight - 4))
+      _ = item.calcSize(ProposedSize(width: max(width * scale, min(DockMetrics.tabMinWidth, width)), height: metrics.pillHeight))
     }
-    _ = self.content?.calcSize(ProposedSize(width: self.size.x, height: max(self.size.y - barHeight, 0)))
+    _ = self.content?.calcSize(ProposedSize(width: self.size.x, height: max(self.size.y - top, 0)))
     return self.size
   }
 
   override func calcPosition(_ position: float2) {
     self.position = position
+    self.titleBarPlacement.settle(position.y, self.area.context)
+    let metrics = self.metrics
+    let barY = position.y + self.rowHeight
     self.chrome.calcPosition(position)
-    self.barHandle.calcPosition(position)
-    var x = position.x + DockMetrics.tabInset
+    self.barHandle.calcPosition(float2(position.x, barY))
+    var start = metrics.inset
+    if self.inTitleBar && self.style == .document {
+      start = max(start, TitleBarInsets.current.leading - position.x)
+    }
+    var x = position.x + start
+    let y = barY + ((self.barHeight - metrics.pillHeight) * 0.5).rounded()
     for item in self.shownItems {
-      self.place(item, at: float2(x, position.y + 4), in: position)
-      x += item.getSize().x + DockMetrics.tabSpacing
+      self.place(item, at: float2(x, y), in: position)
+      x += item.getSize().x + metrics.spacing
+    }
+    if self.inTitleBar {
+      if self.rowHeight > 0 {
+        TitleBarInsets.addDragRegion(float4(position.x, position.y, self.size.x, self.rowHeight))
+      } else {
+        TitleBarInsets.addDragRegion(float4(position.x, barY, start, self.barHeight))
+        let end = x - position.x
+        TitleBarInsets.addDragRegion(float4(x, barY, self.size.x - end, self.barHeight))
+      }
     }
     if let content {
-      content.calcPosition(position + float2(0, DockMetrics.barHeight))
+      content.calcPosition(position + float2(0, self.rowHeight + self.barHeight))
     }
     self.placeLeaving(in: position)
   }
 }
 
-/// One tab: its title, and a close button that shows when it is selected or hovered.
+/// One tab: an icon, its title, marks for an unsaved document or a count, and a close button
+/// that shows while the pointer is over the tab.
 final class DockTabItem : MultiChildElement {
   let panel: String
   unowned let group: DockTabsView
   private let fill = DockTabFill()
+  private let icon: Image
   private let title: Text
+  private let badgeText: Text
   private let press: HittableView
   private let close: HittableView
   private var titleString = ""
+  private var style: DockTabStyle = .panel
+  private var metrics: DockTabMetrics { .of(self.style) }
+  private var hasIcon = false
+  private var iconKind: ThemeIcon?
+  private(set) var isEdited = false
+  private(set) var badge = 0
 
-  var isSelected = false {
-    didSet { if oldValue != self.isSelected { self.fill.isSelected = self.isSelected } }
-  }
+  private(set) var isSelected = false
 
   private(set) var position: float2 = .zero
   private(set) var size: float2 = .zero
@@ -241,7 +341,11 @@ final class DockTabItem : MultiChildElement {
   init(panel: String, group: DockTabsView) {
     self.panel = panel
     self.group = group
-    self.title = Text("").font(DockMetrics.font).foregroundColor(FormMetrics.labelColor).lineLimit(1)
+    self.title = Text("").font(.system(size: DockTabMetrics.panel.fontSize)).foregroundColor(.secondaryLabel).lineLimit(1)
+    self.icon = Image(icon: .document)
+    self.icon.isHidden = true
+    self.badgeText = Text("").font(.system(size: 10, weight: .bold)).foregroundColor(.accentForeground).lineLimit(1)
+    self.badgeText.isHidden = true
     self.press = HittableView {}
     self.close = HittableView {}
     super.init()
@@ -261,7 +365,7 @@ final class DockTabItem : MultiChildElement {
       self.fill.isCloseHovered = hovered
       self.group.area.context?.invalidate(.render)
     }
-    self.applyContent([self.fill, self.title, self.press, self.close])
+    self.applyContent([self.fill, self.icon, self.title, self.badgeText, self.press, self.close])
   }
 
   func setTitle(_ title: String, _ context: UIContext) {
@@ -270,45 +374,133 @@ final class DockTabItem : MultiChildElement {
     self.title.setText(title, context)
   }
 
+  func setSelected(_ value: Bool, _ context: UIContext) {
+    guard value != self.isSelected else { return }
+    self.isSelected = value
+    self.fill.isSelected = value
+    self.title.setForegroundColor(value ? .label : .secondaryLabel, context)
+    self.title.setFontWeight(value ? .medium : nil, context)
+  }
+
+  func setStyle(_ style: DockTabStyle, _ context: UIContext) {
+    guard style != self.style else { return }
+    self.style = style
+    self.title.setFont(.system(size: DockTabMetrics.of(style).fontSize), context)
+    self.updateIcon(context)
+  }
+
+  /// The icon, unsaved mark and count the panel set on itself.
+  func setDecoration(_ info: DockPanelInfo?, kind: DockPanelKind?, _ context: UIContext) {
+    let fallback = info.flatMap { info in kind?.tabIcon?(info.title) }
+    let icon = info?.icon ?? fallback?.0
+    if icon != self.iconKind {
+      self.iconKind = icon
+      if let icon { self.icon.setIcon(icon, context) }
+      self.updateIcon(context)
+    }
+    let color = info?.icon != nil ? info?.iconColor : fallback?.1
+    self.icon.setForegroundColor(color ?? .secondaryLabel, context)
+    let edited = info?.isEdited ?? false
+    if edited != self.isEdited {
+      self.isEdited = edited
+      context.invalidate(.layout)
+    }
+    let badge = info?.badge ?? 0
+    if badge != self.badge {
+      self.badge = badge
+      self.badgeText.setText("\(badge)", context)
+      if (badge > 0) == self.badgeText.isHidden {
+        self.badgeText.isHidden = badge == 0
+        context.invalidate([.layout, .treeOrder])
+      }
+    }
+  }
+
+  private func updateIcon(_ context: UIContext) {
+    let shows = self.iconKind != nil && self.style == .document
+    guard shows != self.hasIcon else { return }
+    self.hasIcon = shows
+    self.icon.isHidden = !shows
+    context.invalidate([.layout, .treeOrder])
+  }
+
+  /// The width of what sits between the title and the close button: the unsaved dot, the count.
+  private var marksWidth: Float {
+    var width: Float = 0
+    if self.isEdited { width += DockTabMetrics.gap + DockTabMetrics.dotSize }
+    if self.badge > 0 { width += DockTabMetrics.gap + self.badgeWidth }
+    return width
+  }
+
+  var badgeWidth: Float {
+    max(self.badgeText.measure(.unspecified).x + 8, DockTabMetrics.badgeHeight)
+  }
+
+  private var leadingWidth: Float {
+    self.metrics.padding + (self.hasIcon ? DockTabMetrics.iconSize.x + DockTabMetrics.gap : 0)
+  }
+
+  private var trailingWidth: Float {
+    self.marksWidth + DockTabMetrics.gap + self.metrics.closeSize + self.metrics.padding * 0.5
+  }
+
   func idealWidth() -> Float {
     let text = self.title.measure(.unspecified).x
-    return min(text + DockMetrics.tabPadding * 2 + DockMetrics.closeSize + 4, DockMetrics.tabMaxWidth)
+    return min(text + self.leadingWidth + self.trailingWidth, DockMetrics.tabMaxWidth)
   }
 
   /// The close button's rect, window coordinates.
   var closeRect: ClipRect {
-    let side = DockMetrics.closeSize
-    let origin = self.position + float2(self.size.x - DockMetrics.tabPadding * 0.5 - side, (self.size.y - side) * 0.5)
+    let side = self.metrics.closeSize
+    let origin = self.position + float2(self.size.x - self.metrics.padding * 0.5 - side, ((self.size.y - side) * 0.5).rounded())
     return ClipRect(position: origin, size: float2(side, side))
   }
+
+  /// Where the unsaved dot and the count go, window coordinates: after the title.
+  var marksOrigin: float2 {
+    self.position + float2(self.leadingWidth + self.title.getSize().x, 0)
+  }
+
+  var radius: Float { self.metrics.radius }
 
   override func getSize() -> float2 { self.size }
 
   override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
-    proposal.replacingUnspecified(with: float2(self.idealWidth(), DockMetrics.barHeight - 4))
+    proposal.replacingUnspecified(with: float2(self.idealWidth(), self.metrics.pillHeight))
   }
 
   override func calcSize(_ proposal: ProposedSize) -> float2 {
     self.size = self.sizeThatFits(proposal)
     _ = self.fill.calcSize(ProposedSize(self.size))
-    let textWidth = max(self.size.x - DockMetrics.tabPadding * 2 - DockMetrics.closeSize - 4, 0)
+    let textWidth = max(self.size.x - self.leadingWidth - self.trailingWidth, 0)
     _ = self.title.calcSize(ProposedSize(width: textWidth, height: nil))
+    _ = self.icon.calcSize(ProposedSize(DockTabMetrics.iconSize))
+    _ = self.badgeText.calcSize(.unspecified)
     _ = self.press.calcSize(ProposedSize(self.size))
-    _ = self.close.calcSize(ProposedSize(float2(repeating: DockMetrics.closeSize)))
+    _ = self.close.calcSize(ProposedSize(float2(repeating: self.metrics.closeSize)))
     return self.size
   }
 
   override func calcPosition(_ position: float2) {
     self.position = position
     self.fill.calcPosition(position)
+    let iconSize = self.icon.getSize()
+    self.icon.calcPosition(position + float2(self.metrics.padding, ((self.size.y - iconSize.y) * 0.5).rounded()))
     let textSize = self.title.getSize()
-    self.title.calcPosition(position + float2(DockMetrics.tabPadding, ((self.size.y - textSize.y) * 0.5).rounded()))
+    self.title.calcPosition(position + float2(self.leadingWidth, ((self.size.y - textSize.y) * 0.5).rounded()))
+    if self.badge > 0 {
+      let badgeSize = self.badgeText.getSize()
+      var x = self.marksOrigin.x + DockTabMetrics.gap
+      if self.isEdited { x += DockTabMetrics.dotSize + DockTabMetrics.gap }
+      x += ((self.badgeWidth - badgeSize.x) * 0.5).rounded()
+      self.badgeText.calcPosition(float2(x, position.y + ((self.size.y - badgeSize.y) * 0.5).rounded()))
+    }
     self.press.calcPosition(position)
     self.close.calcPosition(self.closeRect.min)
   }
 }
 
-/// A tab's rounded background, and its close cross.
+/// A tab's rounded background, its marks and its close cross.
 final class DockTabFill : FormGraphic {
   weak var item: DockTabItem?
   var isSelected = false
@@ -320,25 +512,59 @@ final class DockTabFill : FormGraphic {
   }
 
   override func draw(_ renderer: Graphics2D, origin: float2, size: float2, scale: Float, opacity: Float) {
-    if self.isSelected || self.isHovered {
-      var color = self.isSelected ? DockMetrics.tabSelectedColor : DockMetrics.tabHoverColor
-      color.w *= opacity
-      renderer.draw(roundedRect: origin, size: size, radii: float4(repeating: 5 * scale), color: color)
+    guard let item = self.item else { return }
+    let radii = float4(repeating: item.radius * scale)
+    if self.isSelected {
+      // A raised pill: a shadow a point below, then the fill and a hairline.
+      let shadow = renderer.theme.shadows.control
+      renderer.draw(
+        roundedRect: origin + float2(0, shadow.y * scale), size: size, radii: radii,
+        color: shadow.color.withAlpha(opacity * 0.6)
+      )
+      renderer.draw(roundedRect: origin, size: size, radii: radii, color: DockMetrics.tabSelectedColor.withAlpha(opacity))
+      renderer.draw(
+        roundedRect: origin, size: size, radii: radii, color: DockMetrics.borderColor.withAlpha(opacity),
+        strokeWidth: 0.5 * scale
+      )
+    } else if self.isHovered || self.isCloseHovered {
+      renderer.draw(roundedRect: origin, size: size, radii: radii, color: DockMetrics.tabHoverColor.withAlpha(opacity))
     }
-    guard let item = self.item, self.isSelected || self.isHovered else { return }
+
+    // After the title: the unsaved dot and the count's capsule.
+    var x = origin.x + (item.marksOrigin.x - item.position.x) * scale
+    let midY = origin.y + size.y * 0.5
+    if item.isEdited {
+      x += DockTabMetrics.gap * scale
+      let dot = DockTabMetrics.dotSize * scale
+      renderer.draw(
+        roundedRect: float2(x, midY - dot * 0.5), size: float2(dot, dot), radii: float4(repeating: dot * 0.5),
+        color: float4.secondaryLabel.withAlpha(opacity)
+      )
+      x += dot
+    }
+    if item.badge > 0 {
+      x += DockTabMetrics.gap * scale
+      let height = DockTabMetrics.badgeHeight * scale
+      renderer.draw(
+        roundedRect: float2(x, midY - height * 0.5), size: float2(item.badgeWidth * scale, height),
+        radii: float4(repeating: height * 0.5), color: float4.warning.withAlpha(opacity)
+      )
+    }
+
+    guard self.isHovered || self.isCloseHovered else { return }
     // The cross, in the close button's rect, moved as the tab is.
     let close = item.closeRect
     let min = origin + (close.min - item.position) * scale
     let side = (close.max.x - close.min.x) * scale
     if self.isCloseHovered {
-      renderer.draw(roundedRect: min, size: float2(side, side), radii: float4(repeating: 3 * scale),
-                    color: float4(0, 0, 0, 0.08 * opacity))
+      renderer.draw(roundedRect: min, size: float2(side, side), radii: float4(repeating: 4 * scale),
+                    color: float4.hover.withAlpha(opacity))
     }
-    let inset = side * 0.3
+    let inset = (side - 7 * scale) * 0.5
     var color = DockMetrics.glyphColor
     color.w *= opacity
-    renderer.draw(stroke: min + inset, to: min + side - inset, width: 1.2 * scale, color: color)
-    renderer.draw(stroke: min + float2(side - inset, inset), to: min + float2(inset, side - inset), width: 1.2 * scale, color: color)
+    renderer.draw(stroke: min + inset, to: min + side - inset, width: 1.3 * scale, color: color)
+    renderer.draw(stroke: min + float2(side - inset, inset), to: min + float2(inset, side - inset), width: 1.3 * scale, color: color)
   }
 }
 
@@ -351,13 +577,25 @@ final class DockTabsChrome : FormGraphic {
   }
 
   override func draw(_ renderer: Graphics2D, origin: float2, size: float2, scale: Float, opacity: Float) {
-    let bar = DockMetrics.barHeight * scale
+    let row = (self.group?.rowHeight ?? 0) * scale
+    let bar = (self.group?.barHeight ?? DockTabMetrics.panel.barHeight) * scale
     var barColor = DockMetrics.barColor
     barColor.w *= opacity
-    var contentColor = DockMetrics.contentColor
+    var contentColor = self.group?.contentBackground ?? DockMetrics.contentColor
     contentColor.w *= opacity
-    renderer.draw(roundedRect: origin, size: float2(size.x, bar), radii: .zero, color: barColor)
-    renderer.draw(roundedRect: origin + float2(0, bar), size: float2(size.x, max(size.y - bar, 0)), radii: .zero, color: contentColor)
+    // The title bar's row and the bar: a sidebar's own tint under a panel bar on a sidebar,
+    // which is part of it; the bar tint otherwise.
+    let top = row + bar
+    let onSidebar = self.group?.style == .panel && self.group?.contentBackground == .sidebarTint
+    let chrome = onSidebar ? contentColor : barColor
+    renderer.draw(roundedRect: origin, size: float2(size.x, top), radii: .zero, color: chrome)
+    renderer.draw(roundedRect: origin + float2(0, top), size: float2(size.x, max(size.y - top, 0)), radii: .zero, color: contentColor)
+    if self.group?.metrics.separator == true {
+      renderer.draw(
+        roundedRect: origin + float2(0, top - 0.5 * scale), size: float2(size.x, 0.5 * scale), radii: .zero,
+        color: DockMetrics.borderColor.withAlpha(opacity)
+      )
+    }
   }
 }
 
@@ -506,7 +744,8 @@ final class DockFloatView : MultiChildElement {
     self.id = id
     self.area = area
     let fill = self.fill
-    self.shadow = ShadowElement(color: DockMetrics.shadowColor, radius: 12, y: 4) { fill }
+    let float = Theme.current.shadows.float
+    self.shadow = ShadowElement(color: .shadow, radius: float.radius, y: float.y) { fill }
     let slot = self.slot
     self.clip = ClipElement(.rect(cornerRadius: DockMetrics.floatRadius)) { slot }
     self.grip = HittableView {}
@@ -608,7 +847,7 @@ final class DockFloatView : MultiChildElement {
   }
 }
 
-/// A float's card: white, and a grip strip on top when it has one.
+/// A float's card: the theme's floating panel glass, and a grip strip on top when it has one.
 final class DockFloatFill : FormGraphic {
   var hasGrip = false
 
@@ -618,9 +857,11 @@ final class DockFloatFill : FormGraphic {
 
   override func draw(_ renderer: Graphics2D, origin: float2, size: float2, scale: Float, opacity: Float) {
     let radius = DockMetrics.floatRadius * scale
-    var color = DockMetrics.barColor
-    color.w *= opacity
-    renderer.draw(roundedRect: origin, size: size, radii: float4(repeating: radius), color: color)
+    let material = renderer.theme[.floatingPanel]
+    renderer.draw(
+      glass: origin, size: size, radii: float4(repeating: radius), material: material,
+      sigma: material.blurRadius * ShadowState.sigmaPerRadius * scale, opacity: opacity
+    )
     guard self.hasGrip else { return }
     // Three dots in the middle of the strip, for something to take hold of.
     var dot = DockMetrics.glyphColor
@@ -771,14 +1012,14 @@ final class DockWindowButton : FormGraphic {
 
   override func draw(_ renderer: Graphics2D, origin: float2, size: float2, scale: Float, opacity: Float) {
     var color: float4 = switch self.kind {
-    case .close: float4(1, 0.37, 0.34, 1)
-    case .minimize: float4(1, 0.74, 0.18, 1)
-    case .zoom: float4(0.16, 0.78, 0.25, 1)
+    case .close: float4(1, 0.37, 0.34, 1)  // design: the macOS traffic lights
+    case .minimize: float4(1, 0.74, 0.18, 1)  // design: the macOS traffic lights
+    case .zoom: float4(0.16, 0.78, 0.25, 1)  // design: the macOS traffic lights
     }
     color.w *= opacity
     renderer.draw(roundedRect: origin, size: size, radii: float4(repeating: size.x * 0.5), color: color)
     guard self.isHovered else { return }
-    var glyph = float4(0, 0, 0, 0.55)
+    var glyph = float4(0, 0, 0, 0.55)  // design: the macOS traffic lights
     glyph.w *= opacity
     let c = origin + size * 0.5
     let r = size.x * 0.22
@@ -823,19 +1064,28 @@ final class DockDropOverlay : UIRenderableElement {
   override func render(_ renderer: Graphics2D, _ effect: EffectState) {
     guard effect.opacity > 0 else { return }
     let accent = DockMetrics.accent
+    let opacity = effect.opacity
     if let preview {
       let origin = centred(effect.apply(to: preview.min), renderer)
       let size = (preview.max - preview.min) * effect.scale
-      renderer.draw(roundedRect: origin, size: size, radii: float4(repeating: 4), color: float4(accent.x, accent.y, accent.z, 0.18 * effect.opacity))
-      renderer.draw(roundedRect: origin, size: size, radii: float4(repeating: 4), color: float4(accent.x, accent.y, accent.z, 0.7 * effect.opacity), strokeWidth: 2)
+      let radii = float4(repeating: renderer.theme.radii.md)
+      renderer.draw(roundedRect: origin, size: size, radii: radii, color: accent.withAlpha(0.18 * opacity))
+      renderer.draw(roundedRect: origin, size: size, radii: radii, color: accent.withAlpha(0.7 * opacity), strokeWidth: 2)
     }
+    let material = renderer.theme[.dropMarker]
     for marker in self.markers {
       let origin = centred(effect.apply(to: marker.rect.min), renderer)
       let size = (marker.rect.max - marker.rect.min) * effect.scale
-      let radii = float4(repeating: 5)
-      renderer.draw(roundedRect: origin, size: size, radii: radii,
-                    color: marker.isHovered ? float4(accent.x, accent.y, accent.z, effect.opacity) : float4(1, 1, 1, 0.95 * effect.opacity))
-      renderer.draw(roundedRect: origin, size: size, radii: radii, color: float4(accent.x, accent.y, accent.z, 0.9 * effect.opacity), strokeWidth: 1.5)
+      let radii = float4(repeating: renderer.theme.radii.md)
+      if marker.isHovered {
+        renderer.draw(roundedRect: origin, size: size, radii: radii, color: accent.withAlpha(opacity))
+      } else {
+        renderer.draw(
+          glass: origin, size: size, radii: radii, material: material,
+          sigma: material.blurRadius * ShadowState.sigmaPerRadius * effect.scale, opacity: opacity
+        )
+      }
+      renderer.draw(roundedRect: origin, size: size, radii: radii, color: accent.withAlpha(0.9 * opacity), strokeWidth: 1.5)
       // Where the panels go, drawn inside the marker: all of it for the middle, else one side.
       let inset: Float = 6
       var inner = ClipRect(min: origin + inset, max: origin + size - inset)
@@ -847,7 +1097,7 @@ final class DockDropOverlay : UIRenderableElement {
       case .top: inner.max.y = mid.y
       case .bottom: inner.min.y = mid.y
       }
-      let color = marker.isHovered ? float4(1, 1, 1, 0.9 * effect.opacity) : float4(accent.x, accent.y, accent.z, 0.55 * effect.opacity)
+      let color = marker.isHovered ? float4.accentForeground.withAlpha(0.9 * opacity) : accent.withAlpha(0.55 * opacity)
       renderer.draw(roundedRect: inner.min, size: inner.max - inner.min, radii: float4(repeating: 2), color: color)
     }
   }

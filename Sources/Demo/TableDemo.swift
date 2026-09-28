@@ -29,12 +29,13 @@ final class TableDemo : SingleChildElement {
     .init(0.85, 0.6, 0.1, 1), .init(0.6, 0.3, 0.9, 1), .init(0.1, 0.6, 0.6, 1),
   ]
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let cellFont = TextFont.system(size: 13)
   private static let buttonFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
-  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
-  private static let border = float4(0, 0, 0, 0.2)
+  private static let buttonColor: float4 = .fill
+  private static let buttonShape = UIShape.rect(cornerRadius: 6)
+  private static let border: float4 = .border
 
   // Not state: only used to name new people, never read by `body`.
   private var nextPerson = 1000
@@ -51,15 +52,15 @@ final class TableDemo : SingleChildElement {
       HStack(spacing: 6) {
         Text("Append")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.append() }
         Text("Remove selected")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.removeSelected() }
         Text("\(self.people.count) people, \(self.selection.count) selected")
           .font(Self.captionFont)

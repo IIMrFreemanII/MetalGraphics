@@ -71,21 +71,24 @@ public struct NavigationPath: Equatable, NavigationPathRepresentable {
   }
 }
 
-/// How navigation looks and moves: one place, like `FormMetrics`.
+/// How navigation looks and moves: one place, like `FormMetrics`. Colours are theme roles.
 public enum NavigationMetrics {
   public static let barHeight: Float = 38
-  public static let barColor = float4(0.97, 0.97, 0.97, 1)
-  public static let separatorColor = float4(0, 0, 0, 0.12)
-  public static let titleFont = TextFont.custom(FormMetrics.face, size: 14).weight(.semibold)
-  public static let titleColor = FormMetrics.labelColor
+  public static let barColor: float4 = .barTint
+  public static let separatorColor: float4 = .separator
+  public static var titleFont: TextFont { Theme.current.typography.headline }
+  public static let titleColor: float4 = .label
   /// Behind every page, so the one it covers does not show through while it slides.
-  public static let contentBackground = float4(1, 1, 1, 1)
+  public static let contentBackground: float4 = .contentBackground
 
-  public static let sidebarWidth: Float = 220
-  public static let sidebarColor = float4(0.93, 0.93, 0.94, 1)
-  public static let sidebarInset: Float = 8
+  public static let sidebarWidth: Float = 232
+  public static let sidebarColor: float4 = .sidebarTint
+  /// Between the sidebar's edges and its content: its rows' highlights.
+  public static let sidebarInset: Float = 10
+  /// Above and below the sidebar's content, when no title bar is over it.
+  public static let sidebarVerticalInset: Float = 8
   /// Behind the selected link in a sidebar.
-  public static let selectionColor = float4(0.0, 0.48, 1.0, 0.18)
+  public static let selectionColor: float4 = .selection
 
   /// A push or pop made without an animation of its own, as SwiftUI always animates them.
   public static let transition = UIAnimation.easeInOut(0.3)

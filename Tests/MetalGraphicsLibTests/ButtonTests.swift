@@ -45,7 +45,7 @@ final class ButtonTests: XCTestCase {
 
     button.setButtonStyle(.borderedProminent, h.context)
     h.settle()
-    XCTAssertEqual(plain.displayedColor, float4(1, 1, 1, 1))
+    XCTAssertEqual(plain.displayedColor, .accentForeground)
     XCTAssertEqual(red.displayedColor, .red)
   }
 

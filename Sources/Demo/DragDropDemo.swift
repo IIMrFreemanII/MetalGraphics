@@ -22,21 +22,21 @@ struct DragChip : Identifiable, Equatable {
 @Component
 final class DragDropDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let chipFont = TextFont.system(size: 13)
   private static let chipInset = Inset(vertical: 6, horizontal: 10)
   private static let chipShape = UIShape.rect(cornerRadius: 6)
   private static let zoneInset = Inset(all: 10)
-  private static let zoneColor = float4(0.93, 0.93, 0.94, 1)
-  private static let idleBorder = float4(0, 0, 0, 0.12)
-  private static let basketBorder = float4(0.0, 0.48, 1.0, 1)
-  private static let binBorder = float4(0.92, 0.23, 0.2, 1)
-  private static let taskColor = float4(1, 1, 1, 1)
+  private static let zoneColor: float4 = .fill
+  private static let idleBorder: float4 = .separator
+  private static let basketBorder: float4 = .accent
+  private static let binBorder: float4 = .destructive
+  private static let taskColor: float4 = .card
   private static let reorder = UIAnimation.easeOut(0.2)
   private static let colors: [(name: String, color: float4)] = [
-    ("Red", float4(0.92, 0.3, 0.26, 1)), ("Orange", float4(0.96, 0.58, 0.18, 1)),
-    ("Green", float4(0.25, 0.7, 0.35, 1)), ("Blue", float4(0.2, 0.47, 0.95, 1)),
-    ("Purple", float4(0.6, 0.35, 0.85, 1)),
+    ("Red", .hue(.red)), ("Orange", .hue(.orange)),
+    ("Green", .hue(.green)), ("Blue", .hue(.blue)),
+    ("Purple", .hue(.purple)),
   ]
 
   @State var palette: [DragChip] = DragDropDemo.makePalette()
@@ -72,9 +72,9 @@ final class DragDropDemo : SingleChildElement {
             .draggable(chip) {
               Text("Remove \(chip.name)?")
                 .font(DragDropDemo.captionFont)
-                .foregroundColor(.white)
+                .foregroundColor(.label)
                 .padding(DragDropDemo.chipInset)
-                .background(float4(0.2, 0.2, 0.2, 0.9), in: DragDropDemo.chipShape)
+                .glass(.tooltip, in: DragDropDemo.chipShape)
             }
         }
         .padding(Self.zoneInset)

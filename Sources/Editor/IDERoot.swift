@@ -52,7 +52,7 @@ final class IDERoot : SingleChildElement {
 final class WelcomePanel : SingleChildElement {
   private static let titleFont = TextFont.system(size: 20, weight: .semibold)
   private static let captionFont = TextFont.system(size: 13)
-  private static let captionColor = float4(0.45, 0.45, 0.47, 1)
+  private static let captionColor: float4 = .secondaryLabel
 
   @UIElementBuilder var body: [UIElement] {
     VStack(alignment: .leading, spacing: 10) {

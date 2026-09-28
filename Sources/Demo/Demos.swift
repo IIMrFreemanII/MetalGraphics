@@ -99,6 +99,7 @@ final class Demos : SingleChildElement {
   // Restored from the window's storage, so a hot reload or a relaunch reopens the demo each
   // window was on, and a new window opens on the one last picked in any.
   static let selectedKey = "Demos.selected"
+  static let headerFont = TextFont.system(size: 11, weight: .semibold)
 
   let scene: WindowScene
 
@@ -113,20 +114,33 @@ final class Demos : SingleChildElement {
 
   @UIElementBuilder var body: [UIElement] {
     NavigationSplitView(selection: $selected) {
-      VList(alignment: .leading, spacing: 2, items: self.demos) { demo in
-        NavigationLink(demo.title, value: demo)
+      Text("Demos")
+        .font(Demos.headerFont)
+        .foregroundColor(.secondaryLabel)
+        .padding(Inset(left: 10, top: 4, right: 10, bottom: 6))
+      ScrollView(.vertical) {
+        VList(alignment: .leading, spacing: 0, items: self.demos) { demo in
+          NavigationLink(demo.title, value: demo)
+        }
+        .font(.system(size: 13))
       }
       .navigationDestination(for: DemoPage.self) { demo in
         // Built each time a demo is selected, the restored one included: the one place every
         // selection passes through, so it is saved here.
         self.scene.storage.set(demo, for: Demos.selectedKey)
         return demo.make()
-          .padding(12)
+          .padding(demo.fillsPage ? 0 : 12)
           .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
           .navigationTitle(demo.title)
+          .navigationBackground(demo.fillsPage ? .groupedBackground : .contentBackground)
       }
     } detail: {
       Text("Select a demo")
     }
   }
+}
+
+extension DemoPage {
+  /// Drawn edge to edge on a background of its own, as a form is: no padding around it.
+  var fillsPage: Bool { self == .form }
 }

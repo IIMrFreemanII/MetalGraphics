@@ -208,6 +208,16 @@ public struct DockPanelInfo: Codable, Sendable, Equatable {
   public var title: String
   /// Its `DockPanel.storage`, encoded.
   public var storage: String
+  /// What its tab shows besides the title, as the panel set it: not saved, since the panel
+  /// sets it again when it is made.
+  public var isEdited = false
+  public var badge = 0
+  public var icon: ThemeIcon? = nil
+  public var iconColor: float4 = .secondaryLabel
+
+  private enum CodingKeys: String, CodingKey {
+    case kind, title, storage
+  }
 
   public init(kind: String, title: String, storage: String = "") {
     self.kind = kind

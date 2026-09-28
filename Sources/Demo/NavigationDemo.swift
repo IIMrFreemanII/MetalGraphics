@@ -15,9 +15,9 @@ enum Swatch : String, Hashable {
 
   var color: float4 {
     switch self {
-    case .red: float4(0.9, 0.3, 0.25, 1)
-    case .green: float4(0.3, 0.7, 0.35, 1)
-    case .blue: float4(0.25, 0.45, 0.9, 1)
+    case .red: .hue(.red)
+    case .green: .hue(.green)
+    case .blue: .hue(.blue)
     }
   }
 }
@@ -29,9 +29,9 @@ enum Swatch : String, Hashable {
 @Component
 final class NavigationDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let panelSize = float2(380, 360)
-  private static let border = float4(0, 0, 0, 0.15)
+  private static let border: float4 = .separator
 
   @State var path: [Route] = []
   @State var routes: [Route] = (1...5).map { Route(number: $0) }
@@ -104,7 +104,7 @@ final class NavigationRoutePage : SingleChildElement {
       NavigationLink("Next: \(self.route.next.name)", value: self.route.next)
       Text("Escape or ⌘[ goes back")
         .font(.caption)
-        .foregroundColor(float4(0.5, 0.5, 0.5, 1))
+        .foregroundColor(.secondaryLabel)
     }
     .navigationTitle(self.route.name)
   }
@@ -116,7 +116,7 @@ final class NavigationAboutPage : SingleChildElement {
     VStack(spacing: 8) {
       Text("Pushed by NavigationLink(destination:)")
       Text("It is not part of the path.")
-        .foregroundColor(float4(0.5, 0.5, 0.5, 1))
+        .foregroundColor(.secondaryLabel)
     }
     .navigationTitle("About")
   }

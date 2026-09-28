@@ -257,7 +257,7 @@ public final class DatePicker : FormControl {
 final class CalendarView : SingleChildElement {
   static let cellSize = float2(32, 28)
   static let titleFont = TextFont.custom(FontManager.shared.font(named: "HelveticaNeue-Medium"), size: 14)
-  static let dayFont = TextFont.custom(FormMetrics.face, size: 13)
+  static var dayFont: TextFont { Theme.current.typography.body }
 
   private var selection: Date
   private let range: ClosedRange<Date>?
@@ -405,7 +405,7 @@ final class DayCell : UIRenderableElement {
 
   func update(number: Int, inMonth: Bool, selected: Bool, today: Bool, pickable: Bool, _ context: UIContext?) {
     let text = "\(number)"
-    let color: float4 = selected ? .white
+    let color: float4 = selected ? .accentForeground
       : !pickable ? FormMetrics.labelColor.withAlpha(0.2)
       : today ? FormMetrics.accentColor
       : inMonth ? FormMetrics.labelColor : FormMetrics.labelColor.withAlpha(0.35)

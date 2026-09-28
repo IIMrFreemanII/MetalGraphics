@@ -1,3 +1,4 @@
+import simd
 import Foundation
 
 /// The thread one window runs on: its frames, its input, and whatever other threads post to it
@@ -157,6 +158,8 @@ public final class WindowHandle: @unchecked Sendable {
   var surfaces: [RootViewRenderer] = []
   private let lock = NSLock()
   private var events: [InputEvent] = []
+  /// See `titleBarDragRegions`.
+  private var dragRegions: [float4] = []
   private var isClosed = false
   /// The window's thread's alone: set once the renderer is made there, cleared as it closes.
   fileprivate var renderer: RootViewRenderer?
@@ -169,6 +172,21 @@ public final class WindowHandle: @unchecked Sendable {
     self.thread = thread
     self.executor = thread.executor
     self.parent = nil
+  }
+
+  /// The empty parts of the title bar's row, window points from its top left, as the window's
+  /// last layout left them: a press there drags the window. Read on the main thread, at a press.
+  public var titleBarDragRegions: [float4] {
+    self.lock.lock()
+    defer { self.lock.unlock() }
+    return self.dragRegions
+  }
+
+  /// On the window's thread, after a layout that changed them.
+  func setTitleBarDragRegions(_ regions: [float4]) {
+    self.lock.lock()
+    self.dragRegions = regions
+    self.lock.unlock()
   }
 
   /// A window with no thread of its own: `start` makes its renderer at once, on the calling

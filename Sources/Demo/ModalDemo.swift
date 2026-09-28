@@ -21,7 +21,7 @@ struct DemoNote : Identifiable, Hashable {
 @Component
 final class ModalDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
 
   @State var placement: PresentationWindowStyle.Placement = .inline
   @State var resizable: Bool = false

@@ -138,6 +138,11 @@ extension GlassItem {
     hash.add(self.saturation)
     hash.add(self.noise)
     hash.add(self.opacity)
+    hash.add(self.tintBottom)
+    hash.add(self.rim)
+    hash.add(self.fallback)
+    hash.add(self.rimWidth)
+    hash.add(self.rimBottom)
     return hash.value
   }
 }

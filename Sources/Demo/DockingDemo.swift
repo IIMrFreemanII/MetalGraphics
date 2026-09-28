@@ -24,7 +24,7 @@ enum Workspace {
     DockSpace(
       name: "workspace",
       kinds: [
-        DockPanelKind("outline", title: "Outline") { panel in OutlinePanel(panel: panel) },
+        DockPanelKind("outline", title: "Outline", background: .sidebarTint) { panel in OutlinePanel(panel: panel) },
         DockPanelKind("inspector", title: "Inspector") { _ in InspectorPanel() },
         DockPanelKind("console", title: "Console") { _ in ConsolePanel() },
         DockPanelKind("notes", title: "Notes") { panel in NotesPanel(panel: panel) },
@@ -157,7 +157,7 @@ final class NotesPanel : SingleChildElement {
   @State var text: String
 
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.47, 1)
+  private static let captionColor: float4 = .secondaryLabel
 
   init(panel: DockPanel) {
     self.panel = panel

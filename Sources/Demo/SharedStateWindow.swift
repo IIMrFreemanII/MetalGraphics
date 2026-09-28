@@ -13,7 +13,7 @@ final class SharedStateWindow : SingleChildElement {
     VStack(alignment: .leading, spacing: 12) {
       Text("\(self.model.count)")
         .font(.system(size: 64, weight: .bold))
-        .foregroundColor(self.model.highlighted ? self.model.tint : .black)
+        .foregroundColor(self.model.highlighted ? self.model.tint : .label)
       Text(self.model.message)
       Toggle("Highlight", isOn: $model.highlighted)
       HStack(spacing: 12) {

@@ -82,6 +82,25 @@ A panel can refuse to close from its tab: `panel.shouldClose` is asked first, on
 window thread, and returning false keeps it open while the panel asks the user itself (an
 unsaved document's alert). `panel.close()` from code, and closing a detached window, do not ask.
 
+## Tabs
+
+A group's tabs take the style of the kind of panel it shows, `DockPanelKind(..., tabStyle:)`:
+
+- `.panel` (the default): 22 pt pills on a 30 pt bar, for a navigator, an outline, a console. On a
+  panel whose `background` is `.sidebarTint` the bar is part of the sidebar.
+- `.document`: 28 pt pills on a 40 pt bar with a separator under it, each with an icon, for an
+  editor's files. `tabIcon:` on the kind gives the icon from the panel's title, so a tab behind
+  another shows one before its panel is ever made.
+
+A tab's close button shows while the pointer is over the tab. A panel decorates its own tab:
+`panel.setEdited(true)` puts a dot after the title, `panel.setBadge(n)` a count, and
+`panel.setIcon(_:color:)` overrides the kind's icon. These are in `DockPanelInfo` but not saved.
+
+At a translucent window's top, a group shares the title bar's row (`TitleBarInsets`,
+`docs/DesignSystem.md`): a document bar is that row, its tabs clear of the traffic lights; a
+panel bar sits under an empty 40 pt row the traffic lights are on. The row's empty parts drag
+the window rather than picking the group up.
+
 ## What survives a move
 
 - **Within a window**, a panel keeps its element: the area's reconcile finds it by id and moves it,

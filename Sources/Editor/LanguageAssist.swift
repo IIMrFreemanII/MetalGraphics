@@ -26,8 +26,11 @@ struct CompletionRow : Identifiable {
 /// - A hover shows the problem under the pointer, else what the server says of the symbol.
 /// - ⌘-click and ⌃⌘J go to the definition of the symbol there.
 final class LanguageAssist {
-  static let listWidth: Float = 400
-  static let rowHeight: Float = 22
+  /// The popup's, with its padding.
+  static let listWidth: Float = 420
+  static let rowHeight: Float = 26
+  /// Around the rows, and the detail line under them.
+  static let chromeHeight: Float = 10 + 28
   static let visibleRows = 10
 
   let language: LanguageDocument
@@ -212,7 +215,7 @@ final class LanguageAssist {
         badge: Self.badge(item.kind), isSelected: index == self.selected, index: index
       )
     }
-    let height = Float(rows.count) * Self.rowHeight
+    let height = Float(rows.count) * Self.rowHeight + Self.chromeHeight
     var y = rect.origin.y + rect.height + 2
     if y + height > editor.bounds.y && rect.origin.y - height - 2 >= 0 {
       y = rect.origin.y - height - 2
@@ -224,8 +227,12 @@ final class LanguageAssist {
   static func badge(_ kind: LSPCompletionItem.Kind?) -> String {
     switch kind {
     case .method, .function, .constructor: "M"
-    case .field, .property, .variable: "V"
-    case .class, .struct, .enum, .interface: "T"
+    case .field, .property: "P"
+    case .variable: "V"
+    case .class: "C"
+    case .struct: "S"
+    case .enum: "E"
+    case .interface: "Pr"
     case .enumMember: "c"
     case .keyword: "K"
     case .module: "m"
@@ -303,14 +310,10 @@ private final class WeakAssist: @unchecked Sendable {
 /// A line of the completion list: what kind of thing, its name, and its type.
 @Component
 final class CompletionRowView : SingleChildElement {
-  private static let font = TextFont.system(size: 12, design: .monospaced)
-  private static let detailFont = TextFont.system(size: 11)
-  private static let badgeFont = TextFont.system(size: 9, weight: .bold)
-  private static let selectedColor = float4(0.0, 0.45, 0.95, 1)
-  private static let clearColor = float4(0, 0, 0, 0)
-  private static let textColor = float4(0.12, 0.12, 0.14, 1)
-  private static let detailColor = float4(0.45, 0.45, 0.48, 1)
-  private static let badgeColor = float4(0.35, 0.45, 0.75, 1)
+  private static let font = TextFont.system(size: 12.5, design: .monospaced)
+  private static let detailFont = TextFont.system(size: 11.5)
+  private static let detailColor: float4 = .secondaryLabel
+  private static let selectedDetailColor: float4 = .role(.accentForeground, alpha: 0.85)
 
   let row: CompletionRow
   let onPick: (Int) -> Void
@@ -321,26 +324,34 @@ final class CompletionRowView : SingleChildElement {
     super.init()
   }
 
+  /// A badge letter's colour, from the theme's palette.
+  static func badgeColor(_ letter: String) -> float4 {
+    switch letter {
+    case "M": .hue(.badgeMethod)
+    case "P": .hue(.badgeProperty)
+    case "V": .hue(.badgeVariable)
+    case "C": .hue(.badgeClass)
+    case "S": .hue(.badgeStruct)
+    case "E", "c": .hue(.badgeEnum)
+    case "Pr": .hue(.indigo)
+    default: .hue(.gray)
+    }
+  }
+
   @UIElementBuilder var body: [UIElement] {
-    HStack(spacing: 6) {
-      Text(self.row.badge)
-        .font(Self.badgeFont)
-        .foregroundColor(.white)
-        .frame(width: 14, height: 14)
-        .background(Self.badgeColor)
+    ListRow(
+      selected: self.row.isSelected, selectionStyle: .prominent, height: LanguageAssist.rowHeight, margin: 0, spacing: 8,
+      action: { self.onPick(self.row.index) }
+    ) {
+      KindBadge(self.row.badge, color: Self.badgeColor(self.row.badge))
       Text(self.row.label)
         .font(Self.font)
-        .foregroundColor(self.row.isSelected ? .white : Self.textColor)
         .lineLimit(1)
       Spacer()
       Text(self.row.detail)
         .font(Self.detailFont)
-        .foregroundColor(self.row.isSelected ? .white : Self.detailColor)
+        .foregroundColor(self.row.isSelected ? Self.selectedDetailColor : Self.detailColor)
         .lineLimit(1)
     }
-    .padding(Inset(vertical: 3, horizontal: 6))
-    .frame(width: LanguageAssist.listWidth, height: LanguageAssist.rowHeight, alignment: .leading)
-    .background(self.row.isSelected ? Self.selectedColor : Self.clearColor)
-    .onTap { _ in self.onPick(self.row.index) }
   }
 }

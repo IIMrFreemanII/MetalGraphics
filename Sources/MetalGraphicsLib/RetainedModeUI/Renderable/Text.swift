@@ -238,11 +238,11 @@ public class Text : UIRenderableElement {
   /// The font the text is drawn in, all its layers resolved: as of the last layout.
   public var font: TextFont { self.resolved.font }
 
-  /// The colour the text's own modifiers or the macro set, or black. A `TextStyleElement`'s is
-  /// only known when drawn.
-  public var color: float4 { self.resolved.foreground ?? .black }
+  /// The colour the text's own modifiers or the macro set, or the theme's label colour. A
+  /// `TextStyleElement`'s is only known when drawn.
+  public var color: float4 { self.resolved.foreground ?? .label }
 
-  private var targetColor: float4 { self.resolved.foreground ?? self.lastForeground ?? .black }
+  private var targetColor: float4 { self.resolved.foreground ?? self.lastForeground ?? .label }
   /// The colour it is drawn in now: animating, its own, or the one around it when last drawn.
   var displayedColor: float4 { self.presentedColor ?? self.targetColor }
   private var displayedFontSize: Float { self.presentedFontSize ?? self.resolved.font.size }
@@ -425,7 +425,8 @@ public class Text : UIRenderableElement {
   public func italic(_ isActive: Bool = true) -> Self { self.style = self.style.italic(isActive); return self }
   public func monospaced(_ isActive: Bool = true) -> Self { self.style = self.style.monospaced(isActive); return self }
   public func monospacedDigit() -> Self { self.style = self.style.monospacedDigit(); return self }
-  /// The color to draw in; black when never set here or around it.
+  /// The color to draw in; the theme's `.label` when never set here or around it. A role
+  /// (`.secondaryLabel`) follows light and dark.
   public func foregroundColor(_ color: float4) -> Self { self.style = self.style.foregroundColor(color); return self }
   public func foregroundStyle(_ color: float4) -> Self { self.foregroundColor(color) }
 

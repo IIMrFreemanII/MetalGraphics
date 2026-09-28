@@ -34,9 +34,10 @@ final class AnimationDemo : SingleChildElement {
   ]
   private static let buttonFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
-  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
+  private static let buttonColor: float4 = .fill
+  private static let buttonShape = UIShape.rect(cornerRadius: 6)
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let cardFont = TextFont.system(size: 13)
   private static let rowInset = Inset(vertical: 3, horizontal: 8)
   private static let shake = UIKeyframes(offset: [
@@ -72,45 +73,45 @@ final class AnimationDemo : SingleChildElement {
       HStack(spacing: 6) {
         Text("Toggle arm")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.isOn.toggle() }
         Text("Grow")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in
             withAnimation(.spring(response: 0.45, dampingFraction: 0.6)) { self.toggleSize() }
           }
         Text("Snap size")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.toggleSize() }
         Text("Dim")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in
             withAnimation(.easeInOut(0.4)) { self.dimmed.toggle() }
           }
         Text("Append row")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in
             withAnimation(.spring()) { self.append() }
           }
         Text("Remove first")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in
             withAnimation(.easeOut(0.3)) {
               self.removeItems(at: 0)
@@ -123,17 +124,17 @@ final class AnimationDemo : SingleChildElement {
       HStack(spacing: 6) {
         Text("Pop")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in
             withAnimation(Self.pop) { self.toggleSize() }
           }
         Text("Restyle")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in
             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { self.big.toggle() }
           }
@@ -152,7 +153,7 @@ final class AnimationDemo : SingleChildElement {
 
       Text("restyle me")
         .font(.system(size: self.big ? 24 : 13))
-        .foregroundColor(self.big ? .init(0.85, 0.25, 0.1, 1) : .init(0.2, 0.2, 0.2, 1))
+        .foregroundColor(self.big ? .init(0.85, 0.25, 0.1, 1) : .label)
 
       // A scope: the padding and the background animate, the text snaps.
       Text("scope: hover the card")
@@ -160,9 +161,9 @@ final class AnimationDemo : SingleChildElement {
         .foregroundColor(Self.captionColor)
       Text(self.hovered ? "hovered" : "hover me")
         .font(Self.cardFont)
-        .foregroundColor(.white)
+        .foregroundColor(self.hovered ? .accentForeground : .label)
         .padding(self.hovered ? Inset(all: 16) : Inset(all: 8))
-        .background(self.hovered ? .init(0.1, 0.5, 0.9, 1) : .init(0.3, 0.3, 0.3, 1))
+        .background(self.hovered ? .accent : .fill)
         .animation(.easeOut(0.2), value: self.hovered)
         .onHover { hovered, _ in
           self.hovered = hovered

@@ -8,6 +8,7 @@ import SwiftUI
 /// Usually reached through `RetainedWindowGroup` or `RetainedWindow` rather than directly.
 public struct RetainedView: View {
   let sceneID: String
+  let chrome: WindowChrome
   let root: @Sendable (WindowScene) -> UIElement
 
   /// Created once per window. Holds the window's handle but publishes nothing, so a resize or a
@@ -17,14 +18,24 @@ public struct RetainedView: View {
   @SceneStorage("MetalGraphics.UISceneStorage") private var persisted = ""
   @SwiftUI.Environment(\.openWindow) private var openWindowAction
 
-  public init(sceneID: String, root: @escaping @Sendable (WindowScene) -> UIElement) {
+  public init(sceneID: String, chrome: WindowChrome = .standard, root: @escaping @Sendable (WindowScene) -> UIElement) {
     self.sceneID = sceneID
+    self.chrome = chrome
     self.root = root
   }
 
   public var body: some View {
-    RetainedMetalView(host: self.host, sceneID: self.sceneID, root: self.root, persisted: self.$persisted)
-      .onAppear { Windows.register(self.openWindowAction) }
+    let view = RetainedMetalView(host: self.host, sceneID: self.sceneID, chrome: self.chrome, root: self.root, persisted: self.$persisted)
+    Group {
+      // A translucent window's content runs under its title bar, which the tree makes room for
+      // (`TitleBarInsets`).
+      if self.chrome == .translucent {
+        view.ignoresSafeArea()
+      } else {
+        view
+      }
+    }
+    .onAppear { Windows.register(self.openWindowAction) }
   }
 }
 
@@ -73,6 +84,7 @@ public struct RetainedView: View {
 struct RetainedMetalView: NSViewRepresentable {
   let host: RetainedWindowHost
   let sceneID: String
+  let chrome: WindowChrome
   let root: @Sendable (WindowScene) -> UIElement
   let persisted: SwiftUI.Binding<String>
 
@@ -92,7 +104,7 @@ struct RetainedMetalView: NSViewRepresentable {
     host.start(restoring: restoring)
 
     let (view, handle) = RetainedWindowContent.make(
-      sceneID: self.sceneID, root: self.root, restoring: restoring,
+      sceneID: self.sceneID, chrome: self.chrome, root: self.root, restoring: restoring,
       // On the window's thread; SwiftUI is the main thread's.
       persist: { [weak host] encoded in
         DispatchQueue.main.async { MainActor.assumeIsolated { host?.save(encoded) } }
@@ -120,11 +132,12 @@ struct RetainedMetalView: NSViewRepresentable {
 /// `DockWindows` puts in the windows it opens itself.
 @MainActor enum RetainedWindowContent {
   static func make(
-    sceneID: String, root: @escaping @Sendable (WindowScene) -> UIElement,
+    sceneID: String, chrome: WindowChrome = .standard, root: @escaping @Sendable (WindowScene) -> UIElement,
     restoring: String = "", persist: (@Sendable (String) -> Void)? = nil
   ) -> (RetainedLayerView, WindowHandle) {
+    AppearanceObserver.startIfNeeded()
     let handle = WindowHandle(name: "Window \(sceneID)")
-    let view = RetainedLayerView(handle: handle)
+    let view = RetainedLayerView(handle: handle, chrome: chrome)
     WindowRegistry.add(handle, view: view)
 
     nonisolated(unsafe) let layer = view.metalLayer
@@ -140,6 +153,9 @@ struct RetainedMetalView: NSViewRepresentable {
       sceneID: sceneID, root: root, restoring: restoring, persist: persist, layer: layer,
       showPointerStyle: showPointerStyle, showTextInput: showTextInput
     )
+    if chrome == .translucent {
+      handle.post { $0.setBackground(.clear) }
+    }
 #if DEBUG
     HotReload.startIfNeeded()
 #endif

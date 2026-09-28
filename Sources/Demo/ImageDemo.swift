@@ -11,12 +11,13 @@ import ReactiveUI
 @Component
 final class ImageDemo : SingleChildElement {
   private static let captionFont = TextFont.system(size: 12)
-  private static let captionColor = float4(0.45, 0.45, 0.45, 1)
+  private static let captionColor: float4 = .secondaryLabel
   private static let buttonFont = TextFont.system(size: 13)
   private static let buttonInset = Inset(vertical: 4, horizontal: 8)
-  private static let buttonColor = float4(0.25, 0.25, 0.25, 1)
-  private static let panelColor = float4(0.9, 0.9, 0.9, 1)
-  private static let orange = float4(0.95, 0.5, 0.1, 1)
+  private static let buttonColor: float4 = .fill
+  private static let buttonShape = UIShape.rect(cornerRadius: 6)
+  private static let panelColor: float4 = .fill
+  private static let orange: float4 = .hue(.orange)
   private static let tintAnimation = UIAnimation.easeInOut(0.4)
   private static let resizeAnimation = UIAnimation.easeInOut(0.5)
   private static let appIcon = NSImage(named: NSImage.applicationIconName)!
@@ -80,43 +81,43 @@ final class ImageDemo : SingleChildElement {
       HStack(spacing: 12) {
         Text("Tint")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.tinted.toggle() }
         Image("check-circle", bundle: .module)
           .resizable()
-          .foregroundColor(self.tinted ? Self.orange : .black)
+          .foregroundColor(self.tinted ? Self.orange : .label)
           .animation(Self.tintAnimation, value: self.tinted)
           .frame(width: 32, height: 32)
         Image("wave", bundle: .module)
           .resizable()
-          .foregroundColor(self.tinted ? .blue : .black)
+          .foregroundColor(self.tinted ? .blue : .label)
           .animation(Self.tintAnimation, value: self.tinted)
           .frame(width: 32, height: 32)
         // A template draws every paint, even fixed ones, in the foreground color.
         Image("badge", bundle: .module)
           .resizable()
           .renderingMode(.template)
-          .foregroundColor(self.tinted ? .red : .black)
+          .foregroundColor(self.tinted ? .red : .label)
           .animation(Self.tintAnimation, value: self.tinted)
           .frame(width: 32, height: 32)
         Image("pixel-heart", bundle: .module)
           .resizable()
           .interpolation(.none)
           .renderingMode(.template)
-          .foregroundColor(self.tinted ? .green : .black)
+          .foregroundColor(self.tinted ? .green : .label)
           .animation(Self.tintAnimation, value: self.tinted)
           .frame(width: 32, height: 32)
         Text("Like")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.liked.toggle() }
         Image(self.liked ? "star-fill" : "star", bundle: .module)
           .resizable()
-          .foregroundColor(self.liked ? Self.orange : .black)
+          .foregroundColor(self.liked ? Self.orange : .label)
           .frame(width: 32, height: 32)
       }
 
@@ -126,9 +127,9 @@ final class ImageDemo : SingleChildElement {
       HStack(spacing: 12) {
         Text("Resize")
           .font(Self.buttonFont)
-          .foregroundColor(.white)
+          .foregroundColor(.label)
           .padding(Self.buttonInset)
-          .background(Self.buttonColor)
+          .background(Self.buttonColor, in: Self.buttonShape)
           .onTap { _ in self.wide.toggle() }
         Image("photo", bundle: .module)
           .resizable()
