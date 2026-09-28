@@ -407,11 +407,63 @@ enum ElementCatalog {
     // A sidebar, tree or list row: selected state is reactive, its shape constant.
     "ListRow": TypeSpec(
       name: "ListRow",
-      args: [ArgSpec("selected", "setSelected", animatable: true), ArgSpec("selectionStyle", nil),
+      // The label comes first, unlabelled: `ListRow(message, subtitle: …)`. A row of content only
+      // has no unlabelled argument, so nothing binds to `setLabel` there.
+      args: [ArgSpec(nil, "setLabel", animatable: true), ArgSpec("subtitle", "setSubtitle", animatable: true),
+             ArgSpec("detail", "setDetail", animatable: true), ArgSpec("status", "setStatus", animatable: true),
+             ArgSpec("selected", "setSelected", animatable: true), ArgSpec("selectionStyle", nil),
              ArgSpec("height", nil), ArgSpec("margin", nil), ArgSpec("indent", nil), ArgSpec("spacing", nil),
              ArgSpec("action", nil, handler: HandlerSpec(property: "action", placeholder: ""))],
       arity: .multi
     ),
+    // The design system's small pieces, as the web mirror has them.
+    "Tooltip": TypeSpec(name: "Tooltip", args: [ArgSpec(nil, "setText", animatable: true), ArgSpec("multiline", nil)], arity: .leaf),
+    "ToggleChip": TypeSpec(
+      name: "ToggleChip",
+      args: [ArgSpec(nil, "setTitle", animatable: true),
+             ArgSpec("isOn", "setIsOn", animatable: true, binding: HandlerSpec(property: "onIsOnChange", placeholder: ""))],
+      arity: .leaf
+    ),
+    "StatusBar": TypeSpec(
+      name: "StatusBar",
+      args: [ArgSpec("position", "setPosition", animatable: true), ArgSpec("problem", "setProblem", animatable: true),
+             ArgSpec("file", "setFile", animatable: true)],
+      arity: .leaf
+    ),
+    // The editor's find bar: controlled, each option a binding, each button a handler.
+    "FindBar": TypeSpec(
+      name: "FindBar",
+      args: [ArgSpec("query", "setQuery", animatable: true, binding: HandlerSpec(property: "onQueryChange", placeholder: "")),
+             ArgSpec("replacement", "setReplacement", animatable: true,
+                     binding: HandlerSpec(property: "onReplacementChange", placeholder: "")),
+             ArgSpec("count", "setCount", animatable: true),
+             ArgSpec("caseSensitive", "setCaseSensitive", animatable: true,
+                     binding: HandlerSpec(property: "onCaseSensitiveChange", placeholder: "")),
+             ArgSpec("wholeWord", "setWholeWord", animatable: true,
+                     binding: HandlerSpec(property: "onWholeWordChange", placeholder: "")),
+             ArgSpec("regex", "setRegex", animatable: true, binding: HandlerSpec(property: "onRegexChange", placeholder: "")),
+             ArgSpec("showReplace", "setShowReplace", animatable: true),
+             ArgSpec("focused", "setFocused", animatable: true),
+             ArgSpec("onNext", nil, handler: HandlerSpec(property: "onNext", placeholder: "")),
+             ArgSpec("onPrevious", nil, handler: HandlerSpec(property: "onPrevious", placeholder: "")),
+             ArgSpec("onReplace", nil, handler: HandlerSpec(property: "onReplace", placeholder: "")),
+             ArgSpec("onReplaceAll", nil, handler: HandlerSpec(property: "onReplaceAll", placeholder: "")),
+             ArgSpec("onDone", nil, handler: HandlerSpec(property: "onDone", placeholder: ""))],
+      arity: .leaf
+    ),
+    "CompletionList": TypeSpec(
+      name: "CompletionList",
+      args: [ArgSpec("items", "setItems", animatable: true), ArgSpec("footer", "setFooter", animatable: true),
+             ArgSpec("onPick", nil, handler: HandlerSpec(property: "onPick", placeholder: ""))],
+      arity: .leaf
+    ),
+    "InsertionLine": TypeSpec(name: "InsertionLine", args: [ArgSpec("indent", "setIndent", animatable: true)], arity: .leaf),
+    "ScrollIndicator": TypeSpec(
+      name: "ScrollIndicator", args: [ArgSpec("length", "setLength", animatable: true), ArgSpec("vertical", nil)], arity: .leaf
+    ),
+    "Scrim": TypeSpec(name: "Scrim", args: [], arity: .leaf),
+    "SidebarTitle": TypeSpec(name: "SidebarTitle", args: [ArgSpec(nil, "setTitle", animatable: true)], arity: .leaf),
+    "DockGap": TypeSpec(name: "DockGap", args: [ArgSpec("vertical", nil)], arity: .leaf),
     "KindBadge": TypeSpec(
       name: "KindBadge",
       args: [ArgSpec(nil, "setLetter", animatable: true), ArgSpec("color", "setColor", animatable: true)],
@@ -783,6 +835,15 @@ enum ElementCatalog {
       produces: "GlassBackground", setter: nil, combine: .identity,
       argSetters: [ArgSpec(nil, "setMaterial"), ArgSpec("in", "setShape", animatable: true)]
     ),
+    // A subtree drawn light or dark, or with a theme of its own, whatever the window's is.
+    "colorScheme": ModifierSpec(
+      name: "colorScheme", labels: [nil],
+      produces: "ThemeScopeElement", setter: "setAppearance", combine: .identity, animatable: true
+    ),
+    "theme": ModifierSpec(
+      name: "theme", labels: [nil],
+      produces: "ThemeScopeElement", setter: "setTheme", combine: .identity, animatable: true
+    ),
     // The closure is copied as written and runs at layout time; nothing in it is bound.
     "alignmentGuide": ModifierSpec(
       name: "alignmentGuide", labels: [nil, "computeValue"],
@@ -1029,6 +1090,10 @@ enum ElementCatalog {
     // Forms. A tag is what a picker option selects: constant, like an id.
     "tag": ModifierSpec(
       name: "tag", labels: [nil], produces: "UIElement", setter: nil, combine: .identity, inPlaceOnAny: true
+    ),
+    "menuIndicator": ModifierSpec(
+      name: "menuIndicator", labels: [nil],
+      produces: "Picker", setter: "setMenuIndicator", combine: .identity, animatable: true, inPlaceOn: ["Picker"]
     ),
     "pickerStyle": ModifierSpec(
       name: "pickerStyle", labels: [nil],

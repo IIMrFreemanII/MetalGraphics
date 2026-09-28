@@ -105,7 +105,7 @@ final class LanguageE2ETests: EditorAppTestCase {
 
   /// The completion list's rows, top to bottom.
   private var rows: [String] {
-    self.window.all(CompletionRowView.self).filter(\.mounted).map(\.row.label)
+    self.window.all(CompletionRowElement.self).filter(\.mounted).map(\.item.label)
   }
 
   func testASecondLetterOpensTheListAndReturnAcceptsIt() throws {

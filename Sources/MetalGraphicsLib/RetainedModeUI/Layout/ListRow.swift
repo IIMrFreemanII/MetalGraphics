@@ -8,6 +8,40 @@ public enum ListRowSelectionStyle: Sendable {
   case prominent
 }
 
+/// A problem's severity, as the square a `ListRow` shows before its content.
+public enum ListRowStatus: Sendable, Hashable {
+  case error
+  case warning
+  case note
+
+  /// Its colour: destructive, warning, info.
+  public var color: float4 {
+    switch self {
+    case .error: .destructive
+    case .warning: .warning
+    case .note: .info
+    }
+  }
+}
+
+/// A `ListRow`'s sizes and type for its label, subtitle, detail and status.
+public enum ListRowMetrics {
+  /// The label over a subtitle; alone, a label takes the font around the row.
+  public static let titleFont = TextFont.system(size: 13)
+  public static let subtitleFont = TextFont.system(size: 11)
+  public static let detailFont = TextFont.system(size: 11.5)
+  public static let secondaryColor: float4 = .secondaryLabel
+  /// The detail of a selected prominent row, on the accent.
+  public static let selectedDetailColor: float4 = .role(.accentForeground, alpha: 0.85)
+  /// The status square's side and corner radius.
+  public static let statusSide: Float = 8
+  public static let statusShape = UIShape.rect(cornerRadius: 2)
+  /// Between a label and its subtitle.
+  public static let lineSpacing: Float = 1
+  /// A two-line row, as the Problems list's.
+  public static let twoLineHeight: Float = 38
+}
+
 /// One row of a sidebar, tree, outline or list, as the design system draws them: a fixed
 /// height, inset from the sides, a rounded highlight while hovered and while selected, the label
 /// medium weight when selected. Not in SwiftUI.
@@ -20,17 +54,34 @@ public enum ListRowSelectionStyle: Sendable {
 /// The content sits side by side, vertically centred, and takes the row's width: put a `Spacer`
 /// in it to push something to the trailing edge. Hover is tracked by the row itself and only
 /// redraws.
+///
+/// Or give it a label, with a subtitle under it, a detail at the trailing edge and a status
+/// square before it; the content then goes between the status and the label (a badge, an icon):
+///
+///     ListRow(message, subtitle: "Sources/App/main.swift:2:1", status: .warning, height: 38, spacing: 10)
 public final class ListRow : SingleChildElement {
   /// What a tap runs. `@Component` arms it on mount and clears it on unmount, like `onTap`.
   public var action: (() -> Void)?
   public private(set) var isSelected: Bool
   public let selectionStyle: ListRowSelectionStyle
 
+  /// The label, or nil for a row of content only.
+  public private(set) var label: String?
+  public private(set) var subtitle: String?
+  public private(set) var detail: String?
+  public private(set) var status: ListRowStatus?
+
   private let face: ListRowFace
   private let labelStyle: TextStyleElement
   private let stack: HStack
   private let hit: HittableView
   private weak var context: UIContext?
+  /// With a label: the content given, which goes between the status and the label.
+  private var accessories: [UIElement] = []
+  private var statusMark: Background?
+  private var titleText: Text?
+  private var subtitleText: Text?
+  private var detailText: Text?
 
   public init(
     selected: Bool = false, selectionStyle: ListRowSelectionStyle = .standard,
@@ -57,6 +108,122 @@ public final class ListRow : SingleChildElement {
     hit.onHover = { [unowned self] hovered, _ in
       guard let context = self.context else { return }
       self.face.setHovered(hovered, context)
+    }
+  }
+
+  /// A row with a label: `subtitle` under it in the secondary colour, `detail` at the trailing
+  /// edge, `status` as a square before everything. `content` goes between the status and the
+  /// label. As with the other init, a lone trailing closure is the `action`: write `content:`
+  /// when there is no action.
+  public convenience init(
+    _ label: String, subtitle: String? = nil, detail: String? = nil, status: ListRowStatus? = nil,
+    selected: Bool = false, selectionStyle: ListRowSelectionStyle = .standard,
+    height: Float = 24, margin: Float = 8, indent: Float = 0, spacing: Float = 6,
+    action: (() -> Void)? = nil, @UIElementBuilder content: () -> [UIElement] = { [] }
+  ) {
+    self.init(
+      selected: selected, selectionStyle: selectionStyle, height: height, margin: margin, indent: indent,
+      spacing: spacing, action: action
+    )
+    self.label = label
+    self.subtitle = subtitle
+    self.detail = detail
+    self.status = status
+    self.accessories = content()
+    self.stack.applyContent(self.labelledContent())
+  }
+
+  /// The stack's children with a label: status, accessories, the label (over its subtitle), a
+  /// spacer, the detail. Makes the parts it does not have yet.
+  private func labelledContent() -> [UIElement] {
+    var children: [UIElement] = []
+    if let status = self.status {
+      let mark = self.statusMark ?? Rectangle(.clear)
+        .frame(width: ListRowMetrics.statusSide, height: ListRowMetrics.statusSide)
+        .background(status.color, in: ListRowMetrics.statusShape)
+      self.statusMark = mark
+      children.append(mark)
+    }
+    children.append(contentsOf: self.accessories)
+    let title = self.titleText ?? Text(self.label ?? "").lineLimit(1)
+    self.titleText = title
+    if let subtitle = self.subtitle {
+      let second = self.subtitleText ?? Text(subtitle)
+        .font(ListRowMetrics.subtitleFont)
+        .foregroundColor(ListRowMetrics.secondaryColor)
+        .lineLimit(1)
+      self.subtitleText = second
+      _ = title.font(ListRowMetrics.titleFont)
+      children.append(VStack(alignment: .leading, spacing: ListRowMetrics.lineSpacing) { title; second })
+    } else {
+      children.append(title)
+    }
+    children.append(Spacer())
+    if let detail = self.detail {
+      let text = self.detailText ?? Text(detail)
+        .font(ListRowMetrics.detailFont)
+        .foregroundColor(self.detailColor)
+        .lineLimit(1)
+      self.detailText = text
+      children.append(text)
+    }
+    return children
+  }
+
+  private var detailColor: float4 {
+    self.isSelected && self.selectionStyle == .prominent ? ListRowMetrics.selectedDetailColor : ListRowMetrics.secondaryColor
+  }
+
+  /// Lays the labelled parts out anew, after one came or went: made afresh, as a title moves in
+  /// and out of its subtitle's stack. Once per such change, never per frame.
+  private func relayoutParts(_ context: UIContext, _ animation: UIAnimation?) {
+    self.statusMark = nil
+    self.titleText = nil
+    self.subtitleText = nil
+    self.detailText = nil
+    self.stack.replaceChildren(self.labelledContent(), context, animation: animation)
+  }
+
+  /// The label, for a row made with one.
+  public func setLabel(_ value: String, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.label else { return }
+    self.label = value
+    self.titleText?.setText(value, context, animation: animation)
+  }
+
+  /// A second line under the label, or nil for none.
+  public func setSubtitle(_ value: String?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.subtitle, self.label != nil else { return }
+    let had = self.subtitle != nil
+    self.subtitle = value
+    if let value, had {
+      self.subtitleText?.setText(value, context, animation: animation)
+    } else {
+      self.relayoutParts(context, animation)
+    }
+  }
+
+  /// What shows at the trailing edge, or nil for nothing.
+  public func setDetail(_ value: String?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.detail, self.label != nil else { return }
+    let had = self.detail != nil
+    self.detail = value
+    if let value, had {
+      self.detailText?.setText(value, context, animation: animation)
+    } else {
+      self.relayoutParts(context, animation)
+    }
+  }
+
+  /// The square before the content, or nil for none.
+  public func setStatus(_ value: ListRowStatus?, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.status, self.label != nil else { return }
+    let had = self.status != nil
+    self.status = value
+    if let value, had, let mark = self.statusMark {
+      mark.setColor(value.color, context)
+    } else {
+      self.relayoutParts(context, animation)
     }
   }
 
@@ -87,12 +254,18 @@ public final class ListRow : SingleChildElement {
       self.labelStyle.restyleLayout(\.weight, value ? .medium : nil, context, animation)
     case .prominent:
       self.labelStyle.setForegroundColor(value ? .accentForeground : nil, context)
+      self.detailText?.setForegroundColor(self.detailColor, context)
     }
   }
 
-  /// The door `@Component` attaches the content through.
+  /// The door `@Component` attaches the content through: with a label, the accessories.
   public func replaceChildren(_ elements: [UIElement], _ context: UIContext, animation: UIAnimation? = nil) -> Void {
-    self.stack.replaceChildren(elements, context, animation: animation)
+    if self.label != nil {
+      self.accessories = elements
+      self.relayoutParts(context, animation)
+    } else {
+      self.stack.replaceChildren(elements, context, animation: animation)
+    }
   }
 
   /// The pointer's shape over the row: the arrow unless set.
@@ -207,8 +380,24 @@ final class ListRowFace : UIRenderableElement {
 /// method. Not in SwiftUI.
 ///
 ///     KindBadge("S", color: .hue(.badgeStruct))
+///     KindBadge("S", color: KindBadge.color(forLetter: "S"))
 public final class KindBadge : UIRenderableElement {
   public static let side: Float = 16
+
+  /// The palette hue for a kind's letter: M method, P property, V variable, C class, S struct,
+  /// E (or c, a case) enum, Pr protocol; grey for anything else.
+  public static func color(forLetter letter: String) -> float4 {
+    switch letter {
+    case "M": .hue(.badgeMethod)
+    case "P": .hue(.badgeProperty)
+    case "V": .hue(.badgeVariable)
+    case "C": .hue(.badgeClass)
+    case "S": .hue(.badgeStruct)
+    case "E", "c": .hue(.badgeEnum)
+    case "Pr": .hue(.indigo)
+    default: .hue(.gray)
+    }
+  }
   public private(set) var color: float4
   private let text: Text
   private(set) var position: float2 = .zero

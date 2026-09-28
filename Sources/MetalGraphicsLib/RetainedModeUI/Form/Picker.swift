@@ -22,6 +22,9 @@ public enum PickerStyle : Sendable {
 public final class Picker : FormControl {
   public private(set) var selection: AnyHashable
   public private(set) var style: PickerStyle = .menu
+  /// Whether the menu style shows ⌃⌄ at its trailing edge; hidden, it is a plain pill, as a
+  /// compact `DatePicker`'s.
+  public private(set) var menuIndicator: Visibility = .automatic
   /// Where a click reports the option's tag. `@Component` arms it with the binding's write-back,
   /// through `adapt`.
   public var onSelectionChange: ((AnyHashable) -> Void)?
@@ -99,7 +102,7 @@ public final class Picker : FormControl {
       self.menuTitle.text = self.selectedTitle
       let title = self.menuTitle
       let button = HittableView(onTap: nil) {
-        PopupFace(chevrons: true) { title }
+        PopupFace(chevrons: self.menuIndicator != .hidden) { title }
       }
       button.onTap = { [unowned self] _ in self.openMenu() }
       self.menuButton = button
@@ -269,6 +272,22 @@ public final class Picker : FormControl {
     guard value != self.style else { return }
     self.closeMenu(animated: false)
     self.style = value
+    self.rebuild(animation)
+  }
+
+  /// Built in `style`: `.menuIndicator(.hidden)` for a pill without ⌃⌄, as SwiftUI's.
+  public func menuIndicator(_ visibility: Visibility) -> Self {
+    if visibility != self.menuIndicator {
+      self.menuIndicator = visibility
+      self.rebuild(nil)
+    }
+    return self
+  }
+
+  public func setMenuIndicator(_ value: Visibility, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.menuIndicator else { return }
+    self.closeMenu(animated: false)
+    self.menuIndicator = value
     self.rebuild(animation)
   }
 
