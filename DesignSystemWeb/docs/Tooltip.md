@@ -6,7 +6,7 @@ category: Surfaces
 
 A short label on tooltip glass.
 
-Mirrors `.glass(.tooltip)` in MetalGraphics.
+Mirrors `Tooltip(text, multiline:), .help(_:) (Presentation/Tooltip.swift)` in MetalGraphics.
 
 ## Props
 

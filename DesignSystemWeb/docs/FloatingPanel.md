@@ -6,7 +6,7 @@ category: Docking
 
 A dock panel floating over the others: floating-panel glass, radius 7, a hairline, and a 12pt grip strip with three dots.
 
-Mirrors `DockFloatFill / DockFloatBorder (Docking/DockViews.swift)` in MetalGraphics.
+Mirrors `FloatingPanel (Docking/DockChrome.swift)` in MetalGraphics.
 
 ## Props
 

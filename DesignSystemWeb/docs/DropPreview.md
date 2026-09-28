@@ -6,7 +6,7 @@ category: Docking
 
 Where a dropped panel lands: the accent at 18% with a 2pt ring. Place it over the target area.
 
-Mirrors `DockDropOverlay's preview (Docking/DockViews.swift)` in MetalGraphics.
+Mirrors `DropPreview (Docking/DockChrome.swift)` in MetalGraphics.
 
 ## Props
 

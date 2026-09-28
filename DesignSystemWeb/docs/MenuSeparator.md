@@ -6,7 +6,7 @@ category: Surfaces
 
 A line between groups of menu items.
 
-Mirrors `Menu divider` in MetalGraphics.
+Mirrors `MenuSeparator (Presentation/Menu.swift)` in MetalGraphics.
 
 ## Props
 

@@ -6,7 +6,7 @@ category: Docking
 
 The docking cross shown while a panel is dragged: 28pt markers 34 apart on drop-marker glass with an accent ring, each drawing its zone; the hovered one filled with the accent.
 
-Mirrors `DockDropOverlay (Docking/DockViews.swift)` in MetalGraphics.
+Mirrors `DropMarkers (Docking/DockChrome.swift)` in MetalGraphics.
 
 ## Props
 

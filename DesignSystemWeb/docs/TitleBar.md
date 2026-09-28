@@ -6,7 +6,7 @@ category: Window
 
 A floating dock window's own 28pt title bar on the bar tint: traffic lights on the left, the title centred.
 
-Mirrors `DockTitleBar (Docking/DockViews.swift)` in MetalGraphics.
+Mirrors `TitleBar (Docking/DockChrome.swift)` in MetalGraphics.
 
 ## Props
 

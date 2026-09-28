@@ -6,7 +6,7 @@ category: Surfaces
 
 Menu glass holding MenuItem and MenuSeparator. A hovered item takes the selection colour at radius 5, with an 18-wide check column.
 
-Mirrors `Picker menus, context menus` in MetalGraphics.
+Mirrors `MenuPanel in place; Menu (a button that opens one); .contextMenu { } (Presentation/Menu.swift)` in MetalGraphics.
 
 ## Props
 

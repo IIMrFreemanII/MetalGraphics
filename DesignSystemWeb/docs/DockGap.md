@@ -6,7 +6,7 @@ category: Docking
 
 The 1 pt gap between docked panels, on the gap tint.
 
-Mirrors `Dock gaps (DockViews.swift)` in MetalGraphics.
+Mirrors `DockGap (Docking/DockChrome.swift)` in MetalGraphics.
 
 ## Props
 

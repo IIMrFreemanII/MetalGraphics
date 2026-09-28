@@ -6,7 +6,7 @@ category: Editor
 
 The completion popup on menu glass: a row per candidate with its kind badge, monospaced name and type, the selected one on the accent, and a detail line under a hairline.
 
-Mirrors `the Editor's completion popup (Editor/LanguageAssist.swift CompletionRowView)` in MetalGraphics.
+Mirrors `CompletionList, CompletionItem (TextEditor/Chrome/CompletionList.swift)` in MetalGraphics.
 
 ## Props
 

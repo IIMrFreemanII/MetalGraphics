@@ -500,7 +500,7 @@
 .mg-menu-item__check { display: inline-flex; justify-content: center; width: 18px; flex: none; }
 .mg-menu-item__label { flex: 1; }
 .mg-menu-item__shortcut { margin-left: 24px; color: var(--mg-color-secondary-label); }
-.mg-menu-separator { height: 1px; margin: 5px 6px; background: var(--mg-color-separator); }
+.mg-menu-separator { height: 0.5px; margin: 5px 6px; background: var(--mg-color-separator); }
 .mg-tooltip {
   display: inline-block;
   padding: 4px 8px;
@@ -538,7 +538,7 @@
   background: var(--mg-color-sidebar-tint);
   box-shadow: inset -1px 0 0 var(--mg-color-separator);
 }
-.mg-sidebar__title { padding: 10px 10px 4px; font: var(--mg-font-subheadline); font-weight: 600; color: var(--mg-color-secondary-label); }
+.mg-sidebar__title { padding: 4px 10px 6px; font: var(--mg-font-subheadline); font-weight: 600; color: var(--mg-color-secondary-label); }
 .mg-sidebar-link {
   appearance: none;
   display: flex;
@@ -563,11 +563,14 @@
   align-items: center;
   gap: 8px;
   height: 38px;
-  padding: 0 12px;
+  padding: 0 10px;
   background: var(--mg-color-bar-tint);
   box-shadow: inset 0 -0.5px 0 var(--mg-color-separator);
 }
-.mg-nav-bar__title { flex: 1; font: var(--mg-font-headline); }
+/* The title centred in the bar, as the Swift bar draws it; the items at the edges. */
+.mg-nav-bar__side { flex: 1 1 0; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mg-nav-bar__side--trailing { justify-content: flex-end; }
+.mg-nav-bar__title { flex: none; font: var(--mg-font-headline); white-space: nowrap; }
 
 /* ── Table (Table/Table.swift, TableRow.swift) ────────────────────────── */
 

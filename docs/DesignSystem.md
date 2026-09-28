@@ -80,9 +80,19 @@ registers with `UIContext.addThemeObserver` on mount (see `TextEditor`).
 
 **In components.** `@Bindable let themes: ThemeStore = .shared` reads the theme reactively.
 
+**A subtree in another appearance.** `.colorScheme(.dark)` draws an element and everything in it
+with the store's dark theme whatever its window shows; `.theme(_:)` with a theme of its own
+(`ThemeScopeElement`). The render loop carries the nearest scope per drawn element and swaps the
+renderer's theme where one starts or ends, so nothing is rebuilt; popovers shown from inside a
+scope, shadows, text editors and role animations take its theme too. A window without scopes pays
+nothing per frame. What is read from `Theme.current` while building (type, metrics) stays the
+window's, so a scope's theme should share its typography, as light and dark do; a presentation in
+a window of its own does not inherit a scope. The Storybook's side by side is two scopes.
+
 ## Components
 
-The shapes the design canvas draws, in the library:
+The shapes the design canvas draws, in the library. Each has a story in the Storybook
+(`swift run Storybook`, `docs/Storybook.md`), with the same props as its web version:
 
 - **`ListRow`**: every row of a sidebar, tree, outline, problems list, quick open or completion
   list. A fixed height (24 by default), inset 8 from the sides, a rounded `.hover` highlight
@@ -101,12 +111,37 @@ The shapes the design canvas draws, in the library:
 - **Dock tabs** come in two styles, `.panel` and `.document` (`docs/Docking.md`, Tabs).
 - **The code editor** of the theme is SF Mono 12.5 on 20 pt lines with a 52 pt gutter
   (`EditorTheme.lineHeight`, `.minGutterWidth`).
+- **`ListRow(label, subtitle:, detail:, status:)`**: a row with its label, a second line in the
+  secondary colour, a detail at the trailing edge and a severity square (`ListRowStatus`); the
+  Problems list's 38 pt rows. `KindBadge.color(forLetter:)` gives a kind's hue.
+- **Editor chrome** (`TextEditor/Chrome/`): `FindBar` (query, count, ‹ ›, `ToggleChip` Aa / Word /
+  .*, replace, Done; controlled like a text field), `CompletionList` (`CompletionItem` rows on
+  menu glass with the selected one's detail), `StatusBar` (24 pt: position, problem, file). The
+  Editor's file tab is built from them.
+- **Surfaces** (`Presentation/`): `Tooltip` (one line, or `multiline` a 420 pt hover card) and
+  `.help(_:)`, which shows one after a 0.6 s rest; `Menu`, `MenuItem`, `MenuSeparator`,
+  `MenuPanel` and `.contextMenu { }` (a right click); `Popover`, `Sheet`, `SheetLayout`, `Alert`
+  (`AlertLayout`) and `ConfirmationDialog` shown in place, on the cards the presentations use
+  (`CardChrome`); `Scrim`.
+- **Pickers**: `ColorWell`, `ColorPickerPanel`, `CalendarView` and `TimePanel`, what a
+  `ColorPicker` and a `DatePicker` open; `Picker.menuIndicator(.hidden)` for a pill.
+- **Navigation**: `Sidebar(title:)`, `SidebarTitle`, `SidebarLink`, `NavigationBar` in place, and
+  `.toolbar(leading:trailing:)` for a page's items in its stack's bar, in the title bar's row
+  when the bar is at the window's top.
+- **Window and docking chrome** (`Docking/DockChrome.swift`): `TrafficLights`, `TitleBar`,
+  `FloatingPanel`, `DropMarkers`, `DropPreview`, `DockTab`, `DockTabBar`, `DockGap`, drawn by the
+  pieces a `DockArea` uses.
+- **Lists**: `InsertionLine` (a reorder's 2 pt capsule), `ScrollIndicator`.
+- **Debug**: `.layoutOutline()` frames everything laid out; `ElementInspector.snapshot(of:)` lists
+  a tree's elements with their frames.
 
 ## Building new UI
 
 Start from the canvas board it belongs on and the components above; `.claude/skills/design-system/SKILL.md`
-is the checklist. Colours are roles or palette hues, never written out: `DesignLintTests` reads
-`Sources/MetalGraphicsLib/RetainedModeUI`, `Sources/Editor` and `Sources/Demo` and fails on an RGB
+is the checklist. Reuse a library component before writing one; a shape the design system has
+and the library lacks goes into the library, with a story in the Storybook. Colours are roles or
+palette hues, never written out: `DesignLintTests` reads `Sources/MetalGraphicsLib/RetainedModeUI`,
+`Sources/Editor`, `Sources/Storybook` and `Sources/Demo` and fails on an RGB
 or hex literal, or on `.white`/`.black`/`.red`… passed as a colour in the library or the Editor.
 The token files (`Theme/`, `EditorTheme.swift`) are exempt, and a deliberate exception keeps its
 literal with `// design: <reason>` on the same line (the traffic lights in `DockViews.swift`, a
@@ -171,8 +206,11 @@ Goldens are recorded in light. When a token changes, re-record with
 `TranslucencyTests` and `GlassDamageTests` cover the theme, the transparent output, the rim and
 fallback, and the backdrop cache; `AppearanceE2ETests` the switch across the app's windows;
 `TitleBarTests` the title bar's row, `ListRow` and the form's column; `DockTabStyleTests` the
-two tab styles, the close button on hover and a tab's decorations; `DesignLintTests` that no
-colour is written out.
+two tab styles, the close button on hover and a tab's decorations; `ThemeScopeTests` a subtree in
+another appearance; `DesignComponentsTests`, `MenuAndSurfaceTests` and `DockChromeTests` the
+components shown in place; `DesignLintTests` that no colour is written out. The Storybook's
+`ComponentGoldenTests` keep a golden of every component, light and dark, and `ParityTests` check
+that every web component has a Swift story.
 
 ## On the web (claude.ai/design)
 

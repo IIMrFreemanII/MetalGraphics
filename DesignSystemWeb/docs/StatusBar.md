@@ -6,7 +6,7 @@ category: Editor
 
 The 24pt line under an editor: caret position, the first problem in the destructive colour, and the file name.
 
-Mirrors `the Editor's status line (Editor/FileEditorPanel.swift)` in MetalGraphics.
+Mirrors `StatusBar (TextEditor/Chrome/StatusBar.swift)` in MetalGraphics.
 
 ## Props
 

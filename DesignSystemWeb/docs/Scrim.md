@@ -6,7 +6,7 @@ category: Surfaces
 
 Dims what is behind a sheet or an alert and centres it.
 
-Mirrors `ModalLayer scrim` in MetalGraphics.
+Mirrors `Scrim (Presentation/Surfaces.swift)` in MetalGraphics.
 
 ## Props
 

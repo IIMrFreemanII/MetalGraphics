@@ -237,9 +237,9 @@ export function SidebarLink({
 export function NavigationBar({ title, leading, trailing, className, style }: Common & { title: string; leading?: unknown; trailing?: unknown }) {
   return (
     <header className={cx("mg-nav-bar", className)} style={style}>
-      {leading as any}
+      <span className="mg-nav-bar__side">{leading as any}</span>
       <span className="mg-nav-bar__title">{title}</span>
-      {trailing as any}
+      <span className="mg-nav-bar__side mg-nav-bar__side--trailing">{trailing as any}</span>
     </header>
   );
 }

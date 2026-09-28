@@ -6,7 +6,7 @@ category: Navigation
 
 232 wide on the sidebar tint, inset 10, with a hairline edge. Holds SidebarLinks.
 
-Mirrors `NavigationSplitView sidebar (NavigationMetrics)` in MetalGraphics.
+Mirrors `Sidebar(title:), SidebarTitle (Navigation/Sidebar.swift); NavigationSplitView's column` in MetalGraphics.
 
 ## Props
 

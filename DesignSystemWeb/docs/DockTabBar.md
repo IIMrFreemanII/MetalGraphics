@@ -6,7 +6,7 @@ category: Docking
 
 A tab group's bar. Panel style is 30 tall with 22 pills and 11.5 type; document style is 40 tall with 28 pills, 12.5 type, a document icon and a hairline under the bar. The selected tab is a raised pill; hover shows a close cross.
 
-Mirrors `DockTabsView, DockTabStyle, DockTabMetrics` in MetalGraphics.
+Mirrors `DockTabBar (Docking/DockChrome.swift); a DockArea draws its own` in MetalGraphics.
 
 ## Props
 

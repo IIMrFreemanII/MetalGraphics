@@ -6,7 +6,7 @@ category: Foundations
 
 A scroll bar thumb: 5 thick, square ends, placed 2 from the edge.
 
-Mirrors `ScrollView indicators` in MetalGraphics.
+Mirrors `ScrollIndicator (Layout/ScrollIndicator.swift); a ScrollView draws its own` in MetalGraphics.
 
 ## Props
 

@@ -9,7 +9,7 @@ export const components = [
   {
     name: "MGRoot",
     group: "Foundations",
-    swift: "ThemeStore (Theme.light / Theme.dark)",
+    swift: "ThemeStore (Theme.light / Theme.dark); .colorScheme(_:) / .theme(_:) for a subtree",
     summary: "Wrap every artboard's content in it. Picks light or dark, sets JetBrains Mono (with its ligatures) and the label colour, and can paint a surface.",
     props: [
       ["mode", `"light" | "dark" | "system"`, `"system" follows the viewer's appearance.`],
@@ -50,7 +50,7 @@ export const components = [
   {
     name: "ScrollIndicator",
     group: "Foundations",
-    swift: "ScrollView indicators",
+    swift: "ScrollIndicator (Layout/ScrollIndicator.swift); a ScrollView draws its own",
     summary: "A scroll bar thumb: 5 thick, square ends, placed 2 from the edge.",
     props: [
       ["length", "number", "Length in px, at least 20."],
@@ -103,7 +103,7 @@ export const components = [
   {
     name: "Picker",
     group: "Controls",
-    swift: "Picker with .pickerStyle(.menu / .segmented / .inline)",
+    swift: "Picker with .pickerStyle(.menu / .segmented / .inline), .menuIndicator(.hidden)",
     summary: "A pop-up button with the accent up-down tile, a segmented control, or inline rows with a check.",
     props: [
       ["chevrons", "boolean", "Default true. false gives the plain pill a date picker uses."],
@@ -162,7 +162,7 @@ export const components = [
   {
     name: "ListRow",
     group: "Lists",
-    swift: "ListRow (Layout/ListRow.swift)",
+    swift: "ListRow(label, subtitle:, detail:, status:) (Layout/ListRow.swift)",
     summary: "A 24-tall row for lists, outlines and navigators. The highlight is inset 8 and the content 8 inside it. Hover uses `hover`; selected uses `selection` and a medium label, or with `prominent` the accent. Children go before the label: a KindBadge or an Icon.",
     props: [
       ["subtitle", "string", "A second line in the secondary colour (a location); makes a 38-tall row with height={38}."],
@@ -215,7 +215,7 @@ export const components = [
   {
     name: "FormRow",
     group: "Forms",
-    swift: "A row in Section (FormMetrics: inset 9/14)",
+    swift: "LabeledContent, or any control in a Section (FormMetrics: inset 9/14)",
     summary: "A label on the leading side and a control or value on the trailing side. Hairlines between rows start 14 in.",
     props: [["label", "string", ""], ["value", "string", "A trailing value in the secondary colour."]],
     jsx: "<FormRow label=\"Appearance\"><Picker options={[\"Automatic\", \"Light\", \"Dark\"]} label=\"Appearance\" /></FormRow>",
@@ -223,7 +223,7 @@ export const components = [
   {
     name: "DockTabBar",
     group: "Docking",
-    swift: "DockTabsView, DockTabStyle, DockTabMetrics",
+    swift: "DockTabBar (Docking/DockChrome.swift); a DockArea draws its own",
     summary: "A tab group's bar. Panel style is 30 tall with 22 pills and 11.5 type; document style is 40 tall with 28 pills, 12.5 type, a document icon and a hairline under the bar. The selected tab is a raised pill; hover shows a close cross.",
     props: [
       ["tabs", "{ title, unsaved?, count? }[]", "`unsaved` shows a dot; `count` a warning capsule."],
@@ -237,7 +237,7 @@ export const components = [
   {
     name: "DockTab",
     group: "Docking",
-    swift: "DockTabItem",
+    swift: "DockTab (Docking/DockChrome.swift)",
     summary: "One tab pill. Normally rendered by DockTabBar.",
     props: [["title", "string", ""], ["selected", "boolean", ""], ["tabStyle", `"panel" | "document"`, ""]],
     jsx: "<DockTabBar tabs={[{ title: \"Console\" }, { title: \"Problems\", count: 3 }]} defaultSelected={1} label=\"Panels\" />",
@@ -245,7 +245,7 @@ export const components = [
   {
     name: "DockGap",
     group: "Docking",
-    swift: "Dock gaps (DockViews.swift)",
+    swift: "DockGap (Docking/DockChrome.swift)",
     summary: "The 1 pt gap between docked panels, on the gap tint.",
     props: [["vertical", "boolean", "Default true."]],
     jsx: "<div style={{ display: \"flex\", height: 120 }}>\n  <div style={{ flex: 1 }} />\n  <DockGap />\n  <div style={{ flex: 1 }} />\n</div>",
@@ -253,7 +253,7 @@ export const components = [
   {
     name: "Popover",
     group: "Surfaces",
-    swift: ".popover (Core/Popover.swift)",
+    swift: "Popover in place, .popover to present (Presentation/Surfaces.swift)",
     summary: "A glass card: popover material, radius 10, a 0.5 pt separator hairline and the popover shadow. Place it 4 px from its anchor.",
     props: [],
     jsx: "<Popover style={{ padding: 14, width: 220 }}>\n  <LabeledContent label=\"Line\" value=\"42\" />\n</Popover>",
@@ -261,7 +261,7 @@ export const components = [
   {
     name: "Menu",
     group: "Surfaces",
-    swift: "Picker menus, context menus",
+    swift: "MenuPanel in place; Menu (a button that opens one); .contextMenu { } (Presentation/Menu.swift)",
     summary: "Menu glass holding MenuItem and MenuSeparator. A hovered item takes the selection colour at radius 5, with an 18-wide check column.",
     props: [["label", "string", "Accessible name."]],
     jsx: "<Menu label=\"Appearance\">\n  <MenuItem checked>Automatic</MenuItem>\n  <MenuItem>Light</MenuItem>\n  <MenuSeparator />\n  <MenuItem shortcut=\"⌘,\">Settings…</MenuItem>\n</Menu>",
@@ -269,7 +269,7 @@ export const components = [
   {
     name: "MenuItem",
     group: "Surfaces",
-    swift: "Menu item (Picker.swift)",
+    swift: "MenuItem (Presentation/Menu.swift)",
     summary: "An item in a Menu.",
     props: [["checked", "boolean", ""], ["shortcut", "string", `e.g. "⌘,"`], ["state", `"hover" | "disabled"`, ""]],
     jsx: "<Menu>\n  <MenuItem shortcut=\"⌘R\">Run</MenuItem>\n</Menu>",
@@ -277,7 +277,7 @@ export const components = [
   {
     name: "MenuSeparator",
     group: "Surfaces",
-    swift: "Menu divider",
+    swift: "MenuSeparator (Presentation/Menu.swift)",
     summary: "A line between groups of menu items.",
     props: [],
     jsx: "<Menu>\n  <MenuItem>Copy</MenuItem>\n  <MenuSeparator />\n  <MenuItem>Delete</MenuItem>\n</Menu>",
@@ -285,7 +285,7 @@ export const components = [
   {
     name: "Tooltip",
     group: "Surfaces",
-    swift: ".glass(.tooltip)",
+    swift: "Tooltip(text, multiline:), .help(_:) (Presentation/Tooltip.swift)",
     summary: "A short label on tooltip glass.",
     props: [
       ["multiline", "boolean", "A hover card: several lines, at most 420 wide, radius 8."],
@@ -295,7 +295,7 @@ export const components = [
   {
     name: "Scrim",
     group: "Surfaces",
-    swift: "ModalLayer scrim",
+    swift: "Scrim (Presentation/Surfaces.swift)",
     summary: "Dims what is behind a sheet or an alert and centres it.",
     props: [],
     jsx: "<Scrim>\n  <Alert title=\"Discard changes?\" actions={[{ label: \"Cancel\" }, { label: \"Discard\", variant: \"prominent\", destructive: true }]} />\n</Scrim>",
@@ -303,7 +303,7 @@ export const components = [
   {
     name: "Sheet",
     group: "Surfaces",
-    swift: ".sheet (Presentation/ModalLayer.swift)",
+    swift: "Sheet in place, SheetLayout inside .sheet (Presentation/Surfaces.swift)",
     summary: "Sheet glass, radius 12, with the sheet shadow, a headline title, content and trailing actions.",
     props: [
       ["title", "string", ""],
@@ -315,7 +315,7 @@ export const components = [
   {
     name: "Alert",
     group: "Surfaces",
-    swift: ".alert, .confirmationDialog",
+    swift: "Alert in place (AlertLayout), .alert to present (Presentation/Surfaces.swift)",
     summary: "An alert: a 260-wide sheet with a centred title, a message and full-width buttons. Actions carry a role (cancel, destructive); the first without one is the default, prominent. More than two stack.",
     props: [
       ["layout", "\"auto\" | \"row\" | \"stack\"", "auto: two actions or fewer side by side (cancel on the left), more stacked (cancel last)."],
@@ -326,7 +326,7 @@ export const components = [
   {
     name: "Sidebar",
     group: "Navigation",
-    swift: "NavigationSplitView sidebar (NavigationMetrics)",
+    swift: "Sidebar(title:), SidebarTitle (Navigation/Sidebar.swift); NavigationSplitView's column",
     summary: "232 wide on the sidebar tint, inset 10, with a hairline edge. Holds SidebarLinks.",
     props: [["title", "string", "A small section title."]],
     jsx: "<Sidebar title=\"Demos\">\n  <SidebarLink selected>Form</SidebarLink>\n  <SidebarLink>Glass</SidebarLink>\n</Sidebar>",
@@ -334,7 +334,7 @@ export const components = [
   {
     name: "SidebarLink",
     group: "Navigation",
-    swift: "NavigationLink in a sidebar",
+    swift: "SidebarLink (Navigation/Sidebar.swift); a NavigationLink in a split view's sidebar",
     summary: "A full-width link, inset 5/10. Selected uses the selection colour and a medium label.",
     props: [["selected", "boolean", ""], ["icon", "Icon name", ""], ["state", `"hover"`, ""]],
     jsx: "<Sidebar>\n  <SidebarLink icon=\"folder\" selected>Sources</SidebarLink>\n</Sidebar>",
@@ -342,7 +342,7 @@ export const components = [
   {
     name: "NavigationBar",
     group: "Navigation",
-    swift: "Navigation bar (NavigationStack)",
+    swift: "NavigationBar in place; .navigationTitle and .toolbar(leading:trailing:) in a NavigationStack",
     summary: "38 tall on the bar tint, a headline title, leading and trailing slots.",
     props: [["title", "string", ""], ["leading, trailing", "element", "Buttons."]],
     jsx: "<NavigationBar title=\"Settings\" leading={<Button icon=\"chevronLeft\" label=\"Back\" />} trailing={<Button variant=\"bordered\">Share</Button>} />",
@@ -350,7 +350,7 @@ export const components = [
   {
     "name": "ConfirmationDialog",
     "group": "Surfaces",
-    "swift": ".confirmationDialog (PresentationContent.swift)",
+    "swift": "ConfirmationDialog in place, .confirmationDialog to present (Presentation/Surfaces.swift)",
     "summary": "An alert whose actions always stack, with Cancel added when none is given; the title can be hidden.",
     "props": [
       [
@@ -379,7 +379,7 @@ export const components = [
   {
     "name": "InsertionLine",
     "group": "Lists",
-    "swift": "ReorderIndicator (Interaction/DragAndDrop.swift)",
+    "swift": "InsertionLine (Layout/InsertionLine.swift)",
     "summary": "Where a dragged row would drop: a 2pt accent line across the list.",
     "props": [
       [
@@ -447,7 +447,7 @@ export const components = [
   {
     "name": "FindBar",
     "group": "Editor",
-    "swift": "the Editor's find bar (Editor/FileEditorPanel.swift)",
+    "swift": "FindBar (TextEditor/Chrome/FindBar.swift)",
     "summary": "The editor's find and replace bar: query with a magnifier, match count, previous and next, the Aa / Word / .* chips, replacement, Replace, All and Done.",
     "props": [
       [
@@ -476,7 +476,7 @@ export const components = [
   {
     "name": "ToggleChip",
     "group": "Editor",
-    "swift": "the find bar's option buttons (Editor/FileEditorPanel.swift)",
+    "swift": "ToggleChip (Form/ToggleChip.swift)",
     "summary": "A small on/off chip, 11.5 semibold on radius 5; on shows the selection behind the accent.",
     "props": [
       [
@@ -495,7 +495,7 @@ export const components = [
   {
     "name": "CompletionList",
     "group": "Editor",
-    "swift": "the Editor's completion popup (Editor/LanguageAssist.swift CompletionRowView)",
+    "swift": "CompletionList, CompletionItem (TextEditor/Chrome/CompletionList.swift)",
     "summary": "The completion popup on menu glass: a row per candidate with its kind badge, monospaced name and type, the selected one on the accent, and a detail line under a hairline.",
     "props": [
       [
@@ -519,7 +519,7 @@ export const components = [
   {
     "name": "StatusBar",
     "group": "Editor",
-    "swift": "the Editor's status line (Editor/FileEditorPanel.swift)",
+    "swift": "StatusBar (TextEditor/Chrome/StatusBar.swift)",
     "summary": "The 24pt line under an editor: caret position, the first problem in the destructive colour, and the file name.",
     "props": [
       [
@@ -577,7 +577,7 @@ export const components = [
   {
     "name": "TitleBar",
     "group": "Window",
-    "swift": "DockTitleBar (Docking/DockViews.swift)",
+    "swift": "TitleBar (Docking/DockChrome.swift)",
     "summary": "A floating dock window's own 28pt title bar on the bar tint: traffic lights on the left, the title centred.",
     "props": [
       [
@@ -596,7 +596,7 @@ export const components = [
   {
     "name": "TrafficLights",
     "group": "Window",
-    "swift": "DockWindowButton (Docking/DockViews.swift)",
+    "swift": "TrafficLights (Docking/DockChrome.swift)",
     "summary": "Close, minimize and zoom: 12pt dots 8 apart, with ×, − and + on hover. The only literal colours in the system.",
     "props": [
       [
@@ -615,7 +615,7 @@ export const components = [
   {
     "name": "FloatingPanel",
     "group": "Docking",
-    "swift": "DockFloatFill / DockFloatBorder (Docking/DockViews.swift)",
+    "swift": "FloatingPanel (Docking/DockChrome.swift)",
     "summary": "A dock panel floating over the others: floating-panel glass, radius 7, a hairline, and a 12pt grip strip with three dots.",
     "props": [
       [
@@ -634,7 +634,7 @@ export const components = [
   {
     "name": "DropMarkers",
     "group": "Docking",
-    "swift": "DockDropOverlay (Docking/DockViews.swift)",
+    "swift": "DropMarkers (Docking/DockChrome.swift)",
     "summary": "The docking cross shown while a panel is dragged: 28pt markers 34 apart on drop-marker glass with an accent ring, each drawing its zone; the hovered one filled with the accent.",
     "props": [
       [
@@ -653,7 +653,7 @@ export const components = [
   {
     "name": "DropPreview",
     "group": "Docking",
-    "swift": "DockDropOverlay's preview (Docking/DockViews.swift)",
+    "swift": "DropPreview (Docking/DockChrome.swift)",
     "summary": "Where a dropped panel lands: the accent at 18% with a 2pt ring. Place it over the target area.",
     "props": [],
     "jsx": "<DropPreview style={{ width: 200, height: 120 }} />"
@@ -709,7 +709,7 @@ export const components = [
   {
     "name": "ColorPickerPanel",
     "group": "Controls",
-    "swift": "ColorPicker.open() (Form/ColorPicker.swift)",
+    "swift": "ColorPickerPanel (Form/ColorPicker.swift)",
     "summary": "What a colour well opens: 12 hues in three shades and a row of greys (16pt swatches, the selection ringed), then Hue, Saturation, Brightness and Opacity sliders.",
     "props": [
       [
@@ -791,7 +791,7 @@ export const components = [
   {
     "name": "TimePanel",
     "group": "Controls",
-    "swift": "DatePicker.openTime() (Form/DatePicker.swift)",
+    "swift": "TimePanel (Form/DatePicker.swift)",
     "summary": "What a compact date picker's time pill opens: hour and minute steppers, 180 wide.",
     "props": [
       [
