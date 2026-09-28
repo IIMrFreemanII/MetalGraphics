@@ -188,15 +188,7 @@ public extension HeadlessWindow {
 @MainActor enum HeadlessQuery {
   /// The element's own rect, for the kinds that keep one.
   static func ownGeometry(of element: UIElement) -> HeadlessRect? {
-    switch element {
-    case let hittable as any Hittable: HeadlessRect(origin: hittable.hitPosition, size: hittable.hitSize)
-    case let focusable as FocusableElement: HeadlessRect(origin: focusable.position, size: focusable.size)
-    case let text as Text: HeadlessRect(origin: text.position, size: text.size)
-    case let id as IDElement: HeadlessRect(origin: id.position, size: id.size)
-    case let scroll as ScrollView: HeadlessRect(origin: scroll.position, size: scroll.size)
-    case let tab as DockTabItem: HeadlessRect(origin: tab.position, size: tab.size)
-    default: nil
-    }
+    ElementGeometry.ownRect(of: element)
   }
 
   static func geometry(of element: UIElement) -> HeadlessRect? {

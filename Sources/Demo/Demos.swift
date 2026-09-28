@@ -99,7 +99,6 @@ final class Demos : SingleChildElement {
   // Restored from the window's storage, so a hot reload or a relaunch reopens the demo each
   // window was on, and a new window opens on the one last picked in any.
   static let selectedKey = "Demos.selected"
-  static let headerFont = TextFont.system(size: 11, weight: .semibold)
 
   let scene: WindowScene
 
@@ -114,10 +113,7 @@ final class Demos : SingleChildElement {
 
   @UIElementBuilder var body: [UIElement] {
     NavigationSplitView(selection: $selected) {
-      Text("Demos")
-        .font(Demos.headerFont)
-        .foregroundColor(.secondaryLabel)
-        .padding(Inset(left: 10, top: 4, right: 10, bottom: 6))
+      SidebarTitle("Demos")
       ScrollView(.vertical) {
         VList(alignment: .leading, spacing: 0, items: self.demos) { demo in
           NavigationLink(demo.title, value: demo)

@@ -17,6 +17,7 @@ let package = Package(
     .library(name: "ReactiveUI", targets: ["ReactiveUI"]),
     .executable(name: "Demo", targets: ["Demo"]),
     .executable(name: "Editor", targets: ["Editor"]),
+    .executable(name: "Storybook", targets: ["Storybook"]),
   ],
   dependencies: [
     // Pinned to the newest release that has a prebuilt for the current toolchain (Swift 6.4,
@@ -88,6 +89,16 @@ let package = Package(
       linkerSettings: [.unsafeFlags(["-Xlinker", "-interposable"], .when(configuration: .debug))]
     ),
 
+    // A gallery of every design-system component, as Storybook: `swift run Storybook`.
+    // See docs/Storybook.md.
+    .executableTarget(
+      name: "Storybook",
+      dependencies: ["MetalGraphicsLib", "ReactiveUI"],
+      resources: [.process("Resources")],
+      swiftSettings: swiftSettings,
+      linkerSettings: [.unsafeFlags(["-Xlinker", "-interposable"], .when(configuration: .debug))]
+    ),
+
     .testTarget(
       name: "MetalGraphicsLibTests",
       dependencies: ["MetalGraphicsLib", "ReactiveUI"],
@@ -98,6 +109,12 @@ let package = Package(
     .testTarget(
       name: "DemoTests",
       dependencies: ["Demo", "MetalGraphicsLib", "ReactiveUI"],
+      exclude: ["__Snapshots__"],
+      swiftSettings: swiftSettings
+    ),
+    .testTarget(
+      name: "StorybookTests",
+      dependencies: ["Storybook", "MetalGraphicsLib", "ReactiveUI"],
       exclude: ["__Snapshots__"],
       swiftSettings: swiftSettings
     ),

@@ -1,0 +1,1 @@
+../../MetalGraphicsLibTests/Support/Snapshot.swift
