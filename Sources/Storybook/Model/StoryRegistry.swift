@@ -6,7 +6,7 @@ enum StoryRegistry {
   static func catalog() -> StoryCatalog {
     StoryCatalog(components:
       FoundationStories.all + ControlStories.all + PickerStories.all + ListStories.all + FormStories.all
-        + SurfaceStories.all + NavigationStories.all + DockingStories.all + EditorStories.all
+        + SurfaceStories.all + NavigationStories.all + DockingStories.all + WindowStories.all + EditorStories.all
     )
   }
 }

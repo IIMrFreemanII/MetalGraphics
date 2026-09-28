@@ -17,6 +17,7 @@ final class DesignLintTests: XCTestCase {
     ("Sources/MetalGraphicsLib/RetainedModeUI", true),
     ("Sources/Editor", true),
     ("Sources/Demo", false),
+    ("Sources/Storybook", true),
   ]
 
   /// The files that define the tokens: colours are written out there and nowhere else.

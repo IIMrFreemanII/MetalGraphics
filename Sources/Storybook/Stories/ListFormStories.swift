@@ -16,8 +16,8 @@ enum PickerStories {
   static let colorWell = ComponentStories(
     .pickers, "ColorWell", summary: "A colour on a rounded well, 44 × 24, over a checkerboard when translucent.",
     source: "Sources/MetalGraphicsLib/RetainedModeUI/Form/ColorPicker.swift",
-    args: [ArgType("color", .color, .color(SIMD4<Float>(0.19, 0.69, 0.78, 1)), "The colour.")],
-    stories: [Story("Opaque"), Story("Translucent", ["color": .color(SIMD4<Float>(1, 0.23, 0.19, 0.4))])],
+    args: [ArgType("color", .color, .color(SIMD4<Float>(0.19, 0.69, 0.78, 1)), "The colour.")],  // design: a colour picker edits a plain colour
+    stories: [Story("Opaque"), Story("Translucent", ["color": .color(SIMD4<Float>(1, 0.23, 0.19, 0.4))])],  // design: a colour picker edits a plain colour
     render: { args, _ in ColorWell(args.color("color")) },
     snippet: { args in "ColorWell(float4\(StoryValue.color(args.color("color")).display))" }
   )
@@ -71,10 +71,10 @@ enum PickerStories {
     source: "Sources/MetalGraphicsLib/RetainedModeUI/Form/ColorPicker.swift",
     args: [
       ArgType("label", .text, .text("Tint"), "Its label."),
-      ArgType("selection", .color, .color(SIMD4<Float>(0.0, 0.48, 1.0, 1)), "The colour: a binding."),
+      ArgType("selection", .color, .color(SIMD4<Float>(0.0, 0.48, 1.0, 1)), "The colour: a binding."),  // design: a colour picker edits a plain colour
       ArgType("supportsOpacity", .bool, .bool(true), "Whether it has an opacity slider."),
     ],
-    stories: [Story("Default"), Story("Translucent", ["selection": .color(SIMD4<Float>(0.2, 0.78, 0.35, 0.5))])],
+    stories: [Story("Default"), Story("Translucent", ["selection": .color(SIMD4<Float>(0.2, 0.78, 0.35, 0.5))])],  // design: a colour picker edits a plain colour
     render: { args, context in
       ColorPicker(args.string("label"), selection: context.color("selection"), supportsOpacity: args.bool("supportsOpacity")).frame(width: 360)
     },

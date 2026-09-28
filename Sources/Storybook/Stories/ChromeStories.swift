@@ -315,7 +315,101 @@ enum NavigationStories {
 }
 
 enum DockingStories {
-  static let all: [ComponentStories] = [dockGap]
+  static let all: [ComponentStories] = [dockTabBar, dockTab, floatingPanel, dropMarkers, dropPreview, dockGap, dockArea]
+
+  static let dockTabBar = ComponentStories(
+    .docking, "DockTabBar", summary: "A dock group's tabs on their bar: panel style (30, pills 22) or document style (40, pills 28, a hairline).",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Docking/DockChrome.swift",
+    args: [
+      ArgType("style", .options(["panel", "document"]), .option("document"), "Panel or document tabs."),
+      ArgType("selection", .number(0 ... 2, step: 1), .number(0), "The shown tab: a binding."),
+      ArgType("edited", .bool, .bool(true), "The first document has unsaved changes."),
+      ArgType("onSidebar", .bool, .bool(false), "On the sidebar tint."),
+    ],
+    stories: [
+      Story("Documents", layout: .padded),
+      Story("Panels", layout: .padded, ["style": .option("panel"), "selection": .number(1)]),
+    ],
+    render: { args, context in
+      let document = args.option("style") == "document"
+      let tabs: [DockTabBar.Tab] = document
+        ? [.init("Greeter.swift", icon: .document, iconColor: .hue(.orange), isEdited: args.bool("edited")),
+           .init("main.swift", icon: .document, iconColor: .hue(.orange)), .init("README.md", icon: .document, iconColor: .hue(.blue))]
+        : [.init("Outline"), .init("Problems", badge: 2), .init("Console")]
+      return DockTabBar(
+        tabs: tabs, style: document ? .document : .panel, selection: Int(args.number("selection")), onSidebar: args.bool("onSidebar"),
+        onSelect: { index in context.number("selection").wrappedValue = Double(index) }, onClose: context.action("close", Int.self)
+      )
+      .frame(width: 560)
+    },
+    snippet: { args in "DockArea(space, host: \"main\")  // DockPanelKind(..., tabStyle: .\(args.option("style")))" }
+  )
+
+  static let dockTab = ComponentStories(
+    .docking, "DockTab", summary: "One tab: an icon, the title, an unsaved dot or a count, and a cross on hover.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Docking/DockChrome.swift",
+    args: [
+      ArgType("title", .text, .text("Greeter.swift"), "Its title."),
+      ArgType("selected", .bool, .bool(true), "The shown tab."),
+      ArgType("style", .options(["panel", "document"]), .option("document"), "Its style."),
+      ArgType("isEdited", .bool, .bool(false), "An unsaved dot."),
+      ArgType("badge", .number(0 ... 99, step: 1), .number(0), "A count."),
+    ],
+    stories: [Story("Document"), Story("Edited", ["isEdited": .bool(true)]), Story("Count", ["title": .text("Problems"), "style": .option("panel"), "badge": .number(3)])],
+    render: { args, context in
+      let document = args.option("style") == "document"
+      return DockTab(
+        args.string("title"), selected: args.bool("selected"), style: document ? .document : .panel,
+        icon: document ? .document : nil, iconColor: .hue(.orange), isEdited: args.bool("isEdited"), badge: Int(args.number("badge")),
+        onSelect: context.action("select"), onClose: context.action("close")
+      )
+    },
+    snippet: { args in "panel.setEdited(\(args.bool("isEdited")))\npanel.setBadge(\(Int(args.number("badge"))))" }
+  )
+
+  static let floatingPanel = ComponentStories(
+    .docking, "FloatingPanel", summary: "A card floating over docked content: floating panel glass, radius 7, the float shadow; a grip strip when it holds several panels.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Docking/DockChrome.swift",
+    args: [ArgType("grip", .bool, .bool(true), "The grip strip on top.")],
+    stories: [Story("With grip"), Story("Single", ["grip": .bool(false)])],
+    render: { args, _ in
+      ZStack {
+        Image("wallpaper", bundle: .module).resizable().scaledToFill().frame(width: 360, height: 220).clipped()
+        FloatingPanel(grip: args.bool("grip")) {
+          DockTabBar(tabs: [.init("Inspector"), .init("Notes")])
+          Text("Floating over the workspace.").foregroundColor(.secondaryLabel).padding(12)
+        }
+        .frame(width: 240, height: 140)
+      }
+      .cornerRadius(8)
+    },
+    snippet: { args in "FloatingPanel(grip: \(args.bool("grip"))) {\n  content\n}" }
+  )
+
+  static let dropMarkers = ComponentStories(
+    .docking, "DropMarkers", summary: "Where a dragged panel can dock: five markers, the hovered one on the accent.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Docking/DockChrome.swift",
+    args: [ArgType("hovered", .options(["none"] + DockZone.allCases.map(\.rawValue)), .option("right"), "The zone under the pointer.")],
+    stories: [Story("Right"), Story("None", ["hovered": .option("none")])],
+    render: { args, _ in DropMarkers(hovered: DockZone(rawValue: args.option("hovered"))) },
+    snippet: { args in "DropMarkers(hovered: \(args.option("hovered") == "none" ? "nil" : "." + args.option("hovered")))" }
+  )
+
+  static let dropPreview = ComponentStories(
+    .docking, "DropPreview", summary: "Where the dragged panels would go: an accent tint with a 2 pt edge.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Docking/DockChrome.swift",
+    args: [],
+    stories: [Story("Right half")],
+    render: { _, _ in
+      HStack(spacing: 0) {
+        Text("Editor").foregroundColor(.secondaryLabel).frame(width: 180, height: 140)
+        DropPreview().frame(width: 180, height: 140)
+      }
+      .background(.contentBackground)
+      .border(.separator, width: 0.5)
+    },
+    snippet: { _ in "DropPreview()" }
+  )
 
   static let dockGap = ComponentStories(
     .docking, "DockGap", summary: "The 1 pt line between two docked panes.",
@@ -332,6 +426,113 @@ enum DockingStories {
       return VStack(spacing: 0) { pane("Editor"); DockGap(vertical: false).frame(width: 140); pane("Console") }
     },
     snippet: { args in "DockGap(vertical: \(args.bool("vertical")))" }
+  )
+
+  static let dockArea = ComponentStories(
+    .docking, "DockArea", summary: "Panels that dock, split, tab and float: drag a tab to see the markers.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Docking/DockArea.swift",
+    args: [],
+    stories: [Story("Workspace", layout: .fullscreen)],
+    render: { _, _ in DockArea(StoryDockSample.space, host: "main").frame(height: 380) },
+    snippet: { _ in "DockSpace(name: \"workspace\", kinds: [DockPanelKind(\"notes\", title: \"Notes\") { _ in Notes() }]) { … }\nDockArea(space, host: \"main\")" }
+  )
+}
+
+/// A small workspace for the DockArea story: its layout is its own, not saved.
+enum StoryDockSample {
+  nonisolated(unsafe) static let space = DockSpace(
+    name: "storybook.sample",
+    kinds: [
+      DockPanelKind("outline", title: "Outline", background: .sidebarTint) { _ in
+        VStack(alignment: .leading, spacing: 0) {
+          ListRow("Greeter", content: { KindBadge("S", color: KindBadge.color(forLetter: "S")) })
+          ListRow("name", indent: 14, content: { KindBadge("P", color: KindBadge.color(forLetter: "P")) })
+        }
+        .padding(Inset(vertical: 6))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      },
+      DockPanelKind("file", title: "File", tabStyle: .document, tabIcon: { _ in (.document, .hue(.orange)) }) { _ in
+        Text("struct Greeter { … }").font(.system(size: 12.5, design: .monospaced)).padding(12)
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      },
+      DockPanelKind("console", title: "Console") { _ in
+        Text("Build complete!").font(.system(size: 12, design: .monospaced)).foregroundColor(.secondaryLabel).padding(12)
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      },
+    ],
+    persists: false
+  ) {
+    var layout = DockLayout()
+    let outline = layout.addPanel(kind: "outline", title: "Outline")
+    let greeter = layout.addPanel(kind: "file", title: "Greeter.swift")
+    let main = layout.addPanel(kind: "file", title: "main.swift")
+    let console = layout.addPanel(kind: "console", title: "Console")
+    layout.hosts = [
+      DockHost(id: "main", root: .row([
+        .group([outline]),
+        .column([.group([greeter, main]), .group([console])], fractions: [0.65, 0.35]),
+      ], fractions: [0.3, 0.7])),
+    ]
+    return layout
+  }
+}
+
+enum WindowStories {
+  static let all: [ComponentStories] = [trafficLights, titleBar, window]
+
+  static let trafficLights = ComponentStories(
+    .window, "TrafficLights", summary: "Close, minimise and zoom: 12 pt dots 20 apart, glyphs on hover, grey when the window is not key.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Docking/DockChrome.swift",
+    args: [
+      ArgType("inactive", .bool, .bool(false), "Grey, in a window that is not key."),
+      ArgType("glyphs", .bool, .bool(false), "Show the glyphs, as on hover."),
+    ],
+    stories: [Story("Active"), Story("Hover", ["glyphs": .bool(true)]), Story("Inactive", ["inactive": .bool(true)])],
+    render: { args, context in
+      TrafficLights(inactive: args.bool("inactive"), onClose: context.action("close"), onMinimize: context.action("minimize"), onZoom: context.action("zoom"))
+        .showsGlyphs(args.bool("glyphs"))
+    },
+    snippet: { args in "TrafficLights(inactive: \(args.bool("inactive")), onClose: { … }, onMinimize: { … }, onZoom: { … })" }
+  )
+
+  static let titleBar = ComponentStories(
+    .window, "TitleBar", summary: "A floating panel's or a dock window's own bar: 28 tall, the lights and a centred title.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Docking/DockChrome.swift",
+    args: [ArgType("title", .text, .text("Notes"), "Its title.")],
+    stories: [Story("Default", layout: .padded)],
+    render: { args, _ in TitleBar(args.string("title")).frame(width: 420) },
+    snippet: { args in "TitleBar(\(swiftString(args.string("title"))))" }
+  )
+
+  static let window = ComponentStories(
+    .window, "Window", summary: "A window's frame as the canvas draws it: a sidebar under the traffic lights, a unified toolbar, and the content. The real one is an NSWindow with chrome: .translucent.",
+    source: "Sources/MetalGraphicsLib/RetainedScenes.swift",
+    args: [ArgType("title", .text, .text("Editor"), "The toolbar's title.")],
+    stories: [Story("Translucent", layout: .padded)],
+    render: { args, context in
+      HStack(alignment: .top, spacing: 0) {
+        Sidebar {
+          SidebarLink("Sources", icon: .folder, selected: true)
+          SidebarLink("Greeter.swift", icon: .document)
+          SidebarLink("main.swift", icon: .document)
+        }
+        .frame(height: 300)
+        .overlay(alignment: .topLeading) { TrafficLights().padding(Inset(left: 12, top: 18)) }
+        VStack(spacing: 0) {
+          NavigationBar(args.string("title"), leading: { () -> [UIElement] in return [] }, trailing: { () -> [UIElement] in
+            return [Button("Run", action: context.action("run")).buttonStyle(.bordered)]
+          })
+          .frame(height: TitleBarInsets.unifiedBarHeight)
+          Text("Content").foregroundColor(.secondaryLabel).frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(width: 420, height: 300)
+        .background(.contentBackground)
+      }
+      .clipShape(.rect(cornerRadius: 10))
+      .border(.separator, width: 0.5, in: .rect(cornerRadius: 10))
+      .shadow(color: .shadow, radius: 22, y: 10)
+    },
+    snippet: { _ in "RetainedScene(\"Editor\", id: \"main\", chrome: .translucent) { scene in Root(scene: scene) }" }
   )
 }
 

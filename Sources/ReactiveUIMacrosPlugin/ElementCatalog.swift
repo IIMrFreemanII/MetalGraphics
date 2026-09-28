@@ -490,6 +490,26 @@ enum ElementCatalog {
              ArgSpec("action", nil, handler: HandlerSpec(property: "action", placeholder: ""))],
       arity: .leaf
     ),
+    "TrafficLights": TypeSpec(
+      name: "TrafficLights",
+      args: [ArgSpec("inactive", "setInactive", animatable: true),
+             ArgSpec("onClose", nil, handler: HandlerSpec(property: "onClose", placeholder: "")),
+             ArgSpec("onMinimize", nil, handler: HandlerSpec(property: "onMinimize", placeholder: "")),
+             ArgSpec("onZoom", nil, handler: HandlerSpec(property: "onZoom", placeholder: ""))],
+      arity: .leaf
+    ),
+    "TitleBar": TypeSpec(name: "TitleBar", args: [ArgSpec(nil, "setTitle", animatable: true), ArgSpec("inactive", nil)], arity: .leaf),
+    "DropMarkers": TypeSpec(name: "DropMarkers", args: [ArgSpec("zones", nil), ArgSpec("hovered", "setHovered", animatable: true)], arity: .leaf),
+    "DropPreview": TypeSpec(name: "DropPreview", args: [], arity: .leaf),
+    "DockTab": TypeSpec(
+      name: "DockTab",
+      args: [ArgSpec(nil, "setTitle", animatable: true), ArgSpec("selected", "setSelected", animatable: true),
+             ArgSpec("style", nil), ArgSpec("icon", nil), ArgSpec("iconColor", nil),
+             ArgSpec("isEdited", "setEdited", animatable: true), ArgSpec("badge", "setBadge", animatable: true),
+             ArgSpec("onSelect", nil, handler: HandlerSpec(property: "onSelect", placeholder: "")),
+             ArgSpec("onClose", nil, handler: HandlerSpec(property: "onClose", placeholder: ""))],
+      arity: .leaf
+    ),
     "InsertionLine": TypeSpec(name: "InsertionLine", args: [ArgSpec("indent", "setIndent", animatable: true)], arity: .leaf),
     "ScrollIndicator": TypeSpec(
       name: "ScrollIndicator", args: [ArgSpec("length", "setLength", animatable: true), ArgSpec("vertical", nil)], arity: .leaf
