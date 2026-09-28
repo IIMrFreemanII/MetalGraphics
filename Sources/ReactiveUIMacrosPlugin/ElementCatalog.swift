@@ -888,6 +888,11 @@ enum ElementCatalog {
       produces: "GlassBackground", setter: nil, combine: .identity,
       argSetters: [ArgSpec(nil, "setMaterial"), ArgSpec("in", "setShape", animatable: true)]
     ),
+    // A tooltip after the pointer rests on the element.
+    "help": ModifierSpec(
+      name: "help", labels: [nil],
+      produces: "HelpElement", setter: "setText", combine: .identity, animatable: true
+    ),
     // A subtree drawn light or dark, or with a theme of its own, whatever the window's is.
     "colorScheme": ModifierSpec(
       name: "colorScheme", labels: [nil],

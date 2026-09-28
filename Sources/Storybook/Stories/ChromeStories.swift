@@ -3,7 +3,18 @@ import MetalGraphicsLib
 import simd
 
 enum SurfaceStories {
-  static let all: [ComponentStories] = [popover, menu, menuPanel, contextMenu, sheet, alert, confirmationDialog, tooltip, scrim]
+  static let all: [ComponentStories] = [popover, menu, menuPanel, contextMenu, sheet, alert, confirmationDialog, tooltip, help, scrim]
+
+  static let help = ComponentStories(
+    .surfaces, "Help", summary: ".help(_:): a tooltip after the pointer rests on the element for 0.6 s; gone when it leaves.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Presentation/Tooltip.swift",
+    args: [ArgType("text", .text, .text("Build and run (⌘R)"), "What the tooltip says.")],
+    stories: [Story("On a button")],
+    render: { args, context in
+      Button("Run", action: context.action("run")).buttonStyle(.bordered).help(args.string("text"))
+    },
+    snippet: { args in "Button(\"Run\") { run() }\n  .help(\(swiftString(args.string("text"))))" }
+  )
 
   static let popover = ComponentStories(
     .surfaces, "Popover", summary: "A popover's card: glass, radius 10, a hairline and a shadow. .popover(isPresented:) shows one next to its anchor.",

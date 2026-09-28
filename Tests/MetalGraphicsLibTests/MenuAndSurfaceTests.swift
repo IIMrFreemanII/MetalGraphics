@@ -72,6 +72,26 @@ final class MenuAndSurfaceTests: XCTestCase {
     XCTAssertEqual(taps, 1)
   }
 
+  func testHelpShowsAfterARestAndGoesWhenThePointerLeaves() {
+    var taps = 0
+    let button = Button("Build") { taps += 1 }.help("Build the package (⌘B)")
+    let h = UIHarness(size: float2(400, 300)) { button }
+    h.settle()
+    h.move(to: float2(200, 150))
+    XCTAssertTrue(h.overlayAll(Text.self).isEmpty, "not at once")
+    XCTAssertTrue(h.isIdle, "idle while it waits: a wake times it, not an animation")
+    h.advance(0.7)
+    XCTAssertNotNil(h.settle())
+    let tip = try! XCTUnwrap(h.overlayAll(Text.self).first { $0.text == "Build the package (⌘B)" })
+    XCTAssertGreaterThan(tip.position.y, 150, "under the button")
+    // It takes no clicks: the button under the pointer still does.
+    h.click(at: float2(200, 150))
+    XCTAssertEqual(taps, 1)
+    h.move(to: float2(10, 10))
+    XCTAssertNotNil(h.settle())
+    XCTAssertTrue(h.overlayAll(Text.self).isEmpty)
+  }
+
   func testAlertsLayOutTheirActions() {
     let two = Alert("Delete “Notes”?", message: "This can’t be undone.") {
       Button("Cancel", role: .cancel) {}
