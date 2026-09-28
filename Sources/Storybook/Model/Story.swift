@@ -77,16 +77,44 @@ enum StoryLayout : Sendable {
   case fullscreen
 }
 
-/// One state of a component: a name and the args it changes from the defaults.
+/// One step of a story's play function: what the Interactions panel does to the story, with
+/// real pointer input, and what it checks after.
+enum PlayStep : Sendable, CustomStringConvertible {
+  /// A click at the middle of the text `label` in the story.
+  case click(String)
+  /// The pointer over the text `label`.
+  case hover(String)
+  /// The story shows the text.
+  case expect(String)
+  /// The arg has the value, as the story wrote it back.
+  case expectArg(String, StoryValue)
+  /// The Actions panel's newest entry is named so.
+  case expectAction(String)
+
+  var description: String {
+    switch self {
+    case .click(let label): "click “\(label)”"
+    case .hover(let label): "hover “\(label)”"
+    case .expect(let text): "expect “\(text)” shown"
+    case .expectArg(let name, let value): "expect \(name) = \(value.display)"
+    case .expectAction(let name): "expect action “\(name)”"
+    }
+  }
+}
+
+/// One state of a component: a name, the args it changes from the defaults, and optionally a
+/// play function the Interactions panel runs.
 struct Story : Sendable {
   let name: String
   let args: [String: StoryValue]
   let layout: StoryLayout
+  let play: [PlayStep]
 
-  init(_ name: String, layout: StoryLayout = .centered, _ args: [String: StoryValue] = [:]) {
+  init(_ name: String, layout: StoryLayout = .centered, _ args: [String: StoryValue] = [:], play: [PlayStep] = []) {
     self.name = name
     self.args = args
     self.layout = layout
+    self.play = play
   }
 }
 

@@ -112,6 +112,23 @@ final class StorybookE2ETests: StorybookTestCase {
     XCTAssertEqual(self.model.appearance, .dark)
   }
 
+  func testPlayFunctionsPassAndAFailureStops() throws {
+    for id in [StoryID(component: "Toggle", story: "On"), StoryID(component: "FindBar", story: "Find and replace"),
+               StoryID(component: "Button", story: "Bordered"), StoryID(component: "ToggleChip", story: "On")] {
+      self.show(id)
+      let (_, story) = try XCTUnwrap(StoryRegistry.catalog().find(id))
+      StoryPlayer.shared.run(story.play, self.window.context)
+      self.app.advance(Double(story.play.count + 2) * StoryPlayer.stepDelay)
+      XCTAssertNotNil(self.app.settle())
+      XCTAssertEqual(self.model.playResults, Array(repeating: "pass", count: story.play.count), "\(id)")
+    }
+    // A disabled toggle does not flip: the play function fails there, and stops.
+    self.show(StoryID(component: "Toggle", story: "Disabled"))
+    StoryPlayer.shared.run([.click("Show line numbers"), .expectArg("isOn", .bool(false)), .expect("never")], self.window.context)
+    self.app.advance(1)
+    XCTAssertEqual(self.model.playResults, ["pass", "isOn is true", ""])
+  }
+
   func testNextStoryAndCycleAppearance() {
     self.show(StoryID(component: "Button", story: "Styles"))
     self.model.selectNeighbour(1, in: StoryRegistry.catalog())

@@ -15,6 +15,7 @@ final class StorybookRoot : ModelWatcher {
   init(scene: WindowScene) {
     let model = StorybookModel.shared
     model.restore(from: scene.storage, catalog: StoryRegistry.catalog())
+    StoryPlayer.handle = scene.handle
     let search = TextField("", text: Binding(get: { model.search }, set: { model.search = $0 }), prompt: "Search")
       .leadingIcon(.magnifier)
     // The toolbar shares the detail column's bar, in the title bar's row, the story's name
@@ -61,6 +62,7 @@ enum StorybookDock {
         DockPanelKind("actions", title: "Actions") { _ in ActionsPanel() },
         DockPanelKind("source", title: "Source") { _ in SourcePanel() },
         DockPanelKind("inspector", title: "Inspector") { _ in InspectorPanel() },
+        DockPanelKind("interactions", title: "Interactions") { _ in InteractionsPanel() },
       ]
     ) {
       var layout = DockLayout()
@@ -69,10 +71,11 @@ enum StorybookDock {
       let actions = layout.addPanel(kind: "actions", title: "Actions")
       let source = layout.addPanel(kind: "source", title: "Source")
       let inspector = layout.addPanel(kind: "inspector", title: "Inspector")
+      let interactions = layout.addPanel(kind: "interactions", title: "Interactions")
       layout.hosts = [
         DockHost(id: StorybookDock.host, root: .column([
           .group([canvas]),
-          .group([controls, actions, source, inspector]),
+          .group([controls, actions, source, inspector, interactions]),
         ], fractions: [0.64, 0.36])),
       ]
       return layout

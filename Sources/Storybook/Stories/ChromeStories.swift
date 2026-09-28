@@ -599,7 +599,11 @@ enum EditorStories {
       ArgType("showReplace", .bool, .bool(true), "The replace half."),
     ],
     stories: [
-      Story("Find and replace", layout: .padded),
+      Story("Find and replace", layout: .padded, play: [
+        .click("Word"), .expectArg("wholeWord", .bool(true)),
+        .click("All"), .expectAction("replace all"),
+        .click("Done"), .expectAction("done"),
+      ]),
       Story("No results", layout: .padded, ["query": .text("glass\\w+Tint"), "count": .text("No results"), "regex": .bool(true), "caseSensitive": .bool(false), "showReplace": .bool(false)]),
     ],
     render: { args, context in

@@ -85,6 +85,9 @@ final class StorybookModel {
   var search: String = ""
   /// The components whose stories the sidebar shows.
   var expanded: Set<String> = []
+  /// The play function's steps' results, in order: "" not run yet, "running", "pass", or why it
+  /// failed.
+  var playResults: [String] = []
 
   static let maxActions = 200
   static let zooms: [Double] = [0.5, 0.75, 1, 1.25, 1.5, 2]
@@ -102,6 +105,7 @@ final class StorybookModel {
     }
     if self.selection != id { self.selection = id }
     self.args = args
+    self.playResults = Array(repeating: "", count: story.play.count)
     self.expanded.insert(id.component)
     self.revision += 1
     self.formRevision += 1
@@ -232,6 +236,7 @@ final class StorybookModel {
     self.actions = []
     self.search = ""
     self.expanded = []
+    self.playResults = []
     self.nextAction = 0
     self.storage = nil
   }

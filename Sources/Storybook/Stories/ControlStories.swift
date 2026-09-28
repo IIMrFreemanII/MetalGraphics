@@ -28,7 +28,7 @@ enum ControlStories {
     ],
     stories: [
       Story("Styles", layout: .padded, ["style": .option("all")]),
-      Story("Bordered"),
+      Story("Bordered", play: [.click("Save"), .expectAction("tapped Save")]),
       Story("Prominent", ["style": .option("borderedProminent")]),
       Story("Destructive", ["role": .option("destructive"), "title": .text("Delete")]),
       Story("Disabled", ["disabled": .bool(true)]),
@@ -67,7 +67,11 @@ enum ControlStories {
       ArgType("isOn", .bool, .bool(true), "On or off: a binding."),
       ArgType("disabled", .bool, .bool(false), "Greyed, and it takes no clicks."),
     ],
-    stories: [Story("On"), Story("Off", ["isOn": .bool(false)]), Story("Disabled", ["disabled": .bool(true)])],
+    stories: [
+      Story("On", play: [.click("Show line numbers"), .expectArg("isOn", .bool(false)), .expectAction("isOn changed")]),
+      Story("Off", ["isOn": .bool(false)]),
+      Story("Disabled", ["disabled": .bool(true)], play: [.click("Show line numbers"), .expectArg("isOn", .bool(true))]),
+    ],
     render: { args, context in
       Toggle(args.string("label"), isOn: context.bool("isOn")).disabled(args.bool("disabled")).frame(width: 300)
     },
@@ -198,7 +202,7 @@ enum ControlStories {
       ArgType("title", .text, .text("Aa"), "Its label."),
       ArgType("isOn", .bool, .bool(true), "On or off: a binding."),
     ],
-    stories: [Story("On"), Story("Off", ["isOn": .bool(false)])],
+    stories: [Story("On", play: [.click("Aa"), .expectArg("isOn", .bool(false))]), Story("Off", ["isOn": .bool(false)])],
     render: { args, context in ToggleChip(args.string("title"), isOn: context.bool("isOn")) },
     snippet: { args in "ToggleChip(\(swiftString(args.string("title"))), isOn: $caseSensitive)" }
   )
