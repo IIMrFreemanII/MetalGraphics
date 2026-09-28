@@ -30,6 +30,9 @@ struct AudioSettings {
 //   state.
 @Component
 final class FormDemo : SingleChildElement {
+  /// When the dates start from: now, or a fixed moment in a test.
+  nonisolated(unsafe) static var now: () -> Date = Date.init
+
   @State var name: String = ""
   @State var password: String = ""
   @State var submitted: String = "nothing yet"
@@ -42,8 +45,8 @@ final class FormDemo : SingleChildElement {
   @State var debug: Bool = false
   @State var verbose: Bool = false
   @State var notifications: Bool = true
-  @State var due: Date = Date().addingTimeInterval(3 * 24 * 3600)
-  @State var start: Date = Date()
+  @State var due: Date = FormDemo.now().addingTimeInterval(3 * 24 * 3600)
+  @State var start: Date = FormDemo.now()
   @State var tint: float4 = float4(0.0, 0.48, 1.0, 1)  // design: a ColorPicker edits a plain colour
   @State var taps: Int = 0
   @State var prominent: Bool = false

@@ -209,6 +209,23 @@ public extension HeadlessWindow {
     return found
   }
 
+  /// The rect around everything in `element` that keeps a rect: a composite's extent, as far
+  /// as what it draws is inside its leaves.
+  static func bounds(of element: UIElement) -> HeadlessRect? {
+    var lo = float2(repeating: .infinity), hi = float2(repeating: -.infinity)
+    func add(_ e: UIElement) {
+      guard let rect = self.ownGeometry(of: e), rect.size.x > 0, rect.size.y > 0 else { return }
+      lo = simd_min(lo, rect.origin)
+      hi = simd_max(hi, rect.max)
+    }
+    add(element)
+    self.visitDescendants(of: element) { child in
+      add(child)
+      return true
+    }
+    return lo.x <= hi.x ? HeadlessRect(origin: lo, size: hi - lo) : nil
+  }
+
   static func hitGeometry(of element: UIElement) -> HeadlessRect? {
     if let hittable = element as? any Hittable {
       return HeadlessRect(origin: hittable.hitPosition, size: hittable.hitSize)

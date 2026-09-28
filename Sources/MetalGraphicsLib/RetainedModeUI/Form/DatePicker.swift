@@ -258,6 +258,8 @@ final class CalendarView : SingleChildElement {
   static let cellSize = float2(32, 28)
   static let titleFont = TextFont.custom(FontManager.shared.font(named: "HelveticaNeue-Medium"), size: 14)
   static var dayFont: TextFont { Theme.current.typography.body }
+  /// What day it is, for the one drawn in the accent: the wall clock, or a fixed day in a test.
+  nonisolated(unsafe) static var today: () -> Date = Date.init
 
   private var selection: Date
   private let range: ClosedRange<Date>?
@@ -348,7 +350,7 @@ final class CalendarView : SingleChildElement {
     let context = self.context
     let title = self.month.formatted(.dateTime.month(.wide).year())
     if let context, title != self.title.text { self.title.setText(title, context) } else if context == nil { self.title.text = title }
-    let today = Date()
+    let today = Self.today()
     for (index, cell) in self.cells.enumerated() {
       let day = self.day(index)
       cell.update(
