@@ -38,8 +38,7 @@ public final class DatePicker : FormControl {
   /// The calendar on screen, inline or in the open popover.
   private var calendar: CalendarView?
   /// The time steppers in the open popover.
-  private var hourStepper: Stepper?
-  private var minuteStepper: Stepper?
+  private var timePanel: TimePanel?
   private var popover: PopoverHandle?
 
   public init(
@@ -155,22 +154,11 @@ public final class DatePicker : FormControl {
   private func openTime() {
     guard !self.isDisabled, let context = self.context, let pill = self.timePill, self.popover?.isPresented != true
     else { return }
-    let parts = Calendar.current.dateComponents([.hour, .minute], from: self.selection)
-    let hour = Stepper(Self.hourLabel(parts.hour ?? 0), value: parts.hour ?? 0, in: 0 ... 23) { [unowned self] value in
-      self.setTime(hour: Int(value), minute: nil)
-    }
-    let minute = Stepper(Self.minuteLabel(parts.minute ?? 0), value: parts.minute ?? 0, in: 0 ... 59) { [unowned self] value in
-      self.setTime(hour: nil, minute: Int(value))
-    }
-    self.hourStepper = hour
-    self.minuteStepper = minute
-    let content = VStack(alignment: .leading, spacing: 10) { hour; minute }
-      .frame(width: 180)
-      .padding(12)
-    self.popover = context.presentPopover(content, anchor: pill) { [weak self] in
+    let panel = TimePanel(selection: self.selection) { [unowned self] date in self.report(date) }
+    self.timePanel = panel
+    self.popover = context.presentPopover(panel, anchor: pill) { [weak self] in
       self?.popover = nil
-      self?.hourStepper = nil
-      self?.minuteStepper = nil
+      self?.timePanel = nil
     }
   }
 
@@ -178,9 +166,6 @@ public final class DatePicker : FormControl {
     guard let popover = self.popover, let context = self.context else { return }
     context.dismissPopover(popover, animated: animated)
   }
-
-  private static func hourLabel(_ hour: Int) -> String { "Hour: \(hour)" }
-  private static func minuteLabel(_ minute: Int) -> String { String(format: "Minute: %02d", minute) }
 
   // MARK: - Picking
 
@@ -193,16 +178,6 @@ public final class DatePicker : FormControl {
     guard let date = calendar.date(from: parts) else { return }
     self.report(date)
     if self.style == .compact { self.closePopover(animated: true) }
-  }
-
-  private func setTime(hour: Int?, minute: Int?) {
-    let calendar = Calendar.current
-    var parts = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: self.selection)
-    if let hour { parts.hour = hour }
-    if let minute { parts.minute = minute }
-    parts.second = 0
-    guard let date = calendar.date(from: parts) else { return }
-    self.report(date)
   }
 
   private func report(_ date: Date) {
@@ -220,15 +195,7 @@ public final class DatePicker : FormControl {
     self.selection = value
     self.retitle(context)
     self.calendar?.setSelection(value, context)
-    let parts = Calendar.current.dateComponents([.hour, .minute], from: value)
-    if let hour = self.hourStepper, let value = parts.hour {
-      hour.setValue(value, context)
-      hour.setLabel(Self.hourLabel(value), context)
-    }
-    if let minute = self.minuteStepper, let value = parts.minute {
-      minute.setValue(value, context)
-      minute.setLabel(Self.minuteLabel(value), context)
-    }
+    self.timePanel?.setSelection(value, context)
   }
 
   public func setDatePickerStyle(_ value: DatePickerStyle, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
@@ -252,28 +219,102 @@ public final class DatePicker : FormControl {
   }
 }
 
+/// What a compact `DatePicker`'s time pill opens: hour and minute steppers. Changing one keeps
+/// the day. Put it in a popover, or anywhere a time is picked.
+///
+///     TimePanel(selection: due) { date in due = date }
+public final class TimePanel : SingleChildElement {
+  public static let width: Float = 180
+
+  public private(set) var selection: Date
+  /// Where a change reports the new date.
+  public var onSelectionChange: ((Date) -> Void)?
+
+  private let hour: Stepper
+  private let minute: Stepper
+
+  public init(selection: Date, onSelectionChange: ((Date) -> Void)? = nil) {
+    self.selection = selection
+    self.onSelectionChange = onSelectionChange
+    let parts = Calendar.current.dateComponents([.hour, .minute], from: selection)
+    self.hour = Stepper(Self.hourLabel(parts.hour ?? 0), value: parts.hour ?? 0, in: 0 ... 23)
+    self.minute = Stepper(Self.minuteLabel(parts.minute ?? 0), value: parts.minute ?? 0, in: 0 ... 59)
+    super.init()
+    let hour = self.hour, minute = self.minute
+    self.applyContent([
+      VStack(alignment: .leading, spacing: 10) { hour; minute }
+        .frame(width: Self.width)
+        .padding(12)
+    ])
+    hour.onValueChange = { [unowned self] value in self.setTime(hour: Int(value), minute: nil) }
+    minute.onValueChange = { [unowned self] value in self.setTime(hour: nil, minute: Int(value)) }
+  }
+
+  private static func hourLabel(_ hour: Int) -> String { "Hour: \(hour)" }
+  private static func minuteLabel(_ minute: Int) -> String { String(format: "Minute: %02d", minute) }
+
+  private func setTime(hour: Int?, minute: Int?) {
+    let calendar = Calendar.current
+    var parts = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: self.selection)
+    if let hour { parts.hour = hour }
+    if let minute { parts.minute = minute }
+    parts.second = 0
+    guard let date = calendar.date(from: parts) else { return }
+    self.onSelectionChange?(date)
+  }
+
+  public func setSelection(_ value: Date, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.selection else { return }
+    self.selection = value
+    let parts = Calendar.current.dateComponents([.hour, .minute], from: value)
+    if let value = parts.hour {
+      self.hour.setValue(value, context)
+      self.hour.setLabel(Self.hourLabel(value), context)
+    }
+    if let value = parts.minute {
+      self.minute.setValue(value, context)
+      self.minute.setLabel(Self.minuteLabel(value), context)
+    }
+  }
+}
+
 /// A month of days to pick one from: a title with ‹ › to change month, the weekdays, and a
-/// 6 × 7 grid of days. The grid's 42 cells are built once; changing month relabels them.
-final class CalendarView : SingleChildElement {
+/// 6 × 7 grid of days. The grid's 42 cells are built once; changing month relabels them. The
+/// selected day is on an accent circle, today in the accent, days of other months and days out
+/// of `range` faded. What a `DatePicker` shows, inline or in its popover.
+///
+///     CalendarView(selection: start, in: today ... end) { day in start = day }
+public final class CalendarView : SingleChildElement {
   static let cellSize = float2(32, 28)
   static let titleFont = TextFont.custom(FontManager.shared.font(named: "HelveticaNeue-Medium"), size: 14)
   static var dayFont: TextFont { Theme.current.typography.body }
   /// What day it is, for the one drawn in the accent: the wall clock, or a fixed day in a test.
   nonisolated(unsafe) static var today: () -> Date = Date.init
 
-  private var selection: Date
-  private let range: ClosedRange<Date>?
-  private let onPick: (Date) -> Void
+  public private(set) var selection: Date
+  public let range: ClosedRange<Date>?
+  /// The day drawn in the accent; nil for the wall clock's.
+  private let fixedToday: Date?
+  /// Where a tap on a day reports it.
+  public var onSelectionChange: ((Date) -> Void)?
   /// The first day of the month shown.
   private var month: Date
   private let title = Text("").font(CalendarView.titleFont).foregroundColor(FormMetrics.labelColor)
   private var cells: [DayCell] = []
   private weak var context: UIContext?
 
-  init(selection: Date, range: ClosedRange<Date>?, onPick: @escaping (Date) -> Void) {
+  /// `today` fixes the day drawn in the accent, for a spec or a test.
+  public convenience init(
+    selection: Date, in range: ClosedRange<Date>? = nil, today: Date? = nil, onSelectionChange: ((Date) -> Void)? = nil
+  ) {
+    self.init(selection: selection, range: range, today: today, onPick: onSelectionChange)
+  }
+
+  init(selection: Date, range: ClosedRange<Date>?, today: Date? = nil, onPick: ((Date) -> Void)?) {
     self.selection = selection
     self.range = range
-    self.onPick = onPick
+    self.fixedToday = today
+    self.onSelectionChange = onPick
     self.month = Self.firstOfMonth(selection)
     super.init()
 
@@ -316,11 +357,11 @@ final class CalendarView : SingleChildElement {
     self.relabel()
   }
 
-  override func mount(_ context: UIContext) {
+  public override func mount(_ context: UIContext) {
     self.context = context
   }
 
-  override func unmount(_ context: UIContext) {
+  public override func unmount(_ context: UIContext) {
     self.context = nil
   }
 
@@ -350,7 +391,7 @@ final class CalendarView : SingleChildElement {
     let context = self.context
     let title = self.month.formatted(.dateTime.month(.wide).year())
     if let context, title != self.title.text { self.title.setText(title, context) } else if context == nil { self.title.text = title }
-    let today = Self.today()
+    let today = self.fixedToday ?? Self.today()
     for (index, cell) in self.cells.enumerated() {
       let day = self.day(index)
       cell.update(
@@ -373,10 +414,10 @@ final class CalendarView : SingleChildElement {
   private func tapped(_ index: Int) {
     let day = self.day(index)
     guard self.isPickable(day) else { return }
-    self.onPick(day)
+    self.onSelectionChange?(day)
   }
 
-  func setSelection(_ value: Date, _ context: UIContext) {
+  public func setSelection(_ value: Date, _ context: UIContext, animation: UIAnimation? = nil) {
     self.selection = value
     if !Calendar.current.isDate(value, equalTo: self.month, toGranularity: .month) {
       self.month = Self.firstOfMonth(value)

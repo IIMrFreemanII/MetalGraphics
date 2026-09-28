@@ -15,19 +15,19 @@ struct PresentationContent {
 
   static func make(
     _ kind: PresentationKind, title: String, titleVisibility: Visibility,
-    content: [UIElement], message: [UIElement]
+    content: [UIElement], message: [UIElement], layout: AlertLayout = .automatic
   ) -> PresentationContent {
     switch kind {
     case .sheet, .fullScreenCover, .popover:
       return PresentationContent(root: Self.stack(VStack(spacing: 0), content), buttons: [], title: nil)
     case .alert, .confirmationDialog:
-      return self.alert(kind, title: title, titleVisibility: titleVisibility, actions: content, message: message)
+      return self.alert(kind, title: title, titleVisibility: titleVisibility, actions: content, message: message, layout: layout)
     }
   }
 
   private static func alert(
     _ kind: PresentationKind, title: String, titleVisibility: Visibility,
-    actions: [UIElement], message: [UIElement]
+    actions: [UIElement], message: [UIElement], layout: AlertLayout
   ) -> PresentationContent {
     // Each action with the button it is, found through the wrappers around it.
     var entries = actions.map { ($0, Self.button(in: $0)) }
@@ -43,7 +43,11 @@ struct PresentationContent {
     let others = entries.filter { $0.1?.role != .cancel }
     // Side by side with the default on the right, as a two-button alert; else stacked, cancel
     // last.
-    let sideBySide = kind == .alert && entries.count <= 2
+    let sideBySide = switch layout {
+    case .automatic: kind == .alert && entries.count <= 2
+    case .row: true
+    case .stack: false
+    }
     let ordered = sideBySide ? cancels + others : others + cancels
     let buttons = ordered.compactMap { $0.1 }
     let defaultButton = buttons.first { $0.role == nil }

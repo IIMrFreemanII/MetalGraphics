@@ -457,6 +457,33 @@ enum ElementCatalog {
              ArgSpec("onPick", nil, handler: HandlerSpec(property: "onPick", placeholder: ""))],
       arity: .leaf
     ),
+    "ColorWell": TypeSpec(name: "ColorWell", args: [ArgSpec(nil, "setColor", animatable: true)], arity: .leaf),
+    "ColorPickerPanel": TypeSpec(
+      name: "ColorPickerPanel",
+      args: [ArgSpec("selection", "setSelection", animatable: true), ArgSpec("supportsOpacity", nil),
+             ArgSpec("onSelectionChange", nil, handler: HandlerSpec(property: "onSelectionChange", placeholder: ""))],
+      arity: .leaf
+    ),
+    "CalendarView": TypeSpec(
+      name: "CalendarView",
+      args: [ArgSpec("selection", "setSelection", animatable: true), ArgSpec("in", nil), ArgSpec("today", nil),
+             ArgSpec("onSelectionChange", nil, handler: HandlerSpec(property: "onSelectionChange", placeholder: ""))],
+      arity: .leaf
+    ),
+    "TimePanel": TypeSpec(
+      name: "TimePanel",
+      args: [ArgSpec("selection", "setSelection", animatable: true),
+             ArgSpec("onSelectionChange", nil, handler: HandlerSpec(property: "onSelectionChange", placeholder: ""))],
+      arity: .leaf
+    ),
+    "MenuItem": TypeSpec(
+      name: "MenuItem",
+      args: [ArgSpec(nil, "setTitle", animatable: true), ArgSpec("checked", "setChecked", animatable: true),
+             ArgSpec("shortcut", nil), ArgSpec("role", nil), ArgSpec("disabled", nil),
+             ArgSpec("action", nil, handler: HandlerSpec(property: "action", placeholder: ""))],
+      arity: .leaf
+    ),
+    "MenuSeparator": TypeSpec(name: "MenuSeparator", args: [], arity: .leaf),
     "InsertionLine": TypeSpec(name: "InsertionLine", args: [ArgSpec("indent", "setIndent", animatable: true)], arity: .leaf),
     "ScrollIndicator": TypeSpec(
       name: "ScrollIndicator", args: [ArgSpec("length", "setLength", animatable: true), ArgSpec("vertical", nil)], arity: .leaf

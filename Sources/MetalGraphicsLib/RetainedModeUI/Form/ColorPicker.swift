@@ -12,20 +12,16 @@ public final class ColorPicker : FormControl {
   public var onSelectionChange: ((float4) -> Void)?
 
   private let label: Text
-  private let well = ColorWell()
+  private let well = ColorWellFace()
   private let wellButton: HittableView
-  /// Hue, saturation and brightness, kept apart from the selection so a grey keeps its hue while
-  /// the saturation slider passes through zero.
-  private var hsb: float3
   private var popover: PopoverHandle?
-  private var sliders: [Slider] = []
-  private var swatches: [ColorSwatch] = []
+  /// The open popover's swatches and sliders.
+  private var panel: ColorPickerPanel?
 
   public init(_ label: String, selection: float4, supportsOpacity: Bool = true, onSelectionChange: ((float4) -> Void)? = nil) {
     self.selection = selection
     self.supportsOpacity = supportsOpacity
     self.onSelectionChange = onSelectionChange
-    self.hsb = hsbFromRGB(selection)
     let label = Text(label).font(FormMetrics.font).foregroundColor(FormMetrics.labelColor)
     self.label = label
     self.well.color = selection
@@ -58,25 +54,81 @@ public final class ColorPicker : FormControl {
 
   // MARK: - Popover
 
+  private func open() {
+    guard !self.isDisabled, let context = self.context, self.popover?.isPresented != true else { return }
+    let panel = ColorPickerPanel(selection: self.selection, supportsOpacity: self.supportsOpacity) { [unowned self] color in
+      self.report(color)
+    }
+    self.panel = panel
+    self.popover = context.presentPopover(panel, anchor: self.wellButton) { [weak self] in
+      self?.popover = nil
+      self?.panel = nil
+    }
+  }
+
+  private func report(_ color: float4) {
+    guard !self.isDisabled, let report = self.onSelectionChange, color != self.selection else { return }
+    self.commit { report(color) }
+  }
+
+  // MARK: - Setters
+
+  public func setSelection(_ value: float4, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.selection else { return }
+    self.selection = value
+    self.well.setColor(value, context, animation: animation)
+    self.panel?.setSelection(value, context)
+  }
+
+  public func setLabel(_ value: String, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    guard value != self.label.text else { return }
+    self.label.setText(value, context, animation: animation)
+  }
+}
+
+/// What a `ColorPicker`'s well opens: a grid of swatches, the selection ringed, and hue,
+/// saturation and brightness sliders, with opacity when `supportsOpacity`. Put it in a popover,
+/// or in a panel of an app's own.
+///
+///     ColorPickerPanel(selection: tint) { color in tint = color }
+public final class ColorPickerPanel : SingleChildElement {
+  public private(set) var selection: float4
+  public let supportsOpacity: Bool
+  /// Where a pick or a slide reports the new colour.
+  public var onSelectionChange: ((float4) -> Void)?
+
+  /// Hue, saturation and brightness, kept apart from the selection so a grey keeps its hue while
+  /// the saturation slider passes through zero.
+  private var hsb: float3
+  /// The colour this last reported: when it comes back as the selection, the channels stay as
+  /// the slider left them.
+  private var reported: float4?
+  private var sliders: [Slider] = []
+  private var swatches: [ColorSwatch] = []
+
   /// 12 hues in three shades, and a row of greys.
-  private static let palette: [[float4]] = {
+  public static let palette: [[float4]] = {
     let shades: [(s: Float, b: Float)] = [(0.35, 1), (0.8, 0.95), (0.9, 0.6)]
     var rows = shades.map { shade in
       (0 ..< 12).map { rgbFromHSB(float3(Float($0) / 12, shade.s, shade.b), alpha: 1) }
     }
-    rows.append((0 ..< 12).map { let v = 1 - Float($0) / 11; return float4(v, v, v, 1) })
+    rows.append((0 ..< 12).map { let v = 1 - Float($0) / 11; return float4(v, v, v, 1) })  // design: the picker's greys
     return rows
   }()
 
-  private func open() {
-    guard !self.isDisabled, let context = self.context, self.popover?.isPresented != true else { return }
-    self.swatches.removeAll()
+  public init(selection: float4, supportsOpacity: Bool = true, onSelectionChange: ((float4) -> Void)? = nil) {
+    self.selection = selection
+    self.supportsOpacity = supportsOpacity
+    self.onSelectionChange = onSelectionChange
+    self.hsb = hsbFromRGB(selection)
+    super.init()
+
     let grid = VStack(alignment: .leading, spacing: 4)
     grid.applyContent(Self.palette.map { colors in
       let row = HStack(spacing: 4)
       row.applyContent(colors.map { color in
         let swatch = ColorSwatch(color)
-        swatch.isSelected = color == self.selection
+        swatch.isSelected = color == selection
         self.swatches.append(swatch)
         return HittableView(onTap: { [unowned self] _ in self.pick(color) }) { swatch }
       })
@@ -84,7 +136,7 @@ public final class ColorPicker : FormControl {
     })
 
     var channels: [(String, Float)] = [("Hue", self.hsb.x), ("Saturation", self.hsb.y), ("Brightness", self.hsb.z)]
-    if self.supportsOpacity { channels.append(("Opacity", self.selection.w)) }
+    if supportsOpacity { channels.append(("Opacity", selection.w)) }
     self.sliders = channels.enumerated().map { index, channel in
       Slider(value: channel.1, in: 0 ... 1) { [unowned self] value in self.slide(index, Float(value)) }
     }
@@ -97,16 +149,13 @@ public final class ColorPicker : FormControl {
       }
     })
 
-    let content = VStack(alignment: .leading, spacing: 12) {
-      grid
-      rows.frame(width: 12 * ColorSwatch.size + 11 * 4)
-    }
-    .padding(12)
-    self.popover = context.presentPopover(content, anchor: self.wellButton) { [weak self] in
-      self?.popover = nil
-      self?.sliders.removeAll()
-      self?.swatches.removeAll()
-    }
+    self.applyContent([
+      VStack(alignment: .leading, spacing: 12) {
+        grid
+        rows.frame(width: 12 * ColorSwatch.size + 11 * 4)
+      }
+      .padding(12)
+    ])
   }
 
   private func pick(_ color: float4) {
@@ -128,18 +177,17 @@ public final class ColorPicker : FormControl {
   }
 
   private func report(_ color: float4) {
-    guard !self.isDisabled, let report = self.onSelectionChange, color != self.selection else { return }
-    self.commit { report(color) }
+    guard color != self.selection else { return }
+    self.reported = color
+    self.onSelectionChange?(color)
   }
-
-  // MARK: - Setters
 
   public func setSelection(_ value: float4, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
     guard value != self.selection else { return }
     self.selection = value
     // A colour from elsewhere resets the channels; one from here already set them.
-    if !self.isInteracting { self.hsb = hsbFromRGB(value) }
-    self.well.setColor(value, context, animation: animation)
+    if value != self.reported { self.hsb = hsbFromRGB(value) }
+    self.reported = nil
     for swatch in self.swatches {
       swatch.setSelected(swatch.color == value || (swatch.color.xyz == value.xyz && !self.supportsOpacity), context)
     }
@@ -148,10 +196,25 @@ public final class ColorPicker : FormControl {
       slider.setValue(value, context)
     }
   }
+}
 
-  public func setLabel(_ value: String, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
-    guard value != self.label.text else { return }
-    self.label.setText(value, context, animation: animation)
+/// A colour on a rounded well, over a checkerboard when translucent: what a `ColorPicker` row
+/// shows, 44 × 24, on its own for a spec or a toolbar.
+///
+///     ColorWell(.hue(.teal))
+public final class ColorWell : SingleChildElement {
+  private let face = ColorWellFace()
+
+  public init(_ color: float4) {
+    super.init()
+    self.face.color = color
+    self.applyContent([self.face])
+  }
+
+  public var color: float4 { self.face.color }
+
+  public func setColor(_ value: float4, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
+    self.face.setColor(value, context, animation: animation)
   }
 }
 
@@ -209,7 +272,7 @@ func drawCheckerboard(_ renderer: Graphics2D, origin: float2, size: float2, cell
 }
 
 /// The row's colour well: the colour on a rounded swatch, over a checkerboard when translucent.
-final class ColorWell : FormGraphic {
+final class ColorWellFace : FormGraphic {
   static let size = float2(44, 24)
   var color: float4 = .black
 
@@ -219,7 +282,7 @@ final class ColorWell : FormGraphic {
 
   func setColor(_ value: float4, _ context: UIContext, animation: UIAnimation?) {
     context.animator.set(self, .color, from: self.color, to: value, animation, context) { element, value, context in
-      unsafeDowncast(element, to: ColorWell.self).color = float4(packed: value)
+      unsafeDowncast(element, to: ColorWellFace.self).color = float4(packed: value)
       context.invalidate()
     }
   }

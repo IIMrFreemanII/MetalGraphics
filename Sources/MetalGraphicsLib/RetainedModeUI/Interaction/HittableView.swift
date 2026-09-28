@@ -17,6 +17,9 @@ public class HittableView: SingleChildElement, Hittable, PointerHandling {
   public var onPress: ((Bool, Input) -> Void)?
   /// Called as the pointer moves while the left button is held, after it went down on this view.
   public var onDrag: ((Input) -> Void)?
+  /// Called when the right button goes down on it: a context menu. A right click goes to the
+  /// topmost view under the pointer that has one, instead of to `onTap`.
+  public var onSecondaryTap: ((Input) -> Void)?
   /// Its pointer style, continuous hover, tap gesture and `.gesture`: made by the first that is
   /// set. See `PointerHandling`.
   public var pointer: PointerHandlers?

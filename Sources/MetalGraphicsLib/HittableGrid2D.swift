@@ -280,8 +280,12 @@ public class HittableGrid2D {
       self.resolvePointerStyle()
     }
 
-    // `onTap` fires on the button going down, left or right, on the topmost view that has one.
-    if input.mouseDown, let index = self.topmost(at: input, where: { $0.handlesEvents && $0.onTap != nil }) {
+    // A right click goes to the topmost view with a context menu under the pointer, if any;
+    // else `onTap` fires on the button going down, left or right, on the topmost view that has one.
+    if input.rightMouseDown,
+       let index = self.topmost(at: input, where: { ($0 as? HittableView)?.onSecondaryTap != nil }) {
+      (self.views[index] as? HittableView)?.onSecondaryTap?(input)
+    } else if input.mouseDown, let index = self.topmost(at: input, where: { $0.handlesEvents && $0.onTap != nil }) {
       self.views[index].onTap?(input)
     }
   }

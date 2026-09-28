@@ -3,7 +3,68 @@ import MetalGraphicsLib
 import simd
 
 enum PickerStories {
-  static let all: [ComponentStories] = [colorPicker, datePicker]
+  static let all: [ComponentStories] = [colorPicker, colorWell, colorPickerPanel, datePicker, calendarView, timePanel]
+
+  /// A popover's card around `content`, as a picker shows it open.
+  static func card(_ content: UIElement) -> UIElement {
+    content
+      .glass(.popover, in: .rect(cornerRadius: 10))
+      .border(.separator, width: 0.5, in: .rect(cornerRadius: 10))
+      .shadow(color: .shadow, radius: 12, y: 6)
+  }
+
+  static let colorWell = ComponentStories(
+    .pickers, "ColorWell", summary: "A colour on a rounded well, 44 × 24, over a checkerboard when translucent.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Form/ColorPicker.swift",
+    args: [ArgType("color", .color, .color(SIMD4<Float>(0.19, 0.69, 0.78, 1)), "The colour.")],
+    stories: [Story("Opaque"), Story("Translucent", ["color": .color(SIMD4<Float>(1, 0.23, 0.19, 0.4))])],
+    render: { args, _ in ColorWell(args.color("color")) },
+    snippet: { args in "ColorWell(float4\(StoryValue.color(args.color("color")).display))" }
+  )
+
+  static let colorPickerPanel = ComponentStories(
+    .pickers, "ColorPickerPanel", summary: "What a colour well opens: the swatch grid, the selection ringed, and hue, saturation, brightness and opacity sliders.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Form/ColorPicker.swift",
+    args: [
+      ArgType("selection", .color, .color(ColorPickerPanel.palette[1][7]), "The colour: a binding."),
+      ArgType("supportsOpacity", .bool, .bool(true), "The opacity slider."),
+    ],
+    stories: [Story("Open")],
+    render: { args, context in
+      card(ColorPickerPanel(selection: args.color("selection"), supportsOpacity: args.bool("supportsOpacity")) { color in
+        context.color("selection").wrappedValue = color
+      })
+    },
+    snippet: { args in "ColorPickerPanel(selection: tint, supportsOpacity: \(args.bool("supportsOpacity"))) { color in tint = color }" }
+  )
+
+  static let calendarView = ComponentStories(
+    .pickers, "CalendarView", summary: "A month: title with ‹ ›, weekdays and six weeks. The selection on an accent circle, today in the accent, other months faded.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Form/DatePicker.swift",
+    args: [
+      ArgType("selection", .date, .date(StoryFixtures.due), "The day picked: a binding."),
+      ArgType("limited", .bool, .bool(false), "Only today onwards can be picked."),
+    ],
+    stories: [Story("October"), Story("From today", ["limited": .bool(true), "selection": .date(StoryFixtures.now)])],
+    render: { args, context in
+      let range: ClosedRange<Date>? = args.bool("limited") ? StoryFixtures.now ... StoryFixtures.now.addingTimeInterval(60 * 86400) : nil
+      return card(CalendarView(selection: args.date("selection"), in: range, today: StoryFixtures.now) { day in
+        context.date("selection").wrappedValue = day
+      }.padding(10))
+    },
+    snippet: { args in "CalendarView(selection: due\(args.bool("limited") ? ", in: Date() ... end" : "")) { day in due = day }" }
+  )
+
+  static let timePanel = ComponentStories(
+    .pickers, "TimePanel", summary: "What a compact date picker's time pill opens: hour and minute steppers.",
+    source: "Sources/MetalGraphicsLib/RetainedModeUI/Form/DatePicker.swift",
+    args: [ArgType("selection", .date, .date(StoryFixtures.due), "The time: a binding.")],
+    stories: [Story("Open")],
+    render: { args, context in
+      card(TimePanel(selection: args.date("selection")) { date in context.date("selection").wrappedValue = date })
+    },
+    snippet: { _ in "TimePanel(selection: due) { date in due = date }" }
+  )
 
   static let colorPicker = ComponentStories(
     .pickers, "ColorPicker", summary: "A form row with a colour well; a click opens the swatch grid and hue, saturation, brightness and opacity sliders.",

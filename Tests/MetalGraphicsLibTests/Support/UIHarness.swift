@@ -115,6 +115,18 @@ final class UIHarness {
     self.step()
   }
 
+  /// A right-button press and release at `point`, a frame each.
+  func rightClick(at point: float2) {
+    self.setMouse(point)
+    self.input.rightMousePressed = true
+    self.input.rightMouseDown = true
+    self.input.clickCount = 1
+    self.step()
+    self.input.rightMousePressed = false
+    self.input.rightMouseUp = true
+    self.step()
+  }
+
   /// A press and a release that both land before the next frame, as a fast click can.
   func clickWithinOneFrame(at point: float2) {
     self.setMouse(point)
