@@ -30,7 +30,8 @@ public enum CompletionListMetrics {
   public static let width: Float = 420
   public static let rowHeight: Float = 26
   public static let padding: Float = 5
-  public static let shape = UIShape.rect(cornerRadius: 10)
+  public static let radius: Float = 10
+  public static let shape = UIShape.rect(cornerRadius: CompletionListMetrics.radius)
   public static let font = TextFont.system(size: 12.5, design: .monospaced)
   public static let detailFont = TextFont.system(size: 11.5)
   public static let footerFont = TextFont.system(size: 11)
@@ -75,9 +76,12 @@ public final class CompletionList : SingleChildElement {
       self.column
         .frame(width: CompletionListMetrics.width)
         .padding(CompletionListMetrics.padding)
-        .glass(.menu, in: CompletionListMetrics.shape)
+        // The shadow is the card's, under its glass: the rows on it cast none.
+        .background {
+          CardFill(cornerRadius: CompletionListMetrics.radius, material: .menu)
+            .shadow(color: .shadow, radius: CompletionListMetrics.shadowRadius, y: CompletionListMetrics.shadowY)
+        }
         .border(.separator, width: 0.5, in: CompletionListMetrics.shape)
-        .shadow(color: .shadow, radius: CompletionListMetrics.shadowRadius, y: CompletionListMetrics.shadowY)
     ])
   }
 

@@ -143,3 +143,73 @@ final class SourcePanel : ModelWatcher {
     return component.snippet(StoryArgs(values: self.model.args))
   }
 }
+
+/// The story's element tree: each element's type, its text, and where it was laid out, relative
+/// to the story. Read after the layout that follows each rebuild of the canvas.
+final class InspectorPanel : ModelWatcher {
+  static let font = TextFont.system(size: 11.5, design: .monospaced)
+  static let indent: Float = 12
+
+  override var watched: [String] { ["revision", "appearance", "viewport", "mode"] }
+
+  override init() {
+    super.init()
+    self.child = Self.placeholder
+  }
+
+  private static var placeholder: UIElement {
+    Text("Laid out after the canvas").font(.system(size: 11)).foregroundColor(.secondaryLabel)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+
+  override func mount(_ context: UIContext) {
+    super.mount(context)
+    self.refreshAfterLayout(context)
+  }
+
+  override func update(_ token: Int, _ context: UIContext) {
+    self.refreshAfterLayout(context)
+  }
+
+  private func refreshAfterLayout(_ context: UIContext) {
+    context.afterLayout { [weak self] in
+      guard let self, let context = self.context else { return }
+      self.show(self.make(), context)
+    }
+  }
+
+  private func make() -> UIElement {
+    guard let story = StoryFrame.shown, story.mounted else { return Self.placeholder }
+    let infos = ElementInspector.snapshot(of: story)
+    let origin = infos.first?.frame?.origin ?? .zero
+    let rows: [UIElement] = infos.dropFirst().map { info in
+      var line = info.type
+      if let text = info.text { line += "  “\(text)”" }
+      let frame = info.frame.map { rect -> String in
+        let at = rect.origin - origin
+        return String(format: "%.0f, %.0f   %.0f × %.0f", at.x, at.y, rect.size.x, rect.size.y)
+      } ?? ""
+      return HStack(spacing: 12) {
+        Text(line).font(Self.font).lineLimit(1)
+        Spacer()
+        Text(frame).font(Self.font).foregroundColor(.secondaryLabel)
+      }
+      .padding(Inset(left: 12 + Float(info.depth - 1) * Self.indent, top: 2, right: 12, bottom: 2))
+    }
+    let size = infos.first?.frame.map { String(format: "%.0f × %.0f", $0.size.x, $0.size.y) } ?? ""
+    let list = VStack(alignment: .leading, spacing: 0) { () -> [UIElement] in return rows }
+    return VStack(alignment: .leading, spacing: 0) {
+      HStack {
+        Text("\(infos.count - 1) elements").font(.system(size: 11)).foregroundColor(.secondaryLabel)
+        Spacer()
+        Text("Story \(size)").font(.system(size: 11)).foregroundColor(.secondaryLabel)
+      }
+      .padding(Inset(vertical: 6, horizontal: 12))
+      Rectangle(.separator).frame(height: 0.5)
+      ScrollView(.vertical) { list.padding(Inset(vertical: 4)) }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(.contentBackground)
+  }
+}

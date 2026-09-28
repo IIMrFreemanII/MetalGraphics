@@ -60,6 +60,7 @@ enum StorybookDock {
         DockPanelKind("controls", title: "Controls", background: .groupedBackground) { _ in ControlsPanel() },
         DockPanelKind("actions", title: "Actions") { _ in ActionsPanel() },
         DockPanelKind("source", title: "Source") { _ in SourcePanel() },
+        DockPanelKind("inspector", title: "Inspector") { _ in InspectorPanel() },
       ]
     ) {
       var layout = DockLayout()
@@ -67,10 +68,11 @@ enum StorybookDock {
       let controls = layout.addPanel(kind: "controls", title: "Controls")
       let actions = layout.addPanel(kind: "actions", title: "Actions")
       let source = layout.addPanel(kind: "source", title: "Source")
+      let inspector = layout.addPanel(kind: "inspector", title: "Inspector")
       layout.hosts = [
         DockHost(id: StorybookDock.host, root: .column([
           .group([canvas]),
-          .group([controls, actions, source]),
+          .group([controls, actions, source, inspector]),
         ], fractions: [0.64, 0.36])),
       ]
       return layout

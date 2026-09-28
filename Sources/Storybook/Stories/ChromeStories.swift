@@ -523,6 +523,8 @@ enum WindowStories {
     render: { args, context in
       HStack(alignment: .top, spacing: 0) {
         Sidebar {
+          // The title bar's row, where the traffic lights sit.
+          Spacer().frame(height: TitleBarInsets.standard.top)
           SidebarLink("Sources", icon: .folder, selected: true)
           SidebarLink("Greeter.swift", icon: .document)
           SidebarLink("main.swift", icon: .document)
@@ -541,7 +543,6 @@ enum WindowStories {
       }
       .clipShape(.rect(cornerRadius: 10))
       .border(.separator, width: 0.5, in: .rect(cornerRadius: 10))
-      .shadow(color: .shadow, radius: 22, y: 10)
     },
     snippet: { _ in "RetainedScene(\"Editor\", id: \"main\", chrome: .translucent) { scene in Root(scene: scene) }" }
   )
@@ -609,7 +610,7 @@ enum EditorStories {
         onNext: context.action("next"), onPrevious: context.action("previous"), onReplace: context.action("replace"),
         onReplaceAll: context.action("replace all"), onDone: context.action("done")
       )
-      .frame(width: 820)
+      .frame(width: 920)
     },
     snippet: { args in
       "FindBar(\n  query: $query, replacement: $replacement, count: \(swiftString(args.string("count"))),\n  caseSensitive: $caseSensitive, wholeWord: $wholeWord, regex: $regex,\n  showReplace: \(args.bool("showReplace")),\n  onNext: { findNext() }, onDone: { closeFind() }\n)"

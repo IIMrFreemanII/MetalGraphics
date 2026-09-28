@@ -87,8 +87,13 @@ enum StoryFrame {
   /// The id the story itself is tagged with: where tests and the Inspector find it.
   static let storyID = "storybook.story"
 
+  /// The story the canvas shows now, for the Inspector: on the window's thread.
+  nonisolated(unsafe) static weak var shown: UIElement?
+
   static func make(_ story: UIElement, layout: StoryLayout, settings: CanvasSettings) -> UIElement {
-    var element: UIElement = IDElement(Self.storyID) { story }
+    let tagged = IDElement(Self.storyID) { story }
+    Self.shown = tagged
+    var element: UIElement = tagged
     if let width = settings.viewport.width, layout != .fullscreen {
       element = element.frame(width: width, alignment: .topLeading)
     }

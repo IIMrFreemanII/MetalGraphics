@@ -7,10 +7,7 @@ enum PickerStories {
 
   /// A popover's card around `content`, as a picker shows it open.
   static func card(_ content: UIElement) -> UIElement {
-    content
-      .glass(.popover, in: .rect(cornerRadius: 10))
-      .border(.separator, width: 0.5, in: .rect(cornerRadius: 10))
-      .shadow(color: .shadow, radius: 12, y: 6)
+    Popover { content }
   }
 
   static let colorWell = ComponentStories(
@@ -50,7 +47,7 @@ enum PickerStories {
       let range: ClosedRange<Date>? = args.bool("limited") ? StoryFixtures.now ... StoryFixtures.now.addingTimeInterval(60 * 86400) : nil
       return card(CalendarView(selection: args.date("selection"), in: range, today: StoryFixtures.now) { day in
         context.date("selection").wrappedValue = day
-      }.padding(10))
+      }.frame(width: 7 * CalendarView.cellSize.x).padding(10))
     },
     snippet: { args in "CalendarView(selection: due\(args.bool("limited") ? ", in: Date() ... end" : "")) { day in due = day }" }
   )

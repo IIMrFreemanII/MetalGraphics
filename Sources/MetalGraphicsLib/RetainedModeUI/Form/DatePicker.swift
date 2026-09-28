@@ -285,7 +285,7 @@ public final class TimePanel : SingleChildElement {
 ///
 ///     CalendarView(selection: start, in: today ... end) { day in start = day }
 public final class CalendarView : SingleChildElement {
-  static let cellSize = float2(32, 28)
+  public static let cellSize = float2(32, 28)
   static let titleFont = TextFont.custom(FontManager.shared.font(named: "HelveticaNeue-Medium"), size: 14)
   static var dayFont: TextFont { Theme.current.typography.body }
   /// What day it is, for the one drawn in the accent: the wall clock, or a fixed day in a test.

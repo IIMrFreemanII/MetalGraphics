@@ -16,3 +16,34 @@ enum ElementGeometry {
     }
   }
 }
+
+/// One element of a tree, as an inspector lists it.
+public struct ElementInfo : Sendable, Equatable {
+  /// How deep it is under the element inspected, from 0.
+  public let depth: Int
+  /// Its type's name, without its module: `ListRow`, `Text`, `Frame`.
+  public let type: String
+  /// Its text, when it shows one.
+  public let text: String?
+  /// Where it was laid out, when its kind keeps a rect.
+  public let frame: HeadlessRect?
+}
+
+/// What is laid out under an element, for a design tool's inspector: each element's type, text
+/// and frame, in tree order. On the element's own thread, after a layout; for a panel that shows
+/// it, never per frame.
+public enum ElementInspector {
+  /// The tree under `element`, `maxCount` elements at most.
+  public static func snapshot(of element: UIElement, maxCount: Int = 400) -> [ElementInfo] {
+    var infos: [ElementInfo] = []
+    func visit(_ element: UIElement, _ depth: Int) {
+      guard infos.count < maxCount, !element.isHidden else { return }
+      let name = String(describing: type(of: element)).split(separator: "<").first.map(String.init) ?? "UIElement"
+      let text = (element as? Text)?.text ?? (element as? TextField)?.text
+      infos.append(ElementInfo(depth: depth, type: name, text: text, frame: ElementGeometry.ownRect(of: element)))
+      element.forEachChild { visit($0, depth + 1) }
+    }
+    visit(element, 0)
+    return infos
+  }
+}

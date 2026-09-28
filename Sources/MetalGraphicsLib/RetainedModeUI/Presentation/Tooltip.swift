@@ -35,11 +35,15 @@ public final class Tooltip : SingleChildElement {
         .padding(TooltipMetrics.multilineInset)
         .frame(maxWidth: TooltipMetrics.maxWidth, alignment: .leading)
       : label.lineLimit(1).padding(TooltipMetrics.inset)
+    let radius = multiline ? TooltipMetrics.multilineRadius : TooltipMetrics.radius
+    // The shadow is the card's, under its glass: the text on it casts none.
     self.applyContent([
       content
-        .glass(.tooltip, in: shape)
+        .background {
+          CardFill(cornerRadius: radius, material: .tooltip)
+            .shadow(color: .shadow, radius: TooltipMetrics.shadowRadius, y: TooltipMetrics.shadowY)
+        }
         .border(.separator, width: 0.5, in: shape)
-        .shadow(color: .shadow, radius: TooltipMetrics.shadowRadius, y: TooltipMetrics.shadowY)
     ])
   }
 
