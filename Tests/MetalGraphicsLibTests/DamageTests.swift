@@ -208,4 +208,86 @@ final class DamageTests: XCTestCase {
     XCTAssertTrue(h.graphics.sceneData.debug.showDamage)
     XCTAssertEqual(h.pixel(at: spot), before)
   }
+
+  // MARK: - Window size
+
+  /// The render grid covers the whole target, however big: a harness past 500 points once drew
+  /// only the default grid's 500 in its middle, and left the edges background.
+  func testAWindowPast500PointsDrawsToItsEdges() {
+    let left = Rectangle(.destructive).frame(width: 200, height: 100)
+    let middle = Rectangle(.success).frame(width: 460, height: 100)
+    let right = Rectangle(.accent)
+    let h = UIHarness(size: float2(860, 620)) {
+      VStack(spacing: 0) {
+        HStack(spacing: 0) {
+          left
+          middle
+          right.frame(width: 200, height: 100)
+        }
+        Spacer()
+        Rectangle(.warning).frame(width: 860, height: 40)
+      }
+    }
+    h.settle()
+    XCTAssertEqual(h.graphics.grid.size, int2(18, 13))
+    let red = h.pixel(at: float2(10, 50))
+    let green = h.pixel(at: float2(430, 50))
+    let blue = h.pixel(at: float2(850, 50))
+    let orange = h.pixel(at: float2(430, 610))
+    XCTAssertEqual(h.pixel(at: float2(190, 50)), red)
+    XCTAssertNotEqual(red, green)
+    XCTAssertNotEqual(blue, green)
+    XCTAssertNotEqual(blue, red)
+    XCTAssertNotEqual(orange, green)
+    // The far corners, outside the old 500 point grid, draw as its middle does.
+    XCTAssertEqual(h.pixel(at: float2(5, 615)), orange)
+    XCTAssertEqual(h.pixel(at: float2(855, 615)), orange)
+
+    // A change at the edge shades only its cells again, and they reach the target.
+    let before = h.pixel(at: float2(850, 50))
+    let cells = h.graphics.grid.cells.count
+    right.setColor(.destructive, h.context)
+    h.step()
+    XCTAssertLessThan(h.graphics.lastDamagedCells, cells)
+    XCTAssertNotEqual(h.pixel(at: float2(850, 50)), before)
+    XCTAssertEqual(h.pixel(at: float2(850, 50)), red)
+  }
+
+  /// And hits to its edges: the harness sizes its hit grid as the app's resize does.
+  func testAWindowPast500PointsHitsToItsEdges() {
+    var taps = 0
+    let h = UIHarness(size: float2(860, 620)) {
+      VStack(spacing: 0) {
+        HStack(spacing: 0) {
+          Spacer()
+          Button("Far") { taps += 1 }.buttonStyle(.plain).frame(width: 60, height: 30)
+        }
+        Spacer()
+      }
+    }
+    h.settle()
+    let button = try! XCTUnwrap(h.first(HittableView.self))
+    XCTAssertGreaterThan(button.hitPosition.x, 780)
+    h.click(at: button.hitPosition + button.hitSize * 0.5)
+    XCTAssertEqual(taps, 1)
+  }
+
+  /// A shape reaching the grid's far edge is filed in the last cell, once: its index one past
+  /// the row once wrapped into the next row's first cell, and a shadow drew twice at the left.
+  func testAShapeAtTheGridsFarEdgeIsFiledOnce() {
+    let h = UIHarness(size: float2(320, 240)) {
+      ZStack {
+        Rectangle(float4(0.85, 0.87, 0.9, 1)).frame(width: 320, height: 240)
+        Rectangle(.card).frame(width: 260, height: 110).shadow(color: .shadow, radius: 22, y: 10)
+      }
+    }
+    h.settle()
+    let grid = h.graphics.grid
+    for cell in grid.shapesPerCell.prefix(grid.cells.count) {
+      let shapes = cell.map { [Int($0.shape.shapeType), Int($0.shape.index)] }
+      XCTAssertEqual(Set(shapes).count, shapes.count, "a shape filed twice in one cell")
+    }
+    // The shadow is as dark on the left as on the right.
+    XCTAssertEqual(h.pixel(at: float2(25, 120)), h.pixel(at: float2(295, 120)))
+  }
 }

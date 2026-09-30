@@ -31,7 +31,49 @@ final class TextTests: XCTestCase {
 
   // MARK: - Fonts
 
+  /// `body` with `.system` as SwiftUI's: San Francisco.
+  private func withSanFrancisco(_ body: () -> Void) {
+    TextFont.systemFamily = .sanFrancisco
+    defer { TextFont.systemFamily = .jetBrainsMono }
+    body()
+  }
+
+  func testSystemDrawsTheBundledJetBrainsMono() {
+    XCTAssertEqual(self.postScriptName(.system(size: 13)), "JetBrainsMono-Regular")
+    XCTAssertEqual(self.postScriptName(.system(size: 13).monospaced()), "JetBrainsMono-Regular")
+    XCTAssertEqual(self.postScriptName(.system(size: 13, weight: .medium)), "JetBrainsMono-Medium")
+    XCTAssertEqual(self.postScriptName(.system(size: 13, weight: .semibold)), "JetBrainsMono-SemiBold")
+    XCTAssertEqual(self.postScriptName(.headline), "JetBrainsMono-Bold")
+    // The weights it does not bundle draw the nearest it does.
+    XCTAssertEqual(self.postScriptName(.system(size: 13, weight: .light)), "JetBrainsMono-Regular")
+    XCTAssertEqual(self.postScriptName(.system(size: 13, weight: .black)), "JetBrainsMono-Bold")
+    // Its own file, not an installed copy: the URL is the library's bundle.
+    let url = CTFontCopyAttribute(FontManager.shared.face(for: .body).font, kCTFontURLAttribute) as? URL
+    XCTAssertEqual(url?.deletingLastPathComponent().lastPathComponent, "Fonts")
+    XCTAssertTrue(url?.path.contains(".bundle") ?? false, url?.path ?? "no URL")
+    // In the line box SF has, text and code alike, so every row, button and field keeps its
+    // height: glyphs change, sizes do not.
+    let body = FontManager.shared.face(for: .body).metrics.height
+    let code = FontManager.shared.face(for: .system(size: 12.5, design: .monospaced)).metrics.height
+    let laidOut = self.layout("Mg\nMg").size.y
+    self.withSanFrancisco {
+      XCTAssertEqual(FontManager.shared.face(for: .body).metrics.height, body, accuracy: 0.01)
+      XCTAssertEqual(FontManager.shared.face(for: .system(size: 12.5, design: .monospaced)).metrics.height, code, accuracy: 0.01)
+      XCTAssertEqual(self.layout("Mg\nMg").size.y, laidOut, accuracy: 0.01)
+    }
+    // Rounded and serif are SF's; the switch makes `.system` SF again.
+    XCTAssertTrue(self.postScriptName(.system(size: 14, design: .rounded)).contains("Rounded"))
+    self.withSanFrancisco {
+      XCTAssertTrue(self.postScriptName(.system(size: 13)).contains("SF"), self.postScriptName(.system(size: 13)))
+    }
+    XCTAssertEqual(self.postScriptName(.system(size: 13)), "JetBrainsMono-Regular")
+  }
+
   func testSystemFacesAreDistinctPerWeightAndOpticalSize() {
+    self.withSanFrancisco(self.sanFranciscoFaces)
+  }
+
+  private func sanFranciscoFaces() {
     let regular = self.faceKey(.system(size: 13))
     XCTAssertNotEqual(regular, self.faceKey(.system(size: 13).bold()))
     XCTAssertNotEqual(regular, self.faceKey(.system(size: 13).italic()))
@@ -52,7 +94,9 @@ final class TextTests: XCTestCase {
   func testDesignsAndCustomWeights() {
     XCTAssertTrue(self.postScriptName(.system(size: 14, design: .serif)).contains("NewYork"))
     XCTAssertTrue(self.postScriptName(.system(size: 14, design: .rounded)).contains("Rounded"))
-    XCTAssertTrue(self.postScriptName(.system(size: 14).monospaced()).contains("Monospaced"))
+    self.withSanFrancisco {
+      XCTAssertTrue(self.postScriptName(.system(size: 14).monospaced()).contains("Monospaced"))
+    }
     XCTAssertEqual(self.postScriptName(.custom("Helvetica Neue", size: 14).weight(.bold)), "HelveticaNeue-Bold")
     XCTAssertEqual(self.postScriptName(.custom("Menlo", size: 14).italic()), "Menlo-Italic")
   }
@@ -165,9 +209,11 @@ final class TextTests: XCTestCase {
   // MARK: - Text
 
   func testTextCaseChangesWhatIsShaped() {
-    let lower = Text("abc")
-    let upper = Text("abc").textCase(.uppercase)
-    let reference = Text("ABC")
+    // A proportional face, where capitals are wider: in JetBrains Mono every letter is as wide.
+    let font = TextFont.system(size: 13, design: .rounded)
+    let lower = Text("abc").font(font)
+    let upper = Text("abc").font(font).textCase(.uppercase)
+    let reference = Text("ABC").font(font)
     _ = UIHarness { HStack { lower; upper; reference } }
     XCTAssertEqual(upper.getSize(), reference.getSize())
     XCTAssertNotEqual(upper.getSize(), lower.getSize())

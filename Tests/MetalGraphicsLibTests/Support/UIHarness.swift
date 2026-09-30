@@ -45,6 +45,8 @@ final class UIHarness {
     self.input.prevMousePosition = outside
 
     self.context.clock = { [unowned self] in self.now }
+    // As the app's resize does: the hit grid covers the whole harness, as the render grid does.
+    self.context.resizeHitGrid(for: size)
     self.root.mounted = true
     self.root.setChild(tree(), self.context)
     self.step()
@@ -112,6 +114,18 @@ final class UIHarness {
     self.step()
     self.input.leftMousePressed = false
     self.input.leftMouseUp = true
+    self.step()
+  }
+
+  /// A right-button press and release at `point`, a frame each.
+  func rightClick(at point: float2) {
+    self.setMouse(point)
+    self.input.rightMousePressed = true
+    self.input.rightMouseDown = true
+    self.input.clickCount = 1
+    self.step()
+    self.input.rightMousePressed = false
+    self.input.rightMouseUp = true
     self.step()
   }
 

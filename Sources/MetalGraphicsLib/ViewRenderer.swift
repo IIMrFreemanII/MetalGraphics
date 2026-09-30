@@ -40,25 +40,10 @@ open class ViewRenderer: NSObject {
     self.resizeRenderGrid(for: size)
   }
 
-  /// The render grid covers the window in cells of a fixed size, so a new window size means a
-  /// new cell count. Also run once more after `start()`, when `graphics2D` first exists.
+  /// The render grid covers the window: see `Graphics2D.fitGrid(to:)`. Also run once more after
+  /// `start()`, when `graphics2D` first exists.
   func resizeRenderGrid(for windowSize: float2) {
-    guard let graphics2D = self.graphics2D else { return }
-
-    let newGridSize = int2(floor(windowSize / graphics2D.grid.cellSize)) &+ 1
-    guard newGridSize.x > 0, newGridSize.y > 0, newGridSize != graphics2D.grid.size else {
-      return
-    }
-
-    let prevCellSize = graphics2D.grid.cellSize
-    let prevPosition = graphics2D.grid.position
-    // Deferred rather than applied here: `endFrame` runs this immediately before mapping
-    // shapes into the grid, so the replacement never lands mid-frame.
-    graphics2D.resizeCb = {
-      graphics2D.grid = GraphicsGrid2D(
-        position: prevPosition, size: newGridSize, cellSize: prevCellSize, graphics: graphics2D
-      )
-    }
+    self.graphics2D?.fitGrid(to: windowSize)
   }
 }
 

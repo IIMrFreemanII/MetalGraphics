@@ -144,14 +144,14 @@ final class FileRowView : SingleChildElement {
       action: { self.onTap(self.row) }
     ) {
       if self.row.isDirectory {
-        Image(icon: self.row.isExpanded ? .chevronDown : .chevronRight)
+        AnimatedIcon(.chevronRight, active: self.row.isExpanded)
           .foregroundColor(Self.chevronColor)
-        Image(icon: .folder)
+        AnimatedIcon(.folder)
           .foregroundColor(Self.folderColor)
       } else {
         Spacer(minLength: 10)
           .frame(width: 10)
-        Image(icon: .document)
+        AnimatedIcon(.document)
           .foregroundColor(Self.documentColor(self.row.name))
       }
       Text(self.row.name)

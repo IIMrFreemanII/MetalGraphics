@@ -28,4 +28,21 @@ final class FormDemoE2ETests: AppTestCase {
     try self.main.toggle("Notifications")
     XCTAssertFalse(toggle.isOn)
   }
+
+  /// The Theme picker is the app's appearance: every window follows it, and System gives it back.
+  func testThemePickerSwitchesTheAppearance() throws {
+    XCTAssertTrue(self.main.shows("System"))
+    try self.main.control(labelled: "Theme").tap()
+    try self.main.tap("Dark")
+    XCTAssertNotNil(self.app.settle())
+    XCTAssertEqual(ThemeStore.shared.appearanceOverride, .dark)
+    XCTAssertTrue(self.main.context.theme === Theme.dark)
+    XCTAssertTrue(self.main.shows("Dark"))
+
+    try self.main.control(labelled: "Theme").tap()
+    try self.main.tap("System")
+    XCTAssertNotNil(self.app.settle())
+    XCTAssertNil(ThemeStore.shared.appearanceOverride)
+    XCTAssertTrue(self.main.context.theme === Theme.light)
+  }
 }

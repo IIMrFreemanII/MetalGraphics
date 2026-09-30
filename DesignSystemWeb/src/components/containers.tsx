@@ -1,5 +1,6 @@
 import { React, cx, type Common } from "../react";
-import { Glass, Icon, type IconName } from "./foundation";
+import { Glass, type IconName } from "./foundation";
+import { AnimatedIcon, glyphFor } from "./motion";
 import { Button, type ButtonVariant } from "./controls";
 
 /** Settings on the grouped background, in a column at most 600 wide. Mirrors `Form`. */
@@ -76,7 +77,9 @@ export function MenuItem({
       onClick={onClick}
       style={style}
     >
-      <span className="mg-menu-item__check">{checked && <Icon name="checkmark" />}</span>
+      <span className="mg-menu-item__check">
+        <AnimatedIcon glyph="checkmark" active={!!checked} />
+      </span>
       <span className="mg-menu-item__label">{children}</span>
       {shortcut && <span className="mg-menu-item__shortcut">{shortcut}</span>}
     </button>
@@ -227,7 +230,7 @@ export function SidebarLink({
       onClick={onClick}
       style={style}
     >
-      {icon && <Icon name={icon} color="secondaryLabel" />}
+      {icon && <AnimatedIcon glyph={glyphFor(icon)} color="secondaryLabel" />}
       {children}
     </button>
   );
@@ -237,9 +240,9 @@ export function SidebarLink({
 export function NavigationBar({ title, leading, trailing, className, style }: Common & { title: string; leading?: unknown; trailing?: unknown }) {
   return (
     <header className={cx("mg-nav-bar", className)} style={style}>
-      {leading as any}
+      <span className="mg-nav-bar__side">{leading as any}</span>
       <span className="mg-nav-bar__title">{title}</span>
-      {trailing as any}
+      <span className="mg-nav-bar__side mg-nav-bar__side--trailing">{trailing as any}</span>
     </header>
   );
 }

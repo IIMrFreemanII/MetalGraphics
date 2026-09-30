@@ -10,7 +10,7 @@ Rules:
 
 ## Build
 
-One SwiftPM package (`Package.swift`), no Xcode project: `swift build`, `swift run Demo` (the demo app, a bare executable), `swift run Editor` (the Swift editor), `swift test`. Targets live in `Sources/` (`MetalGraphicsLib`, `Demo`, `Editor`, `EditorCore`, `SwiftCodeModel`, `ReactiveUI`, `ReactiveUIMacrosPlugin`) and `Tests/`; `Tools/` holds `uidrive` and `layoutchecks`. The `MetalShaders` plugin (`Plugins/`) compiles `Sources/MetalGraphicsLib/Shaders/*.metal` into the library's `Bundle.module`; the demo's images are plain files in `Sources/Demo/Resources/`, loaded with `Image(name, bundle: .module)`. Opening `Package.swift` in Xcode works too.
+One SwiftPM package (`Package.swift`), no Xcode project: `swift build`, `swift run Demo` (the demo app, a bare executable), `swift run Editor` (the Swift editor), `swift run Storybook` (the component gallery), `swift test`. Targets live in `Sources/` (`MetalGraphicsLib`, `Demo`, `Editor`, `Storybook`, `EditorCore`, `SwiftCodeModel`, `ReactiveUI`, `ReactiveUIMacrosPlugin`) and `Tests/`; `Tools/` holds `uidrive` and `layoutchecks`. The `MetalShaders` plugin (`Plugins/`) compiles `Sources/MetalGraphicsLib/Shaders/*.metal` into the library's `Bundle.module`; the demo's images are plain files in `Sources/Demo/Resources/`, loaded with `Image(name, bundle: .module)`. Opening `Package.swift` in Xcode works too.
 
 ## Performance
 
@@ -22,9 +22,13 @@ Debug builds reload Swift (via InjectionNext), shaders and the ReactiveUI macros
 
 ## Design system
 
-Everything draws with a `Theme` (frosted glass, light and dark, following the system): colour roles as `float4` (`.secondaryLabel`, `.selection`), glass materials by role (`.glass(.popover)`), SF type, radii. Never hard-code a UI colour; use a role. Translucent windows: `RetainedScene(..., chrome: .translucent)`. Tokens, switching, chrome, glass: `docs/DesignSystem.md`.
+Everything draws with a `Theme` (frosted glass, light and dark, following the system): colour roles as `float4` (`.secondaryLabel`, `.selection`), glass materials by role (`.glass(.popover)`), JetBrains Mono type (bundled; `.system` draws it), radii. Never hard-code a UI colour; use a role. Translucent windows: `RetainedScene(..., chrome: .translucent)`. Tokens, switching, chrome, glass: `docs/DesignSystem.md`.
 
-Before building or restyling any UI in MetalGraphicsLib, Demo or Editor, load the `design-system` skill (`.claude/skills/design-system/SKILL.md`) and apply its checklist: match the design canvas "MetalGraphics Frosted Glass", reuse the components (`ListRow`, `KindBadge`, `ThemeIcon`, `Form`, dock tab styles, `.glass(role)`), take every colour, size and font from the theme. `DesignLintTests` fails on a colour written out; a deliberate one carries `// design: <reason>`. Name the board the change matches, and any departure from it, in the final summary.
+Before building or restyling any UI in MetalGraphicsLib, Demo, Editor or Storybook, load the `design-system` skill (`.claude/skills/design-system/SKILL.md`) and apply its checklist: match the design canvas "MetalGraphics Frosted Glass", reuse the library's components (`ListRow`, `KindBadge`, `ThemeIcon`, `Form`, `FindBar`, `Menu`, `Tooltip`/`.help`, `Sidebar`, `DockTabBar`, `.glass(role)`… every one has a story in the Storybook), never an app-local copy of one; take every colour, size and font from the theme. A component the design system has and the library lacks goes into the library, public, with the web version's props and a story. `DesignLintTests` fails on a colour written out; a deliberate one carries `// design: <reason>`. Name the board the change matches, and any departure from it, in the final summary.
+
+## Storybook
+
+`swift run Storybook` is a gallery of every design-system component, as Storybook is for the web: stories by group, a canvas in light, dark or both side by side, and addon panels for Controls (the args, edited live), Actions, Source, an Inspector of the element tree and Interactions (play functions driven by real pointer events), plus a Docs page per component. A new or changed component gets its story in `Sources/Storybook/Stories`; `ComponentGoldenTests` keep a golden of each, light and dark, and `ParityTests` fail when a component of `DesignSystemWeb/meta.mjs` has no Swift story. Writing stories, the addons, keys and tests: `docs/Storybook.md`.
 
 ## Threading
 

@@ -338,6 +338,13 @@ enum ElementCatalog {
              ArgSpec("icon", "setIcon", animatable: true)],
       arity: .leaf
     ),
+    "AnimatedIcon": TypeSpec(
+      name: "AnimatedIcon",
+      args: [ArgSpec(nil, "setGlyph", animatable: true), ArgSpec("trigger", "setTrigger", animatable: true),
+             ArgSpec("active", "setActive", animatable: true), ArgSpec("loop", "setLoop", animatable: true),
+             ArgSpec("mount", nil)],
+      arity: .leaf
+    ),
     "VectorCanvas": TypeSpec(
       name: "VectorCanvas", args: [ArgSpec("width", nil), ArgSpec("height", nil)], arity: .multi
     ),
@@ -407,11 +414,116 @@ enum ElementCatalog {
     // A sidebar, tree or list row: selected state is reactive, its shape constant.
     "ListRow": TypeSpec(
       name: "ListRow",
-      args: [ArgSpec("selected", "setSelected", animatable: true), ArgSpec("selectionStyle", nil),
+      // The label comes first, unlabelled: `ListRow(message, subtitle: …)`. A row of content only
+      // has no unlabelled argument, so nothing binds to `setLabel` there.
+      args: [ArgSpec(nil, "setLabel", animatable: true), ArgSpec("subtitle", "setSubtitle", animatable: true),
+             ArgSpec("detail", "setDetail", animatable: true), ArgSpec("status", "setStatus", animatable: true),
+             ArgSpec("selected", "setSelected", animatable: true), ArgSpec("selectionStyle", nil),
              ArgSpec("height", nil), ArgSpec("margin", nil), ArgSpec("indent", nil), ArgSpec("spacing", nil),
              ArgSpec("action", nil, handler: HandlerSpec(property: "action", placeholder: ""))],
       arity: .multi
     ),
+    // The design system's small pieces, as the web mirror has them.
+    "Tooltip": TypeSpec(name: "Tooltip", args: [ArgSpec(nil, "setText", animatable: true), ArgSpec("multiline", nil)], arity: .leaf),
+    "ToggleChip": TypeSpec(
+      name: "ToggleChip",
+      args: [ArgSpec(nil, "setTitle", animatable: true),
+             ArgSpec("isOn", "setIsOn", animatable: true, binding: HandlerSpec(property: "onIsOnChange", placeholder: ""))],
+      arity: .leaf
+    ),
+    "StatusBar": TypeSpec(
+      name: "StatusBar",
+      args: [ArgSpec("position", "setPosition", animatable: true), ArgSpec("problem", "setProblem", animatable: true),
+             ArgSpec("file", "setFile", animatable: true)],
+      arity: .leaf
+    ),
+    // The editor's find bar: controlled, each option a binding, each button a handler.
+    "FindBar": TypeSpec(
+      name: "FindBar",
+      args: [ArgSpec("query", "setQuery", animatable: true, binding: HandlerSpec(property: "onQueryChange", placeholder: "")),
+             ArgSpec("replacement", "setReplacement", animatable: true,
+                     binding: HandlerSpec(property: "onReplacementChange", placeholder: "")),
+             ArgSpec("count", "setCount", animatable: true),
+             ArgSpec("caseSensitive", "setCaseSensitive", animatable: true,
+                     binding: HandlerSpec(property: "onCaseSensitiveChange", placeholder: "")),
+             ArgSpec("wholeWord", "setWholeWord", animatable: true,
+                     binding: HandlerSpec(property: "onWholeWordChange", placeholder: "")),
+             ArgSpec("regex", "setRegex", animatable: true, binding: HandlerSpec(property: "onRegexChange", placeholder: "")),
+             ArgSpec("showReplace", "setShowReplace", animatable: true),
+             ArgSpec("focused", "setFocused", animatable: true),
+             ArgSpec("onNext", nil, handler: HandlerSpec(property: "onNext", placeholder: "")),
+             ArgSpec("onPrevious", nil, handler: HandlerSpec(property: "onPrevious", placeholder: "")),
+             ArgSpec("onReplace", nil, handler: HandlerSpec(property: "onReplace", placeholder: "")),
+             ArgSpec("onReplaceAll", nil, handler: HandlerSpec(property: "onReplaceAll", placeholder: "")),
+             ArgSpec("onDone", nil, handler: HandlerSpec(property: "onDone", placeholder: ""))],
+      arity: .leaf
+    ),
+    "CompletionList": TypeSpec(
+      name: "CompletionList",
+      args: [ArgSpec("items", "setItems", animatable: true), ArgSpec("footer", "setFooter", animatable: true),
+             ArgSpec("onPick", nil, handler: HandlerSpec(property: "onPick", placeholder: ""))],
+      arity: .leaf
+    ),
+    "ColorWell": TypeSpec(name: "ColorWell", args: [ArgSpec(nil, "setColor", animatable: true)], arity: .leaf),
+    "ColorPickerPanel": TypeSpec(
+      name: "ColorPickerPanel",
+      args: [ArgSpec("selection", "setSelection", animatable: true), ArgSpec("supportsOpacity", nil),
+             ArgSpec("onSelectionChange", nil, handler: HandlerSpec(property: "onSelectionChange", placeholder: ""))],
+      arity: .leaf
+    ),
+    "CalendarView": TypeSpec(
+      name: "CalendarView",
+      args: [ArgSpec("selection", "setSelection", animatable: true), ArgSpec("in", nil), ArgSpec("today", nil),
+             ArgSpec("onSelectionChange", nil, handler: HandlerSpec(property: "onSelectionChange", placeholder: ""))],
+      arity: .leaf
+    ),
+    "TimePanel": TypeSpec(
+      name: "TimePanel",
+      args: [ArgSpec("selection", "setSelection", animatable: true),
+             ArgSpec("onSelectionChange", nil, handler: HandlerSpec(property: "onSelectionChange", placeholder: ""))],
+      arity: .leaf
+    ),
+    "MenuItem": TypeSpec(
+      name: "MenuItem",
+      args: [ArgSpec(nil, "setTitle", animatable: true), ArgSpec("checked", "setChecked", animatable: true),
+             ArgSpec("shortcut", nil), ArgSpec("role", nil), ArgSpec("disabled", nil),
+             ArgSpec("action", nil, handler: HandlerSpec(property: "action", placeholder: ""))],
+      arity: .leaf
+    ),
+    "MenuSeparator": TypeSpec(name: "MenuSeparator", args: [], arity: .leaf),
+    "SidebarLink": TypeSpec(
+      name: "SidebarLink",
+      args: [ArgSpec(nil, "setTitle", animatable: true), ArgSpec("icon", nil), ArgSpec("selected", "setSelected", animatable: true),
+             ArgSpec("action", nil, handler: HandlerSpec(property: "action", placeholder: ""))],
+      arity: .leaf
+    ),
+    "TrafficLights": TypeSpec(
+      name: "TrafficLights",
+      args: [ArgSpec("inactive", "setInactive", animatable: true),
+             ArgSpec("onClose", nil, handler: HandlerSpec(property: "onClose", placeholder: "")),
+             ArgSpec("onMinimize", nil, handler: HandlerSpec(property: "onMinimize", placeholder: "")),
+             ArgSpec("onZoom", nil, handler: HandlerSpec(property: "onZoom", placeholder: ""))],
+      arity: .leaf
+    ),
+    "TitleBar": TypeSpec(name: "TitleBar", args: [ArgSpec(nil, "setTitle", animatable: true), ArgSpec("inactive", nil)], arity: .leaf),
+    "DropMarkers": TypeSpec(name: "DropMarkers", args: [ArgSpec("zones", nil), ArgSpec("hovered", "setHovered", animatable: true)], arity: .leaf),
+    "DropPreview": TypeSpec(name: "DropPreview", args: [], arity: .leaf),
+    "DockTab": TypeSpec(
+      name: "DockTab",
+      args: [ArgSpec(nil, "setTitle", animatable: true), ArgSpec("selected", "setSelected", animatable: true),
+             ArgSpec("style", nil), ArgSpec("icon", nil), ArgSpec("iconColor", nil),
+             ArgSpec("isEdited", "setEdited", animatable: true), ArgSpec("badge", "setBadge", animatable: true),
+             ArgSpec("onSelect", nil, handler: HandlerSpec(property: "onSelect", placeholder: "")),
+             ArgSpec("onClose", nil, handler: HandlerSpec(property: "onClose", placeholder: ""))],
+      arity: .leaf
+    ),
+    "InsertionLine": TypeSpec(name: "InsertionLine", args: [ArgSpec("indent", "setIndent", animatable: true)], arity: .leaf),
+    "ScrollIndicator": TypeSpec(
+      name: "ScrollIndicator", args: [ArgSpec("length", "setLength", animatable: true), ArgSpec("vertical", nil)], arity: .leaf
+    ),
+    "Scrim": TypeSpec(name: "Scrim", args: [], arity: .leaf),
+    "SidebarTitle": TypeSpec(name: "SidebarTitle", args: [ArgSpec(nil, "setTitle", animatable: true)], arity: .leaf),
+    "DockGap": TypeSpec(name: "DockGap", args: [ArgSpec("vertical", nil)], arity: .leaf),
     "KindBadge": TypeSpec(
       name: "KindBadge",
       args: [ArgSpec(nil, "setLetter", animatable: true), ArgSpec("color", "setColor", animatable: true)],
@@ -543,6 +655,7 @@ enum ElementCatalog {
     "Rectangle", "Background", "Frame", "Padding", "VStack", "HStack", "ZStack", "Grid", "GridRow",
     "ViewThatFits", "LayoutView", "ExpandedFrame", "ScrollView", "Image", "VectorCanvas", "Circle", "Ellipse",
     "RoundedRectangle", "Capsule", "Path", "Divider", "Spacer", "FlexFrame", "EmptyElement", "Form",
+    "AnimatedIcon",
   ]
 
   /// Every one animates: colour and size interpolate, and what the others' relayout moves
@@ -783,6 +896,20 @@ enum ElementCatalog {
       produces: "GlassBackground", setter: nil, combine: .identity,
       argSetters: [ArgSpec(nil, "setMaterial"), ArgSpec("in", "setShape", animatable: true)]
     ),
+    // A tooltip after the pointer rests on the element.
+    "help": ModifierSpec(
+      name: "help", labels: [nil],
+      produces: "HelpElement", setter: "setText", combine: .identity, animatable: true
+    ),
+    // A subtree drawn light or dark, or with a theme of its own, whatever the window's is.
+    "colorScheme": ModifierSpec(
+      name: "colorScheme", labels: [nil],
+      produces: "ThemeScopeElement", setter: "setAppearance", combine: .identity, animatable: true
+    ),
+    "theme": ModifierSpec(
+      name: "theme", labels: [nil],
+      produces: "ThemeScopeElement", setter: "setTheme", combine: .identity, animatable: true
+    ),
     // The closure is copied as written and runs at layout time; nothing in it is bound.
     "alignmentGuide": ModifierSpec(
       name: "alignmentGuide", labels: [nil, "computeValue"],
@@ -850,7 +977,7 @@ enum ElementCatalog {
     // receiver.
     "font": textModifier("font", setter: "setFont"),
     "foregroundColor": textModifier(
-      "foregroundColor", setter: "setForegroundColor", inPlaceOn: textStyled.union(["Image"])
+      "foregroundColor", setter: "setForegroundColor", inPlaceOn: textStyled.union(["Image", "AnimatedIcon"])
     ),
     "foregroundStyle": textModifier(
       "foregroundStyle", setter: "setForegroundColor", inPlaceOn: textStyled.union(["Image"])
@@ -882,6 +1009,19 @@ enum ElementCatalog {
     "leadingIcon": ModifierSpec(
       name: "leadingIcon", labels: [nil], produces: "TextField", setter: nil, combine: .identity,
       inPlaceOn: ["TextField", "SecureField"]
+    ),
+    // An animated glyph's size and pace: set on it in place.
+    "iconSize": ModifierSpec(
+      name: "iconSize", labels: [nil], produces: "AnimatedIcon", setter: "setIconSize", combine: .identity,
+      animatable: true, inPlaceOn: ["AnimatedIcon"]
+    ),
+    "scale": ModifierSpec(
+      name: "scale", labels: [nil], produces: "AnimatedIcon", setter: "setScale", combine: .identity,
+      animatable: true, inPlaceOn: ["AnimatedIcon"]
+    ),
+    "speed": ModifierSpec(
+      name: "speed", labels: [nil], produces: "AnimatedIcon", setter: "setSpeed", combine: .identity,
+      animatable: true, inPlaceOn: ["AnimatedIcon"]
     ),
     // How an image is sized and drawn: constant, built once with it.
     "resizable": ModifierSpec(
@@ -1029,6 +1169,10 @@ enum ElementCatalog {
     // Forms. A tag is what a picker option selects: constant, like an id.
     "tag": ModifierSpec(
       name: "tag", labels: [nil], produces: "UIElement", setter: nil, combine: .identity, inPlaceOnAny: true
+    ),
+    "menuIndicator": ModifierSpec(
+      name: "menuIndicator", labels: [nil],
+      produces: "Picker", setter: "setMenuIndicator", combine: .identity, animatable: true, inPlaceOn: ["Picker"]
     ),
     "pickerStyle": ModifierSpec(
       name: "pickerStyle", labels: [nil],

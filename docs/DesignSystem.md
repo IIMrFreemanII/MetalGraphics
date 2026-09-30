@@ -39,9 +39,16 @@ A `Theme` (`Theme.light`, `Theme.dark`) holds:
 - `palette`: hues for badges and swatches.
 - `materials`: a `GlassMaterial` per `ThemeMaterial` (`popover`, `menu`, `tooltip`, `sheet`,
   `floatingPanel`, `dropMarker`, `bar`).
-- `typography`: SF throughout. largeTitle 26, title 22, title2 17, title3 15, headline 13
-  semibold, body 13, callout 12, subheadline 11, footnote 10, mono 12.5. The same in light and
-  dark, so switching appearance never lays anything out.
+- `typography`: JetBrains Mono throughout, with its ligatures, as the design canvas and the web
+  mirror draw it. largeTitle 26, title 22, title2 17, title3 15, headline 13 semibold, body 13,
+  callout 12, subheadline 11, footnote 10, mono 12.5. The same in light and dark, so switching
+  appearance never lays anything out.
+- **Type.** `.system` fonts and the text styles draw in JetBrains Mono, which the library
+  bundles (`Resources/Fonts`, SIL OFL 1.1) in four weights: regular, medium, semibold and bold;
+  lighter weights draw regular and heavier bold. It keeps SF's line box, its glyphs centred in
+  it as the web's `line-height` places them, so rows, buttons and fields keep their heights;
+  only the widths of text change. `.rounded` and `.serif` stay SF's, and
+  `TextFont.systemFamily = .sanFrancisco`, set before the first window, makes `.system` SF.
 - `spacing` (2 to 32), `radii` (xs 3 badges, sm 5 rows, md 6 buttons and fields, lg 10 cards
   and popovers, xl 12 sheets), `shadows`, `motion`.
 - `editor`: the `EditorTheme` a `TextEditor` shows unless it was given one.
@@ -80,9 +87,19 @@ registers with `UIContext.addThemeObserver` on mount (see `TextEditor`).
 
 **In components.** `@Bindable let themes: ThemeStore = .shared` reads the theme reactively.
 
+**A subtree in another appearance.** `.colorScheme(.dark)` draws an element and everything in it
+with the store's dark theme whatever its window shows; `.theme(_:)` with a theme of its own
+(`ThemeScopeElement`). The render loop carries the nearest scope per drawn element and swaps the
+renderer's theme where one starts or ends, so nothing is rebuilt; popovers shown from inside a
+scope, shadows, text editors and role animations take its theme too. A window without scopes pays
+nothing per frame. What is read from `Theme.current` while building (type, metrics) stays the
+window's, so a scope's theme should share its typography, as light and dark do; a presentation in
+a window of its own does not inherit a scope. The Storybook's side by side is two scopes.
+
 ## Components
 
-The shapes the design canvas draws, in the library:
+The shapes the design canvas draws, in the library. Each has a story in the Storybook
+(`swift run Storybook`, `docs/Storybook.md`), with the same props as its web version:
 
 - **`ListRow`**: every row of a sidebar, tree, outline, problems list, quick open or completion
   list. A fixed height (24 by default), inset 8 from the sides, a rounded `.hover` highlight
@@ -91,6 +108,29 @@ The shapes the design canvas draws, in the library:
 - **`KindBadge("S", color: .hue(.badgeStruct))`**: a symbol's kind, 16 pt, white letter.
 - **`Image(icon: .folder)`**: the design's glyphs (`ThemeIcon`: chevrons, folder, document,
   magnifier, cross, up-down arrows, check), SVGs baked once into the atlas and tinted like text.
+- **`AnimatedIcon(.folder)`**: the 63 animated glyphs (`AnimatedGlyph`) of the Claude Design
+  template "Animated icons": its 56 (chevrons, folder, document, trash, bell, lock, eye,
+  play/pause, sort, splits, sidebars, the Swift and file-type documents, language badges…) and
+  seven in its manner (calendar, clock, color, slider, toggle, code, dock). Each is its own box,
+  the static `ThemeIcon`'s size at `.scale(1)` (`.iconSize(n)` fits the longer side to n). Its
+  host (the nearest `HittableView`: a `ListRow`, a `Button`, any `.onHover`) plays it as the
+  template's host does: a one-shot as the pointer enters, a pose held while it stays, a squash
+  while pressed (a host that takes no press itself, a row tapped on mouse down, still tells its
+  icons the button is down: `HittableView.isPointerDown`). `active: Bool?` holds a state (nil for none: the checkmark drawn, sort
+  unsorted); `loop` repeats a motion; `mount` plays an entrance, `replay` again. Each glyph is
+  its markup and CSS as the template writes them (`AnimatedGlyph+Template.swift`), read by
+  `AnimatedGlyphStyle` and evaluated as a browser would: matching rules, transitions (the
+  template's spring, `spring(210, .38)`, settling in 1.338 s), keyframe animations over them;
+  the same source is exported to `DesignSystemWeb/generated/animated-icons.json`. Shapes are
+  baked once per window and shared; a part moves by its vector item's transform. It draws only
+  while something moves; loops and the spinner step on timed wakes at 30 Hz. Caps and joins are
+  round, as every vector stroke here is; the web draws the template's butt caps and miters. The
+  components draw their glyphs with it: `DisclosureGroup`'s chevron (`.chevronRight` turned),
+  `Picker`'s arrows and checks (and `Menu`'s items'), `Stepper`'s keys (`.stepperMinus`,
+  `.stepperPlus`, active at the end of the range), `TextField.leadingIcon`, `SidebarLink`'s icon,
+  `FindBar`'s and `CalendarView`'s ‹ ›, a menu button's ⌄, a dock tab's document and close cross,
+  and the code editor's fold marks (`AnimatedIcon.draw`, without motion). A `ThemeIcon` maps to
+  the glyph of the same name.
 - **Buttons** fill `.fillHover`/`.hover` while hovered and `.fillPressed` while pressed;
   prominent ones lighten and darken their tint.
 - **Forms** are a column at most 600 wide, centred, of outlined cards; section headers are 12 pt
@@ -99,14 +139,39 @@ The shapes the design canvas draws, in the library:
 - **A text field** can show an icon before its text: `.leadingIcon(.magnifier)`.
 - **A menu picker** ends in an accent tile with up-down arrows.
 - **Dock tabs** come in two styles, `.panel` and `.document` (`docs/Docking.md`, Tabs).
-- **The code editor** of the theme is SF Mono 12.5 on 20 pt lines with a 52 pt gutter
+- **The code editor** of the theme is JetBrains Mono 12.5 on 20 pt lines with a 52 pt gutter
   (`EditorTheme.lineHeight`, `.minGutterWidth`).
+- **`ListRow(label, subtitle:, detail:, status:)`**: a row with its label, a second line in the
+  secondary colour, a detail at the trailing edge and a severity square (`ListRowStatus`); the
+  Problems list's 38 pt rows. `KindBadge.color(forLetter:)` gives a kind's hue.
+- **Editor chrome** (`TextEditor/Chrome/`): `FindBar` (query, count, ‹ ›, `ToggleChip` Aa / Word /
+  .*, replace, Done; controlled like a text field), `CompletionList` (`CompletionItem` rows on
+  menu glass with the selected one's detail), `StatusBar` (24 pt: position, problem, file). The
+  Editor's file tab is built from them.
+- **Surfaces** (`Presentation/`): `Tooltip` (one line, or `multiline` a 420 pt hover card) and
+  `.help(_:)`, which shows one after a 0.6 s rest; `Menu`, `MenuItem`, `MenuSeparator`,
+  `MenuPanel` and `.contextMenu { }` (a right click); `Popover`, `Sheet`, `SheetLayout`, `Alert`
+  (`AlertLayout`) and `ConfirmationDialog` shown in place, on the cards the presentations use
+  (`CardChrome`); `Scrim`.
+- **Pickers**: `ColorWell`, `ColorPickerPanel`, `CalendarView` and `TimePanel`, what a
+  `ColorPicker` and a `DatePicker` open; `Picker.menuIndicator(.hidden)` for a pill.
+- **Navigation**: `Sidebar(title:)`, `SidebarTitle`, `SidebarLink`, `NavigationBar` in place, and
+  `.toolbar(leading:trailing:)` for a page's items in its stack's bar, in the title bar's row
+  when the bar is at the window's top.
+- **Window and docking chrome** (`Docking/DockChrome.swift`): `TrafficLights`, `TitleBar`,
+  `FloatingPanel`, `DropMarkers`, `DropPreview`, `DockTab`, `DockTabBar`, `DockGap`, drawn by the
+  pieces a `DockArea` uses.
+- **Lists**: `InsertionLine` (a reorder's 2 pt capsule), `ScrollIndicator`.
+- **Debug**: `.layoutOutline()` frames everything laid out; `ElementInspector.snapshot(of:)` lists
+  a tree's elements with their frames.
 
 ## Building new UI
 
 Start from the canvas board it belongs on and the components above; `.claude/skills/design-system/SKILL.md`
-is the checklist. Colours are roles or palette hues, never written out: `DesignLintTests` reads
-`Sources/MetalGraphicsLib/RetainedModeUI`, `Sources/Editor` and `Sources/Demo` and fails on an RGB
+is the checklist. Reuse a library component before writing one; a shape the design system has
+and the library lacks goes into the library, with a story in the Storybook. Colours are roles or
+palette hues, never written out: `DesignLintTests` reads `Sources/MetalGraphicsLib/RetainedModeUI`,
+`Sources/Editor`, `Sources/Storybook` and `Sources/Demo` and fails on an RGB
 or hex literal, or on `.white`/`.black`/`.red`… passed as a colour in the library or the Editor.
 The token files (`Theme/`, `EditorTheme.swift`) are exempt, and a deliberate exception keeps its
 literal with `// design: <reason>` on the same line (the traffic lights in `DockViews.swift`, a
@@ -171,8 +236,14 @@ Goldens are recorded in light. When a token changes, re-record with
 `TranslucencyTests` and `GlassDamageTests` cover the theme, the transparent output, the rim and
 fallback, and the backdrop cache; `AppearanceE2ETests` the switch across the app's windows;
 `TitleBarTests` the title bar's row, `ListRow` and the form's column; `DockTabStyleTests` the
-two tab styles, the close button on hover and a tab's decorations; `DesignLintTests` that no
-colour is written out.
+two tab styles, the close button on hover and a tab's decorations; `ThemeScopeTests` a subtree in
+another appearance; `DesignComponentsTests`, `MenuAndSurfaceTests` and `DockChromeTests` the
+components shown in place; `DesignLintTests` that no colour is written out. The Storybook's
+`ComponentGoldenTests` keep a golden of every component, light and dark, and `ParityTests` check
+that every web component has a Swift story. `AnimatedIconTests` cover the animated glyphs: every one at rest
+and held active, the spring against the template's samples, hover, press, the three states,
+draw-on and off, entrances, loops and the spinner on wakes, the eye following the pointer and
+the play/pause morph.
 
 ## On the web (claude.ai/design)
 
@@ -189,6 +260,7 @@ project with `/design-sync`.
   chrome (`MG.Window`, `MG.TrafficLights`), docking (`MG.FloatingPanel`, `MG.DropMarkers`) and the Editor's pieces
   (`MG.CodeEditor`, `MG.FindBar`, `MG.CompletionList`, `MG.StatusBar`). After changing a component here, change its
   web version too.
-- **Type:** the web draws JetBrains Mono; the app keeps SF.
+- **Type:** both draw JetBrains Mono, with its ligatures; the app keeps SF's line heights, as the
+  web's `line-height` does.
 
 See `DesignSystemWeb/README.md`.

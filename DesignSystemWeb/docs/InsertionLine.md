@@ -6,7 +6,7 @@ category: Lists
 
 Where a dragged row would drop: a 2pt accent line across the list.
 
-Mirrors `ReorderIndicator (Interaction/DragAndDrop.swift)` in MetalGraphics.
+Mirrors `InsertionLine (Layout/InsertionLine.swift)` in MetalGraphics.
 
 ## Props
 

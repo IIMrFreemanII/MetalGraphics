@@ -238,12 +238,25 @@ Nine glyphs, drawn in the current text colour: chevronRight, chevronDown, chevro
 folder, document, magnifier, xmark (\`MG.Icon\`). Folders take \`mg-hue-folder\`; symbols in lists take a
 \`MG.KindBadge\` letter tile on a badge hue.
 
+Sixty-three animated glyphs (\`MG.AnimatedIcon glyph="…"\`), as the Claude Design template "Animated icons" draws
+them: each in its own box, the static icon's size at \`scale={1}\`, on one spring. Chevrons, upDown, checkmark,
+folder, document, magnifier, xmark, plus, trash, gear, searchClear, spinner, copyCheck, bell, lock, eye, playPause,
+refresh, menuX, warning, error, note, pin, sort, stepperMinus and stepperPlus, the four splits, sidebarLeft and
+sidebarRight; documents with their type (swift, fileImage … fileFont) and a language's badge (langJS … langShell);
+and calendar, clock, color, slider, toggle, code, dock. The pointer on the row, button or link it sits in plays it: a
+one-shot as it enters, a pose held while it stays, a squash while pressed. \`active\` holds a state (a chevron
+turned, a folder open, a lock undone, a bell badged); \`loop\` repeats a motion; \`mount\` plays an entrance. The
+components draw their glyphs with them: a disclosure's chevron, a pop-up's arrows, a check, a stepper's keys, a
+field's magnifier, a tab's document and close cross, a find bar's and a calendar's ‹ ›, an editor's fold marks. Put
+them where a glyph should answer the pointer: a tree's chevron and folders (\`active={open}\`, \`color="folder"\`),
+toolbar buttons at \`scale={1.15}\`, a problem's error or warning (\`mount\`).
+
 ## Not synced
 
 - Motion (hover 120ms, interaction 180ms, dock 160ms, navigation 300ms, a spring for presentation) lives in the
   bundle's stylesheet as \`--mg-motion-*\`; this format has no motion family.
 - Glass grain (the app's \`noise\`) has no CSS equivalent.
-- The Swift app draws SF; this system uses JetBrains Mono, which ships with it.
+- The Swift app draws JetBrains Mono too, bundled with its library, in SF's line heights.
 `
 );
 
@@ -307,7 +320,7 @@ write(
       assetGroups: {},
       blobs: {},
       docs: { readme: "project/README.md", sections: [] },
-      lastChange: { by: "Mykola", at: new Date().toISOString(), via: "Claude Code", note: "53 components: editor, window chrome, docking, colour and date pickers added." },
+      lastChange: { by: "Mykola", at: new Date().toISOString(), via: "Claude Code", note: "AnimatedIcon is the Animated icons template's: 63 glyphs on its spring, with press, state, loop and entrance." },
     },
     null,
     2

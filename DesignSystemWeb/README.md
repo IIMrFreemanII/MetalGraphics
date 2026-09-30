@@ -16,9 +16,9 @@ It goes one way. `Theme+Presets.swift` and the Swift components are the source; 
 
 | Path | What |
 |---|---|
-| `generated/` | `tokens.json`, `tokens.css`, `icons.json`. Written by `DesignTokenExportTests` from the Swift theme, including the code editor's `EditorTheme` (`--mg-editor-*`, `--mg-syntax-*`). Checked in; do not edit. |
+| `generated/` | `tokens.json`, `tokens.css`, `icons.json`, `animated-icons.json`. Written by `DesignTokenExportTests` from the Swift theme, including the code editor's `EditorTheme` (`--mg-editor-*`, `--mg-syntax-*`), the `ThemeIcon` glyphs and the `AnimatedGlyph` specs. Checked in; do not edit. |
 | `src/styles.css` | The components' CSS. It uses `var(--mg-*)` only, never a colour written out, and each block names the Swift it mirrors. |
-| `src/components/*.tsx` | The 53 components, exported from `src/index.ts`: foundations, controls (with the colour and date pickers), lists, forms, surfaces, navigation, docking, window chrome, and the editor's pieces (`CodeEditor`, `FindBar`, `CompletionList`, `StatusBar`). |
+| `src/components/*.tsx` | The 54 components, exported from `src/index.ts`: foundations (with `AnimatedIcon`, which draws `generated/animated-icons.json`), controls (with the colour and date pickers), lists, forms, surfaces, navigation, docking, window chrome, and the editor's pieces (`CodeEditor`, `FindBar`, `CompletionList`, `StatusBar`). |
 | `meta.mjs` | Each component's summary, props, Swift counterpart and JSX example. Becomes `docs/<Name>.md`, which the sync turns into the design agent's `<Name>.prompt.md`. |
 | `build.mjs` | `npm run build` writes: `dist/index.js` (the ES module), `dist/types/` (declarations), `dist/styles.css` (tokens then components) and `docs/`. |
 | `artifact.mjs` | `node artifact.mjs` repackages the design-sync build (`ds-bundle/`) as the Design System artifact's files in `ds-artifact/project/`, including list-shaped tokens, previews and a cover. Publish them to the artifact with `design-system.json` last. |
@@ -46,10 +46,12 @@ Then run `/design-sync` from `DesignSystemWeb`. A re-sync re-verifies only the c
 
 ## Differences from the app
 
-- **Type:** JetBrains Mono, with its ligatures, for all text (the user's choice for designs). The app draws SF,
-  which Apple's license doesn't allow shipping.
+- **Type:** JetBrains Mono, with its ligatures, for all text, as the app draws it (the library bundles it). The app
+  keeps SF's line heights; the web pins `line-height` on controls to the same.
 - **Glass:** `backdrop-filter`, with no grain (`noise`). It falls back to the role's `fallback` colour where backdrop
   filters are missing.
 - **Shadows:** a Swift shadow's radius is the Gaussian's standard deviation, so a CSS blur is twice it.
 - **`KindBadge`:** radius 4, as `ListRow.swift` draws it, not the `xs` radius of 3 that the docs give badges.
+- **`AnimatedIcon`:** the web runs the template's CSS as it is, with its butt caps and miter joins; the app's vector
+  strokes are always round, and its loops (the spinner, a looping gear) step at 30 frames a second.
 - **The `presentation` spring:** sampled into a CSS `linear()` easing that lasts until it settles, 650 ms.

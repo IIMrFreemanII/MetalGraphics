@@ -6,7 +6,7 @@ category: Docking
 
 One tab pill. Normally rendered by DockTabBar.
 
-Mirrors `DockTabItem` in MetalGraphics.
+Mirrors `DockTab (Docking/DockChrome.swift)` in MetalGraphics.
 
 ## Props
 

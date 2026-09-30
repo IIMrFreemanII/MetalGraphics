@@ -6,7 +6,7 @@ category: Surfaces
 
 An item in a Menu.
 
-Mirrors `Menu item (Picker.swift)` in MetalGraphics.
+Mirrors `MenuItem (Presentation/Menu.swift)` in MetalGraphics.
 
 ## Props
 

@@ -6,7 +6,7 @@ category: Surfaces
 
 An alert: a 260-wide sheet with a centred title, a message and full-width buttons. Actions carry a role (cancel, destructive); the first without one is the default, prominent. More than two stack.
 
-Mirrors `.alert, .confirmationDialog` in MetalGraphics.
+Mirrors `Alert in place (AlertLayout), .alert to present (Presentation/Surfaces.swift)` in MetalGraphics.
 
 ## Props
 

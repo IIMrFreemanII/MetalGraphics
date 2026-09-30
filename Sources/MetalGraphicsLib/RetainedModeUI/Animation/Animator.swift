@@ -120,11 +120,11 @@ public final class Animator {
   ) {
     var target = value.packed
     var from = current.packed
-    // A theme role (`float4.role`) animates through the colours it is in this window's theme,
-    // and lands on the role itself, so it follows the next appearance change.
+    // A theme role (`float4.role`) animates through the colours it is in the theme the element
+    // draws with, and lands on the role itself, so it follows the next appearance change.
     var role: SIMD4<Float>? = nil
     if property == .color, target.w < 0 || from.w < 0 {
-      let theme = Theme.current
+      let theme = context.theme(for: element)
       if target.w < 0 {
         role = target
         target = theme.resolve(target)

@@ -6,7 +6,7 @@ category: Editor
 
 A small on/off chip, 11.5 semibold on radius 5; on shows the selection behind the accent.
 
-Mirrors `the find bar's option buttons (Editor/FileEditorPanel.swift)` in MetalGraphics.
+Mirrors `ToggleChip (Form/ToggleChip.swift)` in MetalGraphics.
 
 ## Props
 

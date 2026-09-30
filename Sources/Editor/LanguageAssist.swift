@@ -4,17 +4,6 @@ import MetalGraphicsLib
 import ReactiveUI
 import simd
 
-/// One line of a completion list.
-struct CompletionRow : Identifiable {
-  let id: String
-  let label: String
-  let detail: String
-  let badge: String
-  let isSelected: Bool
-  /// Its place in the filtered list: what a click accepts.
-  let index: Int
-}
-
 /// Completion, hover and definitions for a Swift file's tab: what the language server answers,
 /// turned into what the tab shows, which it is handed through `onCompletion` and `onHover`.
 /// Lives on the tab's window thread; answers arrive on the server's queue and are posted here.
@@ -39,7 +28,7 @@ final class LanguageAssist {
   private var path: String { self.language.path }
 
   /// What the list should show, and where, in the editor's coordinates; nil hides it.
-  var onCompletion: (([CompletionRow], Inset)?) -> Void = { _ in }
+  var onCompletion: (([CompletionItem], Inset)?) -> Void = { _ in }
   /// What a tooltip should say, and where; nil hides it.
   var onHover: ((String, Inset)?) -> Void = { _ in }
 
@@ -210,7 +199,7 @@ final class LanguageAssist {
     let end = min(start + Self.visibleRows, self.filtered.count)
     let rows = (start ..< end).map { index in
       let item = self.filtered[index]
-      return CompletionRow(
+      return CompletionItem(
         id: "\(item.index)\(index == self.selected ? "*" : "")", label: item.label, detail: item.detail ?? "",
         badge: Self.badge(item.kind), isSelected: index == self.selected, index: index
       )
@@ -305,53 +294,4 @@ final class LanguageAssist {
 private final class WeakAssist: @unchecked Sendable {
   weak var assist: LanguageAssist?
   init(_ assist: LanguageAssist) { self.assist = assist }
-}
-
-/// A line of the completion list: what kind of thing, its name, and its type.
-@Component
-final class CompletionRowView : SingleChildElement {
-  private static let font = TextFont.system(size: 12.5, design: .monospaced)
-  private static let detailFont = TextFont.system(size: 11.5)
-  private static let detailColor: float4 = .secondaryLabel
-  private static let selectedDetailColor: float4 = .role(.accentForeground, alpha: 0.85)
-
-  let row: CompletionRow
-  let onPick: (Int) -> Void
-
-  init(row: CompletionRow, onPick: @escaping (Int) -> Void) {
-    self.row = row
-    self.onPick = onPick
-    super.init()
-  }
-
-  /// A badge letter's colour, from the theme's palette.
-  static func badgeColor(_ letter: String) -> float4 {
-    switch letter {
-    case "M": .hue(.badgeMethod)
-    case "P": .hue(.badgeProperty)
-    case "V": .hue(.badgeVariable)
-    case "C": .hue(.badgeClass)
-    case "S": .hue(.badgeStruct)
-    case "E", "c": .hue(.badgeEnum)
-    case "Pr": .hue(.indigo)
-    default: .hue(.gray)
-    }
-  }
-
-  @UIElementBuilder var body: [UIElement] {
-    ListRow(
-      selected: self.row.isSelected, selectionStyle: .prominent, height: LanguageAssist.rowHeight, margin: 0, spacing: 8,
-      action: { self.onPick(self.row.index) }
-    ) {
-      KindBadge(self.row.badge, color: Self.badgeColor(self.row.badge))
-      Text(self.row.label)
-        .font(Self.font)
-        .lineLimit(1)
-      Spacer()
-      Text(self.row.detail)
-        .font(Self.detailFont)
-        .foregroundColor(self.row.isSelected ? Self.selectedDetailColor : Self.detailColor)
-        .lineLimit(1)
-    }
-  }
 }

@@ -6,7 +6,7 @@ category: Controls
 
 What a compact date picker's time pill opens: hour and minute steppers, 180 wide.
 
-Mirrors `DatePicker.openTime() (Form/DatePicker.swift)` in MetalGraphics.
+Mirrors `TimePanel (Form/DatePicker.swift)` in MetalGraphics.
 
 ## Props
 

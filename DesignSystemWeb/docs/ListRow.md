@@ -6,7 +6,7 @@ category: Lists
 
 A 24-tall row for lists, outlines and navigators. The highlight is inset 8 and the content 8 inside it. Hover uses `hover`; selected uses `selection` and a medium label, or with `prominent` the accent. Children go before the label: a KindBadge or an Icon.
 
-Mirrors `ListRow (Layout/ListRow.swift)` in MetalGraphics.
+Mirrors `ListRow(label, subtitle:, detail:, status:) (Layout/ListRow.swift)` in MetalGraphics.
 
 ## Props
 

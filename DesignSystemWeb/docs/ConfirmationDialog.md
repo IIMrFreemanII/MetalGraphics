@@ -6,7 +6,7 @@ category: Surfaces
 
 An alert whose actions always stack, with Cancel added when none is given; the title can be hidden.
 
-Mirrors `.confirmationDialog (PresentationContent.swift)` in MetalGraphics.
+Mirrors `ConfirmationDialog in place, .confirmationDialog to present (Presentation/Surfaces.swift)` in MetalGraphics.
 
 ## Props
 

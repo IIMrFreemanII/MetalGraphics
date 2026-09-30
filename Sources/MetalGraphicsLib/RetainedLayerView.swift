@@ -328,6 +328,52 @@ public final class RetainedLayerView: NSView {
     )
   }
 
+  // MARK: - Title bar presses
+
+  /// Watches presses in the window, for `titleBarPress(_:)`.
+  private var titleBarMonitor: Any?
+  /// A press in the title bar's strip went to the tree: its drags and its release follow it.
+  private var tracksTitleBarPress = false
+
+  /// In a translucent window AppKit's title bar lies over the top of the content and takes the
+  /// presses there, as a drag of the window. The tree draws its own bar in that row — tabs, a
+  /// toolbar — so its presses are handed to it here, away from the traffic lights; the parts the
+  /// tree says are empty still drag the window (`pressTitleBar`).
+  private func claimTitleBarPresses() {
+    self.titleBarMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp]) {
+      [weak self] event in
+      // Monitors run on the main thread, with the event.
+      nonisolated(unsafe) let pressed = event
+      let taken = MainActor.assumeIsolated { self?.takesTitleBarPress(pressed) ?? false }
+      return taken ? nil : event
+    }
+  }
+
+  /// Whether this view took `event`.
+  private func takesTitleBarPress(_ event: NSEvent) -> Bool {
+    guard event.window === self.window, self.window != nil else { return false }
+    switch event.type {
+    case .leftMouseDown:
+      let point = self.convert(event.locationInWindow, from: nil)
+      let strip = self.sentTitleBar
+      guard strip.top > 0, self.bounds.contains(point), point.y < CGFloat(strip.top), point.x >= CGFloat(strip.leading) else {
+        return false
+      }
+      self.tracksTitleBarPress = true
+      self.mouseDown(with: event)
+      return true
+    case .leftMouseDragged where self.tracksTitleBarPress:
+      self.mouseDragged(with: event)
+      return true
+    case .leftMouseUp where self.tracksTitleBarPress:
+      self.tracksTitleBarPress = false
+      self.mouseUp(with: event)
+      return true
+    default:
+      return false
+    }
+  }
+
   // MARK: - Window status
 
   private var windowObservers: [NSObjectProtocol] = []
@@ -338,9 +384,14 @@ public final class RetainedLayerView: NSView {
       NotificationCenter.default.removeObserver(observer)
     }
     self.windowObservers.removeAll()
+    if let monitor = self.titleBarMonitor {
+      NSEvent.removeMonitor(monitor)
+      self.titleBarMonitor = nil
+    }
     guard let window = self.window else { return }
     if self.chrome == .translucent {
       self.makeTranslucent(window)
+      self.claimTitleBarPresses()
     }
 
     let center = NotificationCenter.default

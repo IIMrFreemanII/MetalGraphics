@@ -6,7 +6,7 @@ category: Controls
 
 A pop-up button with the accent up-down tile, a segmented control, or inline rows with a check.
 
-Mirrors `Picker with .pickerStyle(.menu / .segmented / .inline)` in MetalGraphics.
+Mirrors `Picker with .pickerStyle(.menu / .segmented / .inline), .menuIndicator(.hidden)` in MetalGraphics.
 
 ## Props
 

@@ -50,7 +50,7 @@ final class ConsolePanel : SingleChildElement {
         // The product Run starts; a click picks the next.
         Button { BuildController.shared.selectNextProduct() } label: {
           Text(self.product.isEmpty ? "No Product" : self.product)
-          Image(icon: .upDown)
+          AnimatedIcon(.upDown)
             .foregroundColor(Self.productColor)
         }
         .buttonStyle(.bordered)
@@ -234,14 +234,6 @@ final class ProblemsPanel : SingleChildElement {
 
 @Component
 final class ProblemRow : SingleChildElement {
-  private static let messageFont = TextFont.system(size: 13)
-  private static let locationFont = TextFont.system(size: 11)
-  private static let locationColor: float4 = .secondaryLabel
-  private static let errorColor: float4 = .destructive
-  private static let warningColor: float4 = .warning
-  private static let noteColor: float4 = .info
-  private static let markShape = UIShape.rect(cornerRadius: 2)
-
   let item: ProblemItem
 
   init(item: ProblemItem) {
@@ -250,27 +242,22 @@ final class ProblemRow : SingleChildElement {
   }
 
   @UIElementBuilder var body: [UIElement] {
-    ListRow(height: 38, spacing: 10, action: {
-      let diagnostic = self.item.diagnostic
-      IDE.openFile(diagnostic.path, line: diagnostic.line, column: diagnostic.column)
-    }) {
-      Rectangle(.clear)
-        .frame(width: 8, height: 8)
-        .background(
-          self.item.diagnostic.severity == .error ? Self.errorColor
-            : (self.item.diagnostic.severity == .warning ? Self.warningColor : Self.noteColor),
-          in: Self.markShape
-        )
-      VStack(alignment: .leading, spacing: 1) {
-        Text(self.item.diagnostic.message)
-          .font(Self.messageFont)
-          .lineLimit(1)
-        Text(self.item.location)
-          .font(Self.locationFont)
-          .foregroundColor(Self.locationColor)
-          .lineLimit(1)
+    ListRow(
+      self.item.diagnostic.message, subtitle: self.item.location, status: ProblemRow.status(self.item.diagnostic.severity),
+      height: ListRowMetrics.twoLineHeight, spacing: 10,
+      action: {
+        let diagnostic = self.item.diagnostic
+        IDE.openFile(diagnostic.path, line: diagnostic.line, column: diagnostic.column)
       }
-      Spacer()
+    )
+  }
+
+  /// A diagnostic's severity as a row's status square.
+  static func status(_ severity: CompilerDiagnostic.Severity) -> ListRowStatus {
+    switch severity {
+    case .error: .error
+    case .warning: .warning
+    default: .note
     }
   }
 }

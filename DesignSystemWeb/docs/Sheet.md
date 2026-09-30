@@ -6,7 +6,7 @@ category: Surfaces
 
 Sheet glass, radius 12, with the sheet shadow, a headline title, content and trailing actions.
 
-Mirrors `.sheet (Presentation/ModalLayer.swift)` in MetalGraphics.
+Mirrors `Sheet in place, SheetLayout inside .sheet (Presentation/Surfaces.swift)` in MetalGraphics.
 
 ## Props
 

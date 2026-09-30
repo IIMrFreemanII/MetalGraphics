@@ -38,7 +38,7 @@ public final class ScrollView : SingleChildElement {
   }
 
   // Visited after the content, so it is drawn on top of it.
-  private lazy var indicator = ScrollIndicator(self)
+  private lazy var indicator = ScrollViewIndicator(self)
 
   public init(
     _ axes: Axis = .vertical, showsIndicators: Bool = true,
@@ -265,14 +265,14 @@ public final class ScrollView : SingleChildElement {
 // MARK: - Indicators
 
 /// A scroll view's scroll bars. Drawn over its content, inside its clip.
-final class ScrollIndicator : UIRenderableElement {
+final class ScrollViewIndicator : UIRenderableElement {
   private unowned let scrollView: ScrollView
   private var opacity: Float = 0
 
-  private static let thickness: Float = 5
-  private static let inset: Float = 2
+  static let thickness: Float = 5
+  static let inset: Float = 2
   private static let minLength: Float = 20
-  private static let color: float4 = .scrollIndicator
+  static let color: float4 = .scrollIndicator
 
   init(_ scrollView: ScrollView) {
     self.scrollView = scrollView
@@ -295,14 +295,14 @@ final class ScrollIndicator : UIRenderableElement {
   func flash(_ context: UIContext) {
     guard self.visibility == .automatic else { return }
     context.animator.set(self, .opacity, from: self.opacity, to: 1, nil, context) { element, value, context in
-      unsafeDowncast(element, to: ScrollIndicator.self).opacity = value.x
+      unsafeDowncast(element, to: ScrollViewIndicator.self).opacity = value.x
       context.invalidate()
     }
     context.animator.run(
       self, .opacity, from: SIMD4(1, 0, 0, 0), to: .zero, UIAnimation.easeOut(0.3).delay(0.8), context,
       restart: true, group: nil,
       apply: { element, value, context in
-        unsafeDowncast(element, to: ScrollIndicator.self).opacity = value.x
+        unsafeDowncast(element, to: ScrollViewIndicator.self).opacity = value.x
         context.invalidate()
       },
       completion: nil

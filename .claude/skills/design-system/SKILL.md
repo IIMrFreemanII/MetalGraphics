@@ -20,7 +20,7 @@ reference is the design canvas **"MetalGraphics Frosted Glass"**
 
   | You need | Use |
   |---|---|
-  | a row in a sidebar, tree, outline, list, results, completion | `ListRow` (`Layout/ListRow.swift`); `.prominent` for a menu-like list |
+  | a row in a sidebar, tree, outline, list, results, completion | `ListRow` (`Layout/ListRow.swift`); `.prominent` for a menu-like list; `ListRow(label, subtitle:, detail:, status:)` for a problem or a two-line row |
   | a symbol kind's letter tile | `KindBadge("S", color: .hue(.badgeStruct))` |
   | a small glyph (chevron, folder, document, magnifier, cross, check) | `Image(icon:)` with a `ThemeIcon`; add a case there for a new one |
   | a button | `Button` with `.buttonStyle(.bordered / .borderedProminent / .borderless / .plain)`, never a tappable `Rectangle` |
@@ -28,11 +28,22 @@ reference is the design canvas **"MetalGraphics Frosted Glass"**
   | settings, a form | `Form` / `Section`: the 600 pt column, outlined cards, 240 pt fields |
   | a sidebar and a detail | `NavigationSplitView`; a page's background with `.navigationBackground(_:)` |
   | tabs of panels or documents | a `DockArea` with `DockPanelKind(..., tabStyle: .panel / .document)`; `setEdited`, `setBadge`, `setIcon` |
-  | a popover, menu, tooltip, sheet, floating surface | `.glass(.popover / .menu / .tooltip / .sheet / .floatingPanel, in:)` |
+  | a menu, a context menu | `Menu`, `MenuItem`, `MenuSeparator`; `.contextMenu { }`; `MenuPanel` in place |
+  | a tooltip, a hover card | `.help(_:)`; `Tooltip(text, multiline:)` |
+  | a sheet's, an alert's, a popover's card | `.sheet` with `SheetLayout`, `.alert`, `.confirmationDialog`, `.popover`; `Sheet`, `Alert`, `Popover` in place |
+  | an on/off chip, a find bar, completion, a status line | `ToggleChip`, `FindBar`, `CompletionList`, `StatusBar` (`TextEditor/Chrome/`) |
+  | a sidebar's title or link, a bar's items | `SidebarTitle`, `SidebarLink`, `Sidebar(title:)`; `.toolbar(leading:trailing:)` on a stack's page |
+  | window or dock chrome | `TrafficLights`, `TitleBar`, `FloatingPanel`, `DropMarkers`, `DockTabBar` (`Docking/DockChrome.swift`) |
+  | a colour or a date panel | `ColorWell`, `ColorPickerPanel`, `CalendarView`, `TimePanel` |
+  | a subtree in the other appearance | `.colorScheme(.dark)`, `.theme(_:)` |
+  | any other floating surface | `.glass(.popover / .menu / .tooltip / .sheet / .floatingPanel, in:)` |
   | code or styled text | `TextEditor`; its look is `Theme.editor` |
 
-- A new shared shape goes into the library (`RetainedModeUI/`), not copied into each app, and
-  gets a line in `docs/DesignSystem.md` ▸ Components.
+- Every component has a story in the Storybook (`swift run Storybook`): look there first.
+- A new shared shape goes into the library (`RetainedModeUI/`), public, with the props of its web
+  version (`DesignSystemWeb/meta.mjs`), not copied into each app. It gets a line in
+  `docs/DesignSystem.md` ▸ Components, a `TypeSpec` in `ElementCatalog.swift` so a
+  `@Component` body can hold it, and a story (`docs/Storybook.md`).
 
 ## 2. Tokens only
 
@@ -52,7 +63,8 @@ reference is the design canvas **"MetalGraphics Frosted Glass"**
   (`Theme+Presets.swift`), and a line in `docs/DesignSystem.md` ▸ Tokens. Take the value from the
   canvas's token objects, and add it there too if it is new.
 - **Type** from `theme.typography` (`body` 13, `callout` 12, `subheadline` 11, `headline` 13
-  semibold, `mono` 12.5…), **radii** from `theme.radii` (xs 3 badges, sm 5, md 6 rows, buttons,
+  semibold, `mono` 12.5…), all JetBrains Mono: `.system` draws the bundled face, so never
+  `.custom` a family for UI text (docs/DesignSystem.md ▸ Type). **Radii** from `theme.radii` (xs 3 badges, sm 5, md 6 rows, buttons,
   fields, lg 10 cards and popovers, xl 12 sheets), **spacing** from `theme.spacing`,
   **shadows** from `theme.shadows`, **motion** from `theme.motion` (hover 0.12 s ease-out).
   Build-time code reads `Theme.current`, and only for what is the same in light and dark;

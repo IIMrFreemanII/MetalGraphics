@@ -119,7 +119,8 @@ final class EditorLayout: TextLayoutQueries {
   private func measureBaseFont() {
     let face = FontManager.shared.face(for: self.baseFont)
     let font = face.font
-    let natural = Float(CTFontGetAscent(font) + CTFontGetDescent(font) + CTFontGetLeading(font))
+    // The face's line box, which its lines are laid out in (`ResolvedFace.metrics`).
+    let natural = face.metrics.height
     self.lineSpacing = self.theme.lineHeight.map { max($0 - natural, 0) } ?? self.theme.lineSpacing
     self.rowHeight = natural + self.lineSpacing
     var glyph = CGGlyph(0)

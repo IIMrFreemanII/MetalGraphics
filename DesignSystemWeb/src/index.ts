@@ -1,6 +1,8 @@
 // The package entry: /design-sync bundles these as `window.MG`.
 
 export { MGRoot, Glass, Icon, Divider, ScrollIndicator } from "./components/foundation";
+export { AnimatedIcon, animatedGlyphs, glyphMeta, animatedIconSnippet, animatedIconRootVars } from "./components/motion";
+export type { AnimatedGlyphName, AnimatedIconTrigger } from "./components/motion";
 export { Button, Toggle, TextField, Picker, Slider, ProgressView, Stepper, DisclosureGroup, LabeledContent } from "./components/controls";
 export { ListRow, KindBadge, Table, InsertionLine } from "./components/lists";
 export {

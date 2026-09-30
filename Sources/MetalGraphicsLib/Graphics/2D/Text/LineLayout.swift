@@ -203,7 +203,7 @@ func shapeLine(
   let maxWidth = wrapWidth.map { max($0, 1) } ?? Float(1e7)
   let shaper = ParagraphShaper(
     runs: inputs, faces: faces, string: string, maxSize: float2(maxWidth, .greatestFiniteMagnitude), scale: 1,
-    base: baseFace.font
+    base: baseFace
   )
   let half = lineSpacing * 0.5
   var layout = TextLayout()

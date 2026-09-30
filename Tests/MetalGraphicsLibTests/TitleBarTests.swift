@@ -28,13 +28,13 @@ final class TitleBarTests: XCTestCase {
     let h = self.split(link)
     h.settle()
     XCTAssertEqual(link.face.position.y, NavigationMetrics.sidebarVerticalInset)
-    XCTAssertEqual(h.first(NavigationBar.self)?.size.y, NavigationMetrics.barHeight)
+    XCTAssertEqual(h.first(StackNavigationBar.self)?.size.y, NavigationMetrics.barHeight)
     XCTAssertTrue(h.context.titleBarDragRegions.isEmpty)
 
     h.context.setTitleBar(.standard)
     h.settle()
     XCTAssertEqual(link.face.position.y, TitleBarInsets.unifiedBarHeight)
-    XCTAssertEqual(h.first(NavigationBar.self)?.size.y, TitleBarInsets.unifiedBarHeight)
+    XCTAssertEqual(h.first(StackNavigationBar.self)?.size.y, TitleBarInsets.unifiedBarHeight)
     let regions = h.context.titleBarDragRegions
     XCTAssertTrue(self.contains(regions, float2(40, 20)), "the traffic lights' strip of the sidebar")
     XCTAssertTrue(self.contains(regions, float2(400, 20)), "the bar")
@@ -192,7 +192,8 @@ final class DockTabStyleTests: XCTestCase {
 
   func testATabShowsItsIconEditedDotAndBadge() {
     let space = self.makeSpace()
-    let h = UIHarness(size: float2(600, 300)) { DockArea(space, host: "main") }
+    // Wide enough that no tab is squeezed, with the dot or without.
+    let h = UIHarness(size: float2(900, 300)) { DockArea(space, host: "main") }
     h.settle()
     let width = self.tab("main", h).size.x
     space.decorate(panel: "main") { $0.isEdited = true }

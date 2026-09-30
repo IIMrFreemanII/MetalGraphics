@@ -16,20 +16,6 @@ import SwiftCodeModel
 /// its undo history does not.
 @Component
 final class FileEditorPanel : SingleChildElement {
-  private static let statusFont = TextFont.system(size: 11)
-  private static let statusColor: float4 = .secondaryLabel
-  private static let errorColor: float4 = .destructive
-  private static let barColor: float4 = .barOverContent
-  private static let popupShape = UIShape.rect(cornerRadius: 10)
-  private static let tooltipShape = UIShape.rect(cornerRadius: 8)
-  private static let tooltipFont = TextFont.system(size: 12)
-  private static let findFont = TextFont.system(size: 12)
-  private static let toggleFont = TextFont.system(size: 11.5, weight: .semibold)
-  private static let toggleShape = UIShape.rect(cornerRadius: 5)
-  private static let toggleOn: float4 = .selection
-  private static let toggleOff: float4 = .clear
-  private static let detailFont = TextFont.system(size: 11)
-  private static let completionWidth: Float = 420
 
   let panel: DockPanel
   let file: FileBinding
@@ -61,7 +47,7 @@ final class FileEditorPanel : SingleChildElement {
   @State var foldable: [Range<Int>] = []
   // The completion list and the hover's tooltip, over the text.
   @State var completing: Bool = false
-  @State var completionRows: [CompletionRow] = []
+  @State var completionRows: [CompletionItem] = []
   @State var completionInset: Inset = Inset()
   /// The selected completion's detail, under the list.
   @State var completionDetail: String = ""
@@ -139,61 +125,15 @@ final class FileEditorPanel : SingleChildElement {
   @UIElementBuilder var body: [UIElement] {
     VStack(alignment: .leading, spacing: 0) {
       if self.finding {
-        HStack(spacing: 8) {
-          TextField("", text: $query, prompt: "Find")
-            .leadingIcon(.magnifier)
-            .focused(self.findFocused)
-            .onSubmit { self.controller.findNext() }
-            .frame(width: 220)
-          Text(self.matches)
-            .font(Self.detailFont)
-            .foregroundColor(Self.statusColor)
-            .lineLimit(1)
-            .frame(width: 72, alignment: .leading)
-          Button { self.controller.findNext(forward: false) } label: {
-            Image(icon: .chevronLeft)
-          }
-          .buttonStyle(.bordered)
-          Button { self.controller.findNext() } label: {
-            Image(icon: .chevronRight)
-          }
-          .buttonStyle(.bordered)
-          Button("Aa") { self.caseSensitive.toggle() }
-            .buttonStyle(self.caseSensitive ? .borderless : .plain)
-            .font(Self.toggleFont)
-            .padding(Inset(vertical: 3, horizontal: 8))
-            .background(self.caseSensitive ? Self.toggleOn : Self.toggleOff, in: Self.toggleShape)
-          Button("Word") { self.wholeWord.toggle() }
-            .buttonStyle(self.wholeWord ? .borderless : .plain)
-            .font(Self.toggleFont)
-            .padding(Inset(vertical: 3, horizontal: 8))
-            .background(self.wholeWord ? Self.toggleOn : Self.toggleOff, in: Self.toggleShape)
-          Button(".*") { self.regex.toggle() }
-            .buttonStyle(self.regex ? .borderless : .plain)
-            .font(Self.toggleFont)
-            .padding(Inset(vertical: 3, horizontal: 8))
-            .background(self.regex ? Self.toggleOn : Self.toggleOff, in: Self.toggleShape)
-          Rectangle(.separator)
-            .frame(width: 0.5, height: 18)
-          TextField("", text: $replacement, prompt: "Replace")
-            .onSubmit { self.controller.replaceCurrent(with: self.replacement) }
-            .frame(width: 160)
-          Button("Replace") { self.controller.replaceCurrent(with: self.replacement) }
-            .buttonStyle(.bordered)
-          Button("All") { self.controller.replaceAll(with: self.replacement) }
-            .buttonStyle(.bordered)
-          Spacer()
-          Button("Done") { self.closeFind() }
-            .buttonStyle(.borderless)
-        }
-        .font(Self.findFont)
-        .padding(Inset(horizontal: 12))
-        .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
-        .background(Self.barColor)
-        .overlay(alignment: .bottom) {
-          Rectangle(.separator)
-            .frame(height: 0.5)
-        }
+        FindBar(
+          query: $query, replacement: $replacement, count: self.matches,
+          caseSensitive: $caseSensitive, wholeWord: $wholeWord, regex: $regex, focused: self.findFocused,
+          onNext: { self.controller.findNext() },
+          onPrevious: { self.controller.findNext(forward: false) },
+          onReplace: { self.controller.replaceCurrent(with: self.replacement) },
+          onReplaceAll: { self.controller.replaceAll(with: self.replacement) },
+          onDone: { self.closeFind() }
+        )
       }
       ZStack(alignment: .topLeading) {
         TextEditor(document: self.file.document)
@@ -214,61 +154,17 @@ final class FileEditorPanel : SingleChildElement {
           .onCommandClick { offset in self.assist?.goToDefinition(at: offset) }
           .frame(maxWidth: .infinity, maxHeight: .infinity)
         if self.completing {
-          VStack(alignment: .leading, spacing: 0) {
-            VList(alignment: .leading, spacing: 0, items: self.completionRows) { [weak self] row in
-              CompletionRowView(row: row) { index in self?.assist?.accept(index) }
-            }
-            if !self.completionDetail.isEmpty {
-              Rectangle(.separator)
-                .frame(height: 0.5)
-                .padding(Inset(top: 4))
-              Text(self.completionDetail)
-                .font(Self.detailFont)
-                .foregroundColor(Self.statusColor)
-                .lineLimit(1)
-                .padding(Inset(left: 8, top: 6, right: 8, bottom: 2))
-            }
-          }
-          .frame(width: Self.completionWidth)
-          .padding(5)
-          .glass(.menu, in: Self.popupShape)
-          .border(.separator, width: 0.5, in: Self.popupShape)
-          .shadow(color: .shadow, radius: 12, y: 6)
-          .padding(self.completionInset)
+          CompletionList(items: self.completionRows, footer: self.completionDetail, onPick: { index in self.assist?.accept(index) })
+            .padding(self.completionInset)
         }
         if self.hovering {
-          Text(self.hoverText)
-            .font(Self.tooltipFont)
-            .padding(Inset(vertical: 6, horizontal: 8))
-            .frame(maxWidth: 420, alignment: .leading)
-            .glass(.tooltip, in: Self.tooltipShape)
-            .border(.separator, width: 0.5, in: Self.tooltipShape)
-            .shadow(color: .shadow, radius: 8, y: 4)
+          Tooltip(self.hoverText, multiline: true)
             .allowsHitTesting(false)
             .padding(self.hoverInset)
         }
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
-      HStack(spacing: 12) {
-        Text(self.status)
-          .font(Self.statusFont)
-          .foregroundColor(Self.statusColor)
-        Text(self.problem)
-          .font(Self.statusFont)
-          .foregroundColor(Self.errorColor)
-          .lineLimit(1)
-        Spacer()
-        Text(self.file.name)
-          .font(Self.statusFont)
-          .foregroundColor(Self.statusColor)
-      }
-      .padding(Inset(horizontal: 12))
-      .frame(maxWidth: .infinity, minHeight: 24, alignment: .leading)
-      .background(Self.barColor)
-      .overlay(alignment: .top) {
-        Rectangle(.separator)
-          .frame(height: 0.5)
-      }
+      StatusBar(position: self.status, problem: self.problem, file: self.file.name)
     }
     .onKeyPress(phases: .down) { press in self.key(press) }
     .sheet(isPresented: $goingToLine) {

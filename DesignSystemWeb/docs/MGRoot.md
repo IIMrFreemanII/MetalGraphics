@@ -6,7 +6,7 @@ category: Foundations
 
 Wrap every artboard's content in it. Picks light or dark, sets JetBrains Mono (with its ligatures) and the label colour, and can paint a surface.
 
-Mirrors `ThemeStore (Theme.light / Theme.dark)` in MetalGraphics.
+Mirrors `ThemeStore (Theme.light / Theme.dark); .colorScheme(_:) / .theme(_:) for a subtree` in MetalGraphics.
 
 ## Props
 

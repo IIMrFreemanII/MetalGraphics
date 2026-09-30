@@ -409,7 +409,7 @@ public final class ReorderElement : HittableView {
 /// The line a `ReorderElement` draws where the dragged row would go. Laid out by it, not by
 /// layout: it moves only while dragging, and then only redraws.
 final class ReorderIndicator : UIRenderableElement {
-  static let thickness: Float = 2
+  static let thickness: Float = InsertionLine.thickness
   static let color = FormMetrics.accentColor
 
   var isShown = false
@@ -425,13 +425,8 @@ final class ReorderIndicator : UIRenderableElement {
   }
 
   override func render(_ renderer: Graphics2D, _ effect: EffectState) {
-    guard self.isShown, effect.opacity > 0 else { return }
-    let size = self.lineSize * effect.scale
-    var color = Self.color
-    color.w *= effect.opacity
-    // origin -> top left, window centered
-    let origin = effect.apply(to: self.origin) - renderer.size * 0.5
-    renderer.draw(roundedRect: origin, size: size, radii: float4(repeating: Self.thickness * 0.5 * effect.scale), color: color)
+    guard self.isShown else { return }
+    InsertionLine.draw(origin: self.origin, size: self.lineSize, color: Self.color, renderer, effect)
   }
 }
 

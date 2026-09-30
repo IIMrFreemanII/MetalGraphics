@@ -6,7 +6,7 @@ category: Editor
 
 The editor's find and replace bar: query with a magnifier, match count, previous and next, the Aa / Word / .* chips, replacement, Replace, All and Done.
 
-Mirrors `the Editor's find bar (Editor/FileEditorPanel.swift)` in MetalGraphics.
+Mirrors `FindBar (TextEditor/Chrome/FindBar.swift)` in MetalGraphics.
 
 ## Props
 

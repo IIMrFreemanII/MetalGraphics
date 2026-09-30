@@ -173,6 +173,9 @@
     },
     "Window": {
       "cardMode": "column"
+    },
+    "AnimatedIcon": {
+      "cardMode": "column"
     }
   },
   "extraFonts": [

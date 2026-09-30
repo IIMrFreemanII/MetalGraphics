@@ -26,7 +26,6 @@ final class ModalLayer : OverlayLayer {
   /// `content` goes on the card; `style` is what styles its texts, around it.
   init(_ kind: PresentationKind, content: UIElement) {
     self.kind = kind
-    let radius = Self.cornerRadius
     let chrome: UIElement
     switch kind {
     case .fullScreenCover:
@@ -35,12 +34,7 @@ final class ModalLayer : OverlayLayer {
         .background(FormMetrics.groupedBackground)
       self.backdrop = nil
     default:
-      chrome = ScrollView(.vertical) { content }
-        .clipShape(.rect(cornerRadius: radius))
-        .background {
-          CardFill(cornerRadius: radius, material: .sheet).shadow(color: .shadow, radius: 22, y: 10)
-        }
-        .border(.separator, width: 0.5, in: .rect(cornerRadius: radius))
+      chrome = CardChrome.sheet(content)
       self.backdrop = TransitionElement(.opacity) { ModalBackdrop() }
     }
     let backdrop = self.backdrop

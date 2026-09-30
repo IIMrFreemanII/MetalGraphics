@@ -82,6 +82,8 @@ public enum NavigationMetrics {
   public static let contentBackground: float4 = .contentBackground
 
   public static let sidebarWidth: Float = 232
+  /// A sidebar link's height.
+  public static let sidebarRowHeight: Float = 26
   public static let sidebarColor: float4 = .sidebarTint
   /// Between the sidebar's edges and its content: its rows' highlights.
   public static let sidebarInset: Float = 10

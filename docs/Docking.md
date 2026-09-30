@@ -124,6 +124,13 @@ the window rather than picking the group up.
   without losing the press.
 - **Moving a float.** The float is drawn at the pointer by an offset (`DockFloatView.dragOrigin`),
   so a move only redraws. It is laid out there once the drag commits.
+- **Where a float may be.** In its area, as a window is kept on screen: its top never above the
+  area's content or in the window's title bar row, and `DockMetrics.floatKeptInView` (60×30) of
+  its bar inside, so it can always be taken again; it may hang off the other edges. What is above
+  the area — a navigation bar and its toolbar, the traffic lights — is drawn by others, and a
+  float kept below never hides them nor is hidden by them. A move and a resize of its top stop
+  there. A layout saved in a bigger window, or with the float above where the area now starts,
+  is placed back when laid out, and saved only when the float next moves.
 - **Tear-out.** Out of the window, the float becomes a detached host (`.newHost`), and the area
   asks main to open its window under the pointer (`DockWindowRequest.tearOut`).
 - **The window drag.** Main moves the window on every drag event and finds this app's window

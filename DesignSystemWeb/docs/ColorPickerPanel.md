@@ -6,7 +6,7 @@ category: Controls
 
 What a colour well opens: 12 hues in three shades and a row of greys (16pt swatches, the selection ringed), then Hue, Saturation, Brightness and Opacity sliders.
 
-Mirrors `ColorPicker.open() (Form/ColorPicker.swift)` in MetalGraphics.
+Mirrors `ColorPickerPanel (Form/ColorPicker.swift)` in MetalGraphics.
 
 ## Props
 

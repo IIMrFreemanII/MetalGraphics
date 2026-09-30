@@ -188,15 +188,7 @@ public extension HeadlessWindow {
 @MainActor enum HeadlessQuery {
   /// The element's own rect, for the kinds that keep one.
   static func ownGeometry(of element: UIElement) -> HeadlessRect? {
-    switch element {
-    case let hittable as any Hittable: HeadlessRect(origin: hittable.hitPosition, size: hittable.hitSize)
-    case let focusable as FocusableElement: HeadlessRect(origin: focusable.position, size: focusable.size)
-    case let text as Text: HeadlessRect(origin: text.position, size: text.size)
-    case let id as IDElement: HeadlessRect(origin: id.position, size: id.size)
-    case let scroll as ScrollView: HeadlessRect(origin: scroll.position, size: scroll.size)
-    case let tab as DockTabItem: HeadlessRect(origin: tab.position, size: tab.size)
-    default: nil
-    }
+    ElementGeometry.ownRect(of: element)
   }
 
   static func geometry(of element: UIElement) -> HeadlessRect? {
@@ -207,6 +199,23 @@ public extension HeadlessWindow {
       return found == nil
     }
     return found
+  }
+
+  /// The rect around everything in `element` that keeps a rect: a composite's extent, as far
+  /// as what it draws is inside its leaves.
+  static func bounds(of element: UIElement) -> HeadlessRect? {
+    var lo = float2(repeating: .infinity), hi = float2(repeating: -.infinity)
+    func add(_ e: UIElement) {
+      guard let rect = self.ownGeometry(of: e), rect.size.x > 0, rect.size.y > 0 else { return }
+      lo = simd_min(lo, rect.origin)
+      hi = simd_max(hi, rect.max)
+    }
+    add(element)
+    self.visitDescendants(of: element) { child in
+      add(child)
+      return true
+    }
+    return lo.x <= hi.x ? HeadlessRect(origin: lo, size: hi - lo) : nil
   }
 
   static func hitGeometry(of element: UIElement) -> HeadlessRect? {

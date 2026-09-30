@@ -85,6 +85,15 @@ public class UIContext {
   private var foregroundOrder: [TextStyleElement] = []
   private var paintForegrounds: [Int] = []
 
+  /// Every mounted `ThemeScopeElement` in the tree, in pre-order; `paintThemes[i]` is the
+  /// nearest one above `paintOrder[i]`, or -1 for the window's theme. Nearest wins, as for
+  /// foregrounds: the render loop hands the renderer that scope's theme. Empty, and never read,
+  /// in a window without scopes.
+  private var themeOrder: [ThemeScopeElement] = []
+  private var paintThemes: [Int] = []
+  /// How many scopes are mounted: while none are, nothing looks for one.
+  private var themeScopeCount = 0
+
   /// Every element that clips what is under it, in pre-order like `effectOrder`.
   /// `clipParents[i]` is the nearest clip above `clipOrder[i]`, or -1, `clipEffects[i]` the
   /// nearest effect at or above it, or -1. `paintClips` and `hitClips` are the nearest clip
@@ -318,7 +327,40 @@ public class UIContext {
     // Walks a copy: an observer may mount or unmount others.
     let observers = self.themeObservers
     for entry in observers {
-      (entry.element as? ThemeObserving)?.themeDidChange(theme, self)
+      guard let element = entry.element, let observer = element as? ThemeObserving else { continue }
+      observer.themeDidChange(self.theme(for: element), self)
+    }
+  }
+
+  /// The theme `element` draws with: its nearest `ThemeScopeElement`'s, or the window's. Walks
+  /// up only while a scope is mounted; for mounting and theme changes, not per frame.
+  public func theme(for element: UIElement) -> Theme {
+    guard self.themeScopeCount > 0, let scope = element.nearestAncestor(ThemeScopeElement.self) else {
+      return self.theme
+    }
+    return scope.resolve()
+  }
+
+  func addThemeScope(_ scope: ThemeScopeElement) {
+    self.themeScopeCount += 1
+    self.addThemeObserver(scope)
+  }
+
+  func removeThemeScope(_ scope: ThemeScopeElement) {
+    self.themeScopeCount -= 1
+    self.removeThemeObserver(scope)
+  }
+
+  /// Tells the theme observers inside `scope` that it draws with another theme now.
+  func themeChanged(inside scope: ThemeScopeElement) {
+    let observers = self.themeObservers
+    for entry in observers {
+      guard let element = entry.element, element !== scope, let observer = element as? ThemeObserving else { continue }
+      var current = element.parent
+      while let ancestor = current, ancestor !== scope { current = ancestor.parent }
+      if current === scope {
+        observer.themeDidChange(self.theme(for: element), self)
+      }
     }
   }
 
@@ -721,8 +763,17 @@ public class UIContext {
     // The blur `renderer` draws with, as an index into `blurOrder`, or -1 for none.
     var blur = -1
     let hasForegrounds = !self.foregroundOrder.isEmpty
+    // The scope whose theme `renderer` draws with, as an index into `themeOrder`, or -1 for the
+    // window's. Shadows resolve their colour as they are set, so a swap sets them again.
+    var theme = -1
+    let hasThemes = !self.themeOrder.isEmpty
     if self.clipOrder.isEmpty {
       for index in self.paintOrder.indices {
+        if hasThemes, self.paintThemes[index] != theme {
+          theme = self.paintThemes[index]
+          renderer.theme = theme < 0 ? self.theme : self.themeOrder[theme].theme
+          if shadow >= 0 { shadow = -2 }
+        }
         if hasShadows, self.paintShadows[index] != shadow {
           shadow = self.paintShadows[index]
           self.setShadows(shadow, clip: -1, renderer)
@@ -750,6 +801,11 @@ public class UIContext {
           // Nothing under an empty clip can show.
           if self.clipResolved[clip].isEmpty { continue }
           renderer.setClip(self.gpuClip(clip, renderer))
+        }
+        if hasThemes, self.paintThemes[index] != theme {
+          theme = self.paintThemes[index]
+          renderer.theme = theme < 0 ? self.theme : self.themeOrder[theme].theme
+          if shadow >= 0 { shadow = -2 }
         }
         if hasShadows, self.paintShadows[index] != shadow || (shadow >= 0 && clip != shadowClip) {
           shadow = self.paintShadows[index]
@@ -783,6 +839,10 @@ public class UIContext {
       renderer.resetClip()
       let lift = EffectState(opacity: DragSession.ghostOpacity, scale: 1, translate: drag.pointer - drag.start)
       for index in drag.ghostStart ..< drag.ghostEnd {
+        if hasThemes, self.paintThemes[index] != theme {
+          theme = self.paintThemes[index]
+          renderer.theme = theme < 0 ? self.theme : self.themeOrder[theme].theme
+        }
         if hasForegrounds {
           self.setForeground(self.paintForegrounds[index], renderer)
         }
@@ -797,6 +857,7 @@ public class UIContext {
       renderer.setBlur(0)
     }
     renderer.textForeground = nil
+    renderer.theme = self.theme
     // A layout still pending — asked for by `afterLayout` work after this frame's pass — is laid
     // out and drawn next frame: until then there is still something to draw, and the window
     // must not go idle.
@@ -1188,6 +1249,9 @@ public class UIContext {
     self.paintBlurs.removeAll(keepingCapacity: true)
     self.foregroundOrder.removeAll(keepingCapacity: true)
     self.paintForegrounds.removeAll(keepingCapacity: true)
+    for scope in self.themeOrder { scope.collectIndex = -1 }
+    self.themeOrder.removeAll(keepingCapacity: true)
+    self.paintThemes.removeAll(keepingCapacity: true)
     self.hitOrder.removeAll(keepingCapacity: true)
     self.effectOrder.removeAll(keepingCapacity: true)
     self.effectParents.removeAll(keepingCapacity: true)
@@ -1216,7 +1280,7 @@ public class UIContext {
     self.modalKeyStart = 0
     self.modalScrollStart = 0
     self.modalDropStart = 0
-    self.collect(root, effect: -1, clip: -1, shadow: -1, blur: -1, foreground: -1, key: -1, hit: -1, spine: -1, inFocusable: false, leaving: false, noHit: false)
+    self.collect(root, effect: -1, clip: -1, shadow: -1, blur: -1, foreground: -1, theme: -1, key: -1, hit: -1, spine: -1, inFocusable: false, leaving: false, noHit: false)
     for overlay in self.overlays {
       // Everything collected before a modal is under it. The last one wins; popovers above it
       // stay live.
@@ -1226,11 +1290,13 @@ public class UIContext {
         self.modalScrollStart = self.scrollOrder.count
         self.modalDropStart = self.dropOrder.count
       }
-      self.collect(overlay, effect: -1, clip: -1, shadow: -1, blur: -1, foreground: -1, key: -1, hit: -1, spine: -1, inFocusable: false, leaving: false, noHit: false)
+      // Drawn with the theme of the scope it was shown from: it is mounted in its anchor.
+      let theme = self.themeScopeCount > 0 ? overlay.nearestAncestor(ThemeScopeElement.self)?.collectIndex ?? -1 : -1
+      self.collect(overlay, effect: -1, clip: -1, shadow: -1, blur: -1, foreground: -1, theme: theme, key: -1, hit: -1, spine: -1, inFocusable: false, leaving: false, noHit: false)
     }
     // Last, so it draws over the popovers too; as if leaving, so it is drawn and never hit.
     if let preview = self.drag?.preview {
-      self.collect(preview, effect: -1, clip: -1, shadow: -1, blur: -1, foreground: -1, key: -1, hit: -1, spine: -1, inFocusable: false, leaving: true, noHit: false)
+      self.collect(preview, effect: -1, clip: -1, shadow: -1, blur: -1, foreground: -1, theme: -1, key: -1, hit: -1, spine: -1, inFocusable: false, leaving: true, noHit: false)
     }
     self.effectResolved = Array(repeating: .identity, count: self.effectOrder.count)
     self.shadowResolved = Array(repeating: ShadowState(color: .zero, sigma: 0, offset: .zero), count: self.shadowOrder.count)
@@ -1279,7 +1345,7 @@ public class UIContext {
   // elements only, or -1, and `inFocusable` is true under a focusable element. `leaving` is true under a child playing its
   // removal transition: still drawn, but no longer hit, focused or offered keys.
   private func collect(
-    _ element: UIElement, effect: Int, clip: Int, shadow: Int, blur: Int, foreground: Int, key: Int, hit: Int,
+    _ element: UIElement, effect: Int, clip: Int, shadow: Int, blur: Int, foreground: Int, theme: Int, key: Int, hit: Int,
     spine: Int, inFocusable: Bool, leaving: Bool, noHit: Bool
   ) -> Void {
     // Still laid out, but nothing under it is drawn, hit or scrolled.
@@ -1298,6 +1364,7 @@ public class UIContext {
     var shadow = shadow
     var blur = blur
     var foreground = foreground
+    var theme = theme
     var key = key
     var hit = hit
     var spine = spine
@@ -1319,6 +1386,7 @@ public class UIContext {
       self.paintShadows.append(shadow)
       self.paintBlurs.append(blur)
       self.paintForegrounds.append(foreground)
+      self.paintThemes.append(theme)
       self.paintClips.append(clip)
     } else if !leaving, !noHit, let hittable = element as? any Hittable,
               self.hittableViews[ObjectIdentifier(hittable)] != nil {
@@ -1379,6 +1447,11 @@ public class UIContext {
       blur = self.blurOrder.count
       self.blurOrder.append(blurElement)
     }
+    if self.themeScopeCount > 0, let scope = element as? ThemeScopeElement, scope.mounted {
+      theme = self.themeOrder.count
+      scope.collectIndex = theme
+      self.themeOrder.append(scope)
+    }
     if let style = element as? TextStyleElement, style.displayedForeground != nil {
       foreground = self.foregroundOrder.count
       self.foregroundOrder.append(style)
@@ -1396,7 +1469,7 @@ public class UIContext {
     }
     element.forEachChildInPaintOrder {
       self.collect(
-        $0, effect: effect, clip: clip, shadow: shadow, blur: blur, foreground: foreground, key: key, hit: hit,
+        $0, effect: effect, clip: clip, shadow: shadow, blur: blur, foreground: foreground, theme: theme, key: key, hit: hit,
         spine: spine, inFocusable: inFocusable, leaving: leaving, noHit: noHit
       )
     }

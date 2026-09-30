@@ -6,7 +6,7 @@ category: Window
 
 Close, minimize and zoom: 12pt dots 8 apart, with ×, − and + on hover. The only literal colours in the system.
 
-Mirrors `DockWindowButton (Docking/DockViews.swift)` in MetalGraphics.
+Mirrors `TrafficLights (Docking/DockChrome.swift)` in MetalGraphics.
 
 ## Props
 

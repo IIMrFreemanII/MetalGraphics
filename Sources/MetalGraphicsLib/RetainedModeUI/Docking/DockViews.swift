@@ -22,6 +22,9 @@ enum DockMetrics {
   static let floatRadius: Float = 7
   static let minPane: Float = 60
   static let minFloat = float2(180, 110)
+  /// How much of a float stays in its area, whatever moves it: the height of a panel bar and a
+  /// little more than a tab's width, enough to take it by its bar again. Its top never leaves.
+  static let floatKeptInView = float2(60, 30)
   static let markerSize: Float = 28
   static let markerSpacing: Float = 34
   static let edgeInset: Float = 10
@@ -220,7 +223,7 @@ final class DockTabsView : MultiChildElement {
     }
     var shown: [DockTabItem] = []
     for panel in tabs.panels {
-      let item = self.items[panel] ?? DockTabItem(panel: panel, group: self)
+      let item = self.items[panel] ?? self.makeItem(panel)
       self.items[panel] = item
       let info = titles[panel]
       item.setTitle(info?.title ?? "", context)
@@ -238,6 +241,14 @@ final class DockTabsView : MultiChildElement {
     children += shown
     if let content { children.append(content) }
     return children
+  }
+
+  /// A tab for `panel`: a press picks it up, its cross closes it.
+  private func makeItem(_ panel: String) -> DockTabItem {
+    let item = DockTabItem(panel: panel)
+    item.onPickUp = { [unowned self] input in self.area.pickUp(.panel(panel, group: self.id), input) }
+    item.onClose = { [unowned self] in self.area.closePanel(panel) }
+    return item
   }
 
   // MARK: Layout
@@ -315,12 +326,20 @@ final class DockTabsView : MultiChildElement {
 }
 
 /// One tab: an icon, its title, marks for an unsaved document or a count, and a close button
-/// that shows while the pointer is over the tab.
+/// that shows while the pointer is over the tab. A tab group's, or a `DockTab` shown on its own.
 final class DockTabItem : MultiChildElement {
   let panel: String
-  unowned let group: DockTabsView
+  /// A press on the tab: its group picks the panel up.
+  var onPickUp: ((Input) -> Void)?
+  /// A click on its cross.
+  var onClose: (() -> Void)?
+  private weak var context: UIContext?
   private let fill = DockTabFill()
-  private let icon: Image
+  /// The animated glyph, playing as the tab is hovered: drawn 16 square, centred on the
+  /// `DockTabMetrics.iconSize` slot the title is laid out after.
+  private let icon: AnimatedIcon
+  /// The close button's cross, shown while the pointer is on the tab.
+  private let closeIcon: AnimatedIcon
   private let title: Text
   private let badgeText: Text
   private let press: HittableView
@@ -338,34 +357,53 @@ final class DockTabItem : MultiChildElement {
   private(set) var position: float2 = .zero
   private(set) var size: float2 = .zero
 
-  init(panel: String, group: DockTabsView) {
+  init(panel: String) {
     self.panel = panel
-    self.group = group
     self.title = Text("").font(.system(size: DockTabMetrics.panel.fontSize)).foregroundColor(.secondaryLabel).lineLimit(1)
-    self.icon = Image(icon: .document)
+    self.icon = AnimatedIcon(.document).iconSize(DockTabMetrics.iconSize.y)
     self.icon.isHidden = true
+    self.closeIcon = AnimatedIcon(.xmark).foregroundColor(DockMetrics.glyphColor.withAlpha(0))
     self.badgeText = Text("").font(.system(size: 10, weight: .bold)).foregroundColor(.accentForeground).lineLimit(1)
     self.badgeText.isHidden = true
     self.press = HittableView {}
     self.close = HittableView {}
     super.init()
+    self.icon.explicitHost = self.press
+    self.closeIcon.explicitHost = self.close
     self.fill.item = self
     self.press.onPress = { [unowned self] down, input in
-      if down { self.group.area.pickUp(.panel(self.panel, group: self.group.id), input) }
+      if down { self.onPickUp?(input) }
     }
     self.press.onHover = { [unowned self] hovered, _ in
       self.fill.isHovered = hovered
-      self.group.area.context?.invalidate(.render)
+      self.showCloseIcon()
+      self.context?.invalidate(.render)
     }
     // A tap goes to the topmost view that takes taps, and a press to the topmost that takes
     // presses: this takes both, so closing does not also pick the tab up.
     self.close.onPress = { _, _ in }
-    self.close.onTap = { [unowned self] _ in self.group.area.closePanel(self.panel) }
+    self.close.onTap = { [unowned self] _ in self.onClose?() }
     self.close.onHover = { [unowned self] hovered, _ in
       self.fill.isCloseHovered = hovered
-      self.group.area.context?.invalidate(.render)
+      self.showCloseIcon()
+      self.context?.invalidate(.render)
     }
-    self.applyContent([self.fill, self.icon, self.title, self.badgeText, self.press, self.close])
+    self.applyContent([self.fill, self.icon, self.title, self.badgeText, self.closeIcon, self.press, self.close])
+  }
+
+  /// The cross shows while the pointer is on the tab or its close button.
+  private func showCloseIcon() {
+    guard let context = self.context else { return }
+    let shown = self.fill.isHovered || self.fill.isCloseHovered
+    self.closeIcon.setForegroundColor(DockMetrics.glyphColor.withAlpha(shown ? 1 : 0), context)
+  }
+
+  override func mount(_ context: UIContext) {
+    self.context = context
+  }
+
+  override func unmount(_ context: UIContext) {
+    self.context = nil
   }
 
   func setTitle(_ title: String, _ context: UIContext) {
@@ -395,7 +433,7 @@ final class DockTabItem : MultiChildElement {
     let icon = info?.icon ?? fallback?.0
     if icon != self.iconKind {
       self.iconKind = icon
-      if let icon { self.icon.setIcon(icon, context) }
+      if let icon { self.icon.setGlyph(AnimatedGlyph(icon), context) }
       self.updateIcon(context)
     }
     let color = info?.icon != nil ? info?.iconColor : fallback?.1
@@ -475,6 +513,7 @@ final class DockTabItem : MultiChildElement {
     let textWidth = max(self.size.x - self.leadingWidth - self.trailingWidth, 0)
     _ = self.title.calcSize(ProposedSize(width: textWidth, height: nil))
     _ = self.icon.calcSize(ProposedSize(DockTabMetrics.iconSize))
+    _ = self.closeIcon.calcSize(.unspecified)
     _ = self.badgeText.calcSize(.unspecified)
     _ = self.press.calcSize(ProposedSize(self.size))
     _ = self.close.calcSize(ProposedSize(float2(repeating: self.metrics.closeSize)))
@@ -485,7 +524,8 @@ final class DockTabItem : MultiChildElement {
     self.position = position
     self.fill.calcPosition(position)
     let iconSize = self.icon.getSize()
-    self.icon.calcPosition(position + float2(self.metrics.padding, ((self.size.y - iconSize.y) * 0.5).rounded()))
+    let slot = DockTabMetrics.iconSize.x
+    self.icon.calcPosition(position + float2(self.metrics.padding + ((slot - iconSize.x) * 0.5).rounded(), ((self.size.y - iconSize.y) * 0.5).rounded()))
     let textSize = self.title.getSize()
     self.title.calcPosition(position + float2(self.leadingWidth, ((self.size.y - textSize.y) * 0.5).rounded()))
     if self.badge > 0 {
@@ -497,6 +537,8 @@ final class DockTabItem : MultiChildElement {
     }
     self.press.calcPosition(position)
     self.close.calcPosition(self.closeRect.min)
+    let rect = self.closeRect
+    self.closeIcon.calcPosition(rect.min + ((rect.max - rect.min - self.closeIcon.getSize()) * 0.5).rounded(.toNearestOrAwayFromZero))
   }
 }
 
@@ -552,7 +594,7 @@ final class DockTabFill : FormGraphic {
     }
 
     guard self.isHovered || self.isCloseHovered else { return }
-    // The cross, in the close button's rect, moved as the tab is.
+    // The close button's hover square, in its rect, moved as the tab is.
     let close = item.closeRect
     let min = origin + (close.min - item.position) * scale
     let side = (close.max.x - close.min.x) * scale
@@ -560,11 +602,7 @@ final class DockTabFill : FormGraphic {
       renderer.draw(roundedRect: min, size: float2(side, side), radii: float4(repeating: 4 * scale),
                     color: float4.hover.withAlpha(opacity))
     }
-    let inset = (side - 7 * scale) * 0.5
-    var color = DockMetrics.glyphColor
-    color.w *= opacity
-    renderer.draw(stroke: min + inset, to: min + side - inset, width: 1.3 * scale, color: color)
-    renderer.draw(stroke: min + float2(side - inset, inset), to: min + float2(inset, side - inset), width: 1.3 * scale, color: color)
+    // The cross over it is the tab's `closeIcon`.
   }
 }
 
@@ -1000,6 +1038,8 @@ final class DockWindowButton : FormGraphic {
 
   let kind: Kind
   var isHovered = false
+  /// In a window that is not key: grey, as macOS draws them.
+  var isInactive = false
 
   init(_ kind: Kind) {
     self.kind = kind
@@ -1012,6 +1052,7 @@ final class DockWindowButton : FormGraphic {
 
   override func draw(_ renderer: Graphics2D, origin: float2, size: float2, scale: Float, opacity: Float) {
     var color: float4 = switch self.kind {
+    case _ where self.isInactive && !self.isHovered: .fillPressed
     case .close: float4(1, 0.37, 0.34, 1)  // design: the macOS traffic lights
     case .minimize: float4(1, 0.74, 0.18, 1)  // design: the macOS traffic lights
     case .zoom: float4(0.16, 0.78, 0.25, 1)  // design: the macOS traffic lights
@@ -1063,17 +1104,31 @@ final class DockDropOverlay : UIRenderableElement {
 
   override func render(_ renderer: Graphics2D, _ effect: EffectState) {
     guard effect.opacity > 0 else { return }
+    if let preview {
+      Self.drawPreview(preview, renderer, effect)
+    }
+    for marker in self.markers {
+      Self.drawMarker(marker, renderer, effect)
+    }
+  }
+
+  /// The tint over where the dragged panels would go: accent at 18 %, a 2 pt accent edge.
+  static func drawPreview(_ preview: ClipRect, _ renderer: Graphics2D, _ effect: EffectState) {
     let accent = DockMetrics.accent
     let opacity = effect.opacity
-    if let preview {
-      let origin = centred(effect.apply(to: preview.min), renderer)
-      let size = (preview.max - preview.min) * effect.scale
-      let radii = float4(repeating: renderer.theme.radii.md)
-      renderer.draw(roundedRect: origin, size: size, radii: radii, color: accent.withAlpha(0.18 * opacity))
-      renderer.draw(roundedRect: origin, size: size, radii: radii, color: accent.withAlpha(0.7 * opacity), strokeWidth: 2)
-    }
+    let origin = centred(effect.apply(to: preview.min), renderer)
+    let size = (preview.max - preview.min) * effect.scale
+    let radii = float4(repeating: renderer.theme.radii.md)
+    renderer.draw(roundedRect: origin, size: size, radii: radii, color: accent.withAlpha(0.18 * opacity))
+    renderer.draw(roundedRect: origin, size: size, radii: radii, color: accent.withAlpha(0.7 * opacity), strokeWidth: 2)
+  }
+
+  /// One zone marker: drop marker glass, or the accent when hovered, with where it docks inside.
+  static func drawMarker(_ marker: Marker, _ renderer: Graphics2D, _ effect: EffectState) {
+    let accent = DockMetrics.accent
+    let opacity = effect.opacity
     let material = renderer.theme[.dropMarker]
-    for marker in self.markers {
+    do {
       let origin = centred(effect.apply(to: marker.rect.min), renderer)
       let size = (marker.rect.max - marker.rect.min) * effect.scale
       let radii = float4(repeating: renderer.theme.radii.md)

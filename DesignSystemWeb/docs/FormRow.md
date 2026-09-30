@@ -6,7 +6,7 @@ category: Forms
 
 A label on the leading side and a control or value on the trailing side. Hairlines between rows start 14 in.
 
-Mirrors `A row in Section (FormMetrics: inset 9/14)` in MetalGraphics.
+Mirrors `LabeledContent, or any control in a Section (FormMetrics: inset 9/14)` in MetalGraphics.
 
 ## Props
 

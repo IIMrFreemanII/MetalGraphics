@@ -92,6 +92,33 @@ public final class NavigationTitleElement : SingleChildElement {
   }
 }
 
+/// Gives the page it is in items in the stack's bar, beside its title: `leading` after the back
+/// button, `trailing` at the trailing edge, as SwiftUI's `.toolbar`. Made by `.toolbar(leading:
+/// trailing:)`. The items are shown in the bar while the page is on top; they draw nothing here.
+public final class NavigationToolbarElement : SingleChildElement {
+  public let leading: [UIElement]
+  public let trailing: [UIElement]
+  private weak var entry: NavigationEntry?
+
+  public init(leading: [UIElement], trailing: [UIElement], @UIElementBuilder content: () -> [UIElement]) {
+    self.leading = leading
+    self.trailing = trailing
+    super.init()
+    self.applyContent(content())
+  }
+
+  public override func mount(_ context: UIContext) {
+    let entry = self.nearestAncestor(NavigationEntry.self)
+    self.entry = entry
+    entry?.adoptToolbar(self)
+  }
+
+  public override func unmount(_ context: UIContext) {
+    self.entry?.dropToolbar(self)
+    self.entry = nil
+  }
+}
+
 /// Gives the page it is in its background: what the page is drawn on, edge to edge, under
 /// the stack's bar. `.contentBackground` when no page element sets one. Made by
 /// `.navigationBackground(_:)`. Not in SwiftUI.
@@ -145,6 +172,14 @@ extension UIElementWrapping where Self: UIElement {
   /// mount. Values waiting for it stay pending until then, rather than resolving to a stand-in.
   public func navigationDestination<D: Hashable>(for type: D.Type) -> NavigationDestinationElement<D> {
     NavigationDestinationElement(for: type, destination: nil) { self }
+  }
+
+  /// Items in the stack's bar while the page this is in is on top: `leading` after the back
+  /// button, `trailing` at the trailing edge.
+  public func toolbar(
+    @UIElementBuilder leading: () -> [UIElement] = { [] }, @UIElementBuilder trailing: () -> [UIElement] = { [] }
+  ) -> NavigationToolbarElement {
+    NavigationToolbarElement(leading: leading(), trailing: trailing()) { self }
   }
 
   /// The title of the page this is in, in the stack's bar.

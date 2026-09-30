@@ -348,7 +348,7 @@ public final class TextEditor : SingleChildElement, TextDocumentObserver, Editor
     self.state.clock = { [unowned context] in context.clock() }
     if self.followsTheme {
       context.addThemeObserver(self)
-      self.applyTheme(context.theme.editor, context)
+      self.applyTheme(context.theme(for: self).editor, context)
     }
   }
 

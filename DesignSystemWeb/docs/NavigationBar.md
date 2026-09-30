@@ -6,7 +6,7 @@ category: Navigation
 
 38 tall on the bar tint, a headline title, leading and trailing slots.
 
-Mirrors `Navigation bar (NavigationStack)` in MetalGraphics.
+Mirrors `NavigationBar in place; .navigationTitle and .toolbar(leading:trailing:) in a NavigationStack` in MetalGraphics.
 
 ## Props
 

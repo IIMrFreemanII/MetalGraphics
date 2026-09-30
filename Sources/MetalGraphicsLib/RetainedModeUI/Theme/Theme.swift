@@ -110,8 +110,8 @@ public struct ThemeMaterials: Equatable, Sendable {
   }
 }
 
-/// The type scale: SF throughout, macOS sizes. The same in light and dark, so switching
-/// appearance never lays anything out again.
+/// The type scale: the design's JetBrains Mono throughout (see `TextFont.systemFamily`), macOS
+/// sizes. The same in light and dark, so switching appearance never lays anything out again.
 public struct ThemeTypography: Hashable, Sendable {
   public var largeTitle: TextFont
   public var title: TextFont

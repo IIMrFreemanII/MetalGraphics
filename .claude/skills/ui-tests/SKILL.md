@@ -58,7 +58,7 @@ func testSaveButtonSaves() {
 - The builder has no `for`. Build a list with an explicit `return`, e.g. `VStack { return (0..<20).map { _ in Rectangle(.blue).frame(height: 50) } }`, or use `VList`.
 - Elements have no common `position`. Read one where the type has it: `Rectangle.position/size`, `HittableView.hitPosition/hitSize`, `FocusableElement.position/size`, `ScrollView.offset`, or `getSize()`.
 - The root is a centre-aligned `Frame` the size of the window. A fixed-size child sits in the middle.
-- The harness never resizes the hit grid, which covers 500×500 points around the window's centre. For a larger harness, call `h.context.resizeHitGrid(for: size)` once, as the app's resize does, or nothing outside that square is hit.
+- The harness sizes its hit grid and render grid to its window, as the app's resize does, so a harness of any size draws and hits to its edges (`DamageTests.testAWindowPast500PointsDrawsToItsEdges`).
 
 **Docking** (`DockingTests`, `DockLayoutTests`, `docs/Docking.md`): make a `DockSpace(name:kinds:persists: false) { layout }` and mount `DockArea(space, host: "main")`. Find tabs with `all(DockTabItem.self)`, groups with `all(DockTabsView.self)` (`rect`, `barRect`), floats with `all(DockFloatView.self)`, and the markers on `first(DockDropOverlay.self)!.markers`. Pick a panel up with `mouseDown` on its tab and a few `mouseDrag`s; a drag that undocks reflows the rest, so read a target's marker after it has undocked. A float being dragged is drawn by an offset (`dragOrigin`) and laid out on release. Between windows, run each area's harness on its own `WindowThread` (`DockWindowsTests`) and call the area's `remoteHover`/`remoteDrop` as `DockWindows` does from the main thread.
 

@@ -312,10 +312,10 @@ struct ParagraphShaper {
 
   var baseHeight: Float { self.baseAscent + self.baseDescent + self.baseLeading }
 
-  /// `base` is the font no line is shorter than, the first run's when nil.
+  /// `base` is the face no line is shorter than, the first run's when nil.
   init(
     runs: [TextRunInput], faces: [ResolvedFace], string: NSAttributedString, maxSize: float2, scale: Float,
-    base: CTFont? = nil
+    base: ResolvedFace? = nil
   ) {
     self.runs = runs
     self.faces = faces
@@ -323,10 +323,10 @@ struct ParagraphShaper {
     self.typesetter = CTTypesetterCreateWithAttributedString(string)
     self.maxWidth = Double(min(maxSize.x, 1e7))
     self.scale = scale
-    let base = base ?? faces[0].font
-    self.baseAscent = Float(CTFontGetAscent(base))
-    self.baseDescent = Float(CTFontGetDescent(base))
-    self.baseLeading = Float(CTFontGetLeading(base))
+    let base = (base ?? faces[0]).metrics
+    self.baseAscent = base.ascent
+    self.baseDescent = base.descent
+    self.baseLeading = base.leading
   }
 
   /// The text from `start` to the end of its paragraph, cut to fit one line, with an ellipsis
@@ -371,14 +371,24 @@ struct ParagraphShaper {
     var descent = self.baseDescent
     var leading = self.baseLeading
     for run in glyphRuns {
-      let offset = self.runs[self.runIndex(run)].style.baselineOffset * self.scale
-      var runAscent: CGFloat = 0
-      var runDescent: CGFloat = 0
-      var runLeading: CGFloat = 0
-      CTRunGetTypographicBounds(run, CFRange(), &runAscent, &runDescent, &runLeading)
-      ascent = max(ascent, Float(runAscent) + offset)
-      descent = max(descent, Float(runDescent) - offset)
-      leading = max(leading, Float(runLeading))
+      let index = self.runIndex(run)
+      let offset = self.runs[index].style.baselineOffset * self.scale
+      let metrics: LineMetrics
+      let face = self.faces[index]
+      let runFont = (CTRunGetAttributes(run) as NSDictionary)[kCTFontAttributeName as String] as! CTFont
+      if let own = face.lineMetrics, CFEqual(runFont, face.font) {
+        // Its face's line box. A fallback font in the run keeps its own.
+        metrics = own
+      } else {
+        var runAscent: CGFloat = 0
+        var runDescent: CGFloat = 0
+        var runLeading: CGFloat = 0
+        CTRunGetTypographicBounds(run, CFRange(), &runAscent, &runDescent, &runLeading)
+        metrics = LineMetrics(ascent: Float(runAscent), descent: Float(runDescent), leading: Float(runLeading))
+      }
+      ascent = max(ascent, metrics.ascent + offset)
+      descent = max(descent, metrics.descent - offset)
+      leading = max(leading, metrics.leading)
     }
 
     let width = Float(CTLineGetTypographicBounds(line, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(line))

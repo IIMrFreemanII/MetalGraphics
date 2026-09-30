@@ -19,9 +19,12 @@ extension UIContext {
   /// The popover is laid out apart from the tree, so the text style around the anchor does not
   /// reach it: pass it as `textStyle`, with `textDefaults` under it, to style the texts inside as
   /// if they were there. It is taken as it is now, and not updated while the popover is open.
+  ///
+  /// `material` is the card's glass: `.popover`, or `.menu` for a menu.
   @discardableResult
   public func presentPopover(
     _ content: UIElement, anchor: any Hittable, alignment: HorizontalAlignment = .trailing,
+    material: ThemeMaterial = .popover,
     textStyle: TextEnvironment? = nil, textDefaults: TextEnvironment = TextEnvironment(),
     onDismiss: (() -> Void)? = nil
   ) -> PopoverHandle {
@@ -31,7 +34,7 @@ extension UIContext {
       let wrapped = content
       content = TextStyleElement(overrides: textStyle ?? TextEnvironment(), defaults: textDefaults) { wrapped }
     }
-    let layer = PopoverLayer(content, anchor: anchor, alignment: alignment, modal: false)
+    let layer = PopoverLayer(content, anchor: anchor, alignment: alignment, modal: false, material: material)
     handle.layer = layer
     layer.onRemoved = { [weak handle] in
       handle?.layer = nil
@@ -82,19 +85,13 @@ final class PopoverLayer : OverlayLayer {
 
   init(
     _ content: UIElement, anchor: any Hittable, alignment: HorizontalAlignment, modal: Bool,
-    prefersAbove: Bool = false
+    prefersAbove: Bool = false, material: ThemeMaterial = .popover
   ) {
     self.anchor = anchor
     self.alignment = alignment
     self.prefersAbove = prefersAbove
     self.scrim = HittableView(onTap: nil, onPress: modal ? { _, _ in } : nil) {}
-    let radius = Self.cornerRadius
-    let card = ScrollView(.vertical) { content }
-      .clipShape(.rect(cornerRadius: radius))
-      .background {
-        CardFill(cornerRadius: radius, material: .popover).shadow(color: .shadow, radius: 12, y: 6)
-      }
-      .border(.separator, width: 0.5, in: .rect(cornerRadius: radius))
+    let card = CardChrome.popover(content, material: material)
     // A tap goes to the topmost view that takes taps, and a press to the topmost that takes
     // presses. This takes both under the content, so a click anywhere on the card — on a
     // slider, which only presses, or on nothing — never reaches the scrim and dismisses.

@@ -1,8 +1,52 @@
 public class HittableView: SingleChildElement, Hittable, PointerHandling {
   public var position: SIMD2<Float> = .init()
   public var size: SIMD2<Float> = .init()
-  public var isHovered: Bool = false
-  public var isPressed: Bool = false
+  public var isHovered: Bool = false {
+    didSet { if oldValue != self.isHovered, !self.followers.isEmpty { self.notifyFollowers() } }
+  }
+  public var isPressed: Bool = false {
+    didSet { if oldValue != self.isPressed, !self.followers.isEmpty { self.notifyFollowers() } }
+  }
+  /// The left button went down over it and is still down, whether or not it takes presses
+  /// itself (a row tapped on mouse down does not): what its followers see as pressed.
+  var isPointerDown = false {
+    didSet { if oldValue != self.isPointerDown, !self.followers.isEmpty { self.notifyFollowers() } }
+  }
+
+  /// Elements inside it that answer its hover and press: an `AnimatedIcon` playing as its row or
+  /// button is hovered. Told on every change, including the reset on unmount.
+  private var followers: [HostFollowerRef] = []
+
+  /// Whether a follower wants the pointer's moves over it (the eye's pupil): the hover grid
+  /// sends them only then.
+  private(set) var followsPointer = false
+
+  func addFollower(_ follower: HostFollower) {
+    if !self.followers.contains(where: { $0.follower === follower }) {
+      self.followers.append(HostFollowerRef(follower: follower))
+      self.followsPointer = self.followsPointer || follower.wantsPointer
+    }
+  }
+
+  func removeFollower(_ follower: HostFollower) {
+    self.followers.removeAll { $0.follower === follower || $0.follower == nil }
+    self.followsPointer = self.followers.contains { $0.follower?.wantsPointer == true }
+  }
+
+  var hasFollowers: Bool { !self.followers.isEmpty }
+
+  private func notifyFollowers() {
+    for ref in self.followers {
+      ref.follower?.hostChanged(hovered: self.isHovered, pressed: self.isPressed || self.isPointerDown)
+    }
+  }
+
+  /// The pointer over it, as a window point (top left origin).
+  func notifyPointer(_ point: float2) {
+    for ref in self.followers where ref.follower?.wantsPointer == true {
+      ref.follower?.hostPointerMoved(point)
+    }
+  }
   
   /// Settable, and cleared while unmounted.
   ///
@@ -17,6 +61,9 @@ public class HittableView: SingleChildElement, Hittable, PointerHandling {
   public var onPress: ((Bool, Input) -> Void)?
   /// Called as the pointer moves while the left button is held, after it went down on this view.
   public var onDrag: ((Input) -> Void)?
+  /// Called when the right button goes down on it: a context menu. A right click goes to the
+  /// topmost view under the pointer that has one, instead of to `onTap`.
+  public var onSecondaryTap: ((Input) -> Void)?
   /// Its pointer style, continuous hover, tap gesture and `.gesture`: made by the first that is
   /// set. See `PointerHandling`.
   public var pointer: PointerHandlers?
@@ -52,6 +99,7 @@ public class HittableView: SingleChildElement, Hittable, PointerHandling {
     // hovered, and never fire `onHover(true)` again until the pointer left and re-entered.
     self.isHovered = false
     self.isPressed = false
+    self.isPointerDown = false
     
     context.unregisterHittableView(self)
   }
@@ -98,4 +146,21 @@ public class HittableView: SingleChildElement, Hittable, PointerHandling {
     
     child?.calcPosition(position)
   }
+}
+
+/// Something inside a `HittableView` that follows its hover and press. See `HittableView.addFollower`.
+protocol HostFollower: AnyObject {
+  func hostChanged(hovered: Bool, pressed: Bool)
+  /// Whether it wants `hostPointerMoved`.
+  var wantsPointer: Bool { get }
+  func hostPointerMoved(_ point: float2)
+}
+
+extension HostFollower {
+  var wantsPointer: Bool { false }
+  func hostPointerMoved(_ point: float2) {}
+}
+
+private struct HostFollowerRef {
+  weak var follower: HostFollower?
 }

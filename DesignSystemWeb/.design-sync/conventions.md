@@ -83,6 +83,7 @@ For code:
 Forms take `ColorPicker` and `DatePicker` rows. Docking adds `FloatingPanel`, `DropMarkers` and `DropPreview`.
 Alerts order their actions by `role` (cancel, destructive) and stack beyond two; `ConfirmationDialog` always stacks.
 
-Lists use `ListRow` (with a `KindBadge` or `Icon` before the label). Tabs use `DockTabBar`
+Lists use `ListRow` (with a `KindBadge`, `Icon` or `AnimatedIcon` before the label; a tree's chevron and folders
+are `AnimatedIcon`s with `active={open}`, so they turn, open and answer the pointer). Tabs use `DockTabBar`
 (`tabStyle="document"` for files, `"panel"` for tool panels). Navigation uses `Sidebar` + `SidebarLink` and
 `NavigationBar`.

@@ -74,8 +74,25 @@ public final class Path: VectorShape {
     super.init()
   }
 
+  /// Between two outlines of the same commands, `morphProgress` of the way (0 at `from`): an
+  /// `AnimatedIcon` part whose outline follows a spring.
+  init(morphing from: String, to: String) {
+    self.source = .commands
+    self.d = to
+    self.from = SVGPathData.parse(from)
+    self.to = SVGPathData.parse(to)
+    self.morphProgress = 0
+    super.init()
+  }
+
   public override func unmount(_ context: UIContext) {
     super.unmount(context)
+    self.releaseBake()
+  }
+
+  /// Gives its tile of the atlas back: for a path drawn without being mounted, when its owner
+  /// goes.
+  func releaseBake() {
     if let slot = self.slot {
       self.baker?.free(slot)
       self.slot = nil

@@ -569,6 +569,26 @@ public struct HeadlessRect: Equatable, Sendable, CustomStringConvertible {
     return Self.image(width: pixels.width, height: pixels.height, bgra: pixels.bgra)
   }
 
+  /// The part of the last frame inside `rect` (points), clamped to the window: a golden of one
+  /// element, free of whatever else the window shows.
+  public func snapshot(of rect: HeadlessRect) -> CGImage {
+    let image = self.snapshot()
+    let scale = CGFloat(self.app.pixelsPerPoint)
+    let crop = CGRect(
+      x: CGFloat(rect.origin.x) * scale, y: CGFloat(rect.origin.y) * scale,
+      width: CGFloat(rect.size.x) * scale, height: CGFloat(rect.size.y) * scale
+    ).integral.intersection(CGRect(x: 0, y: 0, width: image.width, height: image.height))
+    return image.cropping(to: crop) ?? image
+  }
+
+  /// The part of the last frame around `element`'s rects (its own and its descendants'), grown
+  /// by `margin` on each side for a padding or a shadow; the whole frame when it has none.
+  public func snapshot(of element: UIElement, margin: Float = 0) -> CGImage {
+    if self.context.needsRender { self.app.step(0) }
+    guard let frame = HeadlessQuery.bounds(of: element) else { return self.snapshot() }
+    return self.snapshot(of: HeadlessRect(origin: frame.origin - margin, size: frame.size + margin * 2))
+  }
+
   /// The colour at `point` (points) in the last frame drawn, RGBA 0...255.
   public func pixel(at point: float2) -> SIMD4<UInt8> {
     let pixels = self.readPixels()

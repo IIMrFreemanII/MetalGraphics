@@ -6,7 +6,7 @@ category: Navigation
 
 A full-width link, inset 5/10. Selected uses the selection colour and a medium label.
 
-Mirrors `NavigationLink in a sidebar` in MetalGraphics.
+Mirrors `SidebarLink (Navigation/Sidebar.swift); a NavigationLink in a split view's sidebar` in MetalGraphics.
 
 ## Props
 
