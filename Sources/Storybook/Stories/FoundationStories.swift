@@ -2,7 +2,7 @@ import MetalGraphicsLib
 import simd
 
 enum FoundationStories {
-  static let all: [ComponentStories] = [colors, palette, typography, glass, icon, animatedIcon, divider, scrollIndicator, themeScope]
+  static let all: [ComponentStories] = [colors, palette, typography, glass, animatedIcon, divider, scrollIndicator, themeScope]
 
   static let colors = ComponentStories(
     .foundations, "Colors", summary: "Every colour role, as the theme resolves it in light and dark. Draw with roles, never literal colours.",
@@ -94,36 +94,6 @@ enum FoundationStories {
     snippet: { args in
       let role = args.option("material") == "all" ? "popover" : args.option("material")
       return "content\n  .glass(.\(role), in: .rect(cornerRadius: \(swiftNumber(args.number("radius")))))\n  .border(.separator, width: 0.5, in: .rect(cornerRadius: \(swiftNumber(args.number("radius")))))"
-    }
-  )
-
-  static let icon = ComponentStories(
-    .foundations, "Icon", summary: "The theme's glyphs, drawn as signed distance fields in any colour.",
-    source: "Sources/MetalGraphicsLib/RetainedModeUI/Theme/ThemeIcon.swift",
-    args: [
-      ArgType("icon", .options(["all"] + iconNames), .option("folder"), "Which glyph; all shows each."),
-      ArgType("color", .options(roleNames + hueNames.map { "hue." + $0 }), .option("secondaryLabel"), "Its colour: a role or a hue."),
-    ],
-    stories: [Story("Folder", ["color": .option("hue.folder")]), Story("Every glyph", layout: .padded, ["icon": .option("all")])],
-    render: { args, _ in
-      let name = args.option("color")
-      let color = name.hasPrefix("hue.") ? hue(named: String(name.dropFirst(4))) : role(named: name)
-      if args.option("icon") == "all" {
-        return gallery(columns: 9, ThemeIcon.allCases.map { icon in
-          VStack(spacing: 6) {
-            Image(icon: icon).foregroundColor(color)
-            caption(".\(icon)")
-          }
-          .frame(width: 70)
-        })
-      }
-      let icon = ThemeIcon.allCases.first { "\($0)" == args.option("icon") } ?? .folder
-      return Image(icon: icon).foregroundColor(color)
-    },
-    snippet: { args in
-      let name = args.option("color")
-      let color = name.hasPrefix("hue.") ? ".hue(.\(name.dropFirst(4)))" : ".\(name)"
-      return "Image(icon: .\(args.option("icon") == "all" ? "folder" : args.option("icon")))\n  .foregroundColor(\(color))"
     }
   )
 

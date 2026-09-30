@@ -11,6 +11,7 @@ final class ParityTests: XCTestCase {
 
   /// Web components shown in Swift under another story: web name → the Swift story.
   private static let aliases = [
+    "Icon": "AnimatedIcon",
     "Section": "Form",
     "MenuItem": "MenuPanel",
     "MenuSeparator": "MenuPanel",
