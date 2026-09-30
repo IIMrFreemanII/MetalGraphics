@@ -177,7 +177,7 @@ public final class Menu : SingleChildElement {
       PopupFace(chevrons: false) {
         HStack(spacing: 6) {
           title
-          Image(icon: .chevronDown).foregroundColor(.secondaryLabel)
+          AnimatedIcon(.chevronDown).foregroundColor(.secondaryLabel)
         }
       }
     }

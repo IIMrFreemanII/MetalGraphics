@@ -1,5 +1,5 @@
 import { React, cx, type Common } from "../react";
-import { Icon } from "./foundation";
+import { AnimatedIcon } from "./motion";
 
 export type DockTabStyle = "panel" | "document";
 
@@ -92,7 +92,7 @@ export function DockTab({
       onClick={onSelect}
       style={style}
     >
-      {tabStyle === "document" && <Icon name="document" className="mg-dock-tab__icon" />}
+      {tabStyle === "document" && <AnimatedIcon glyph="document" size={14} className="mg-dock-tab__icon" />}
       <span className="mg-dock-tab__title">{title}</span>
       {unsaved && <span className="mg-dock-tab__dot" aria-label="Unsaved" />}
       {count !== undefined && count > 0 && <span className="mg-dock-tab__count">{count}</span>}
@@ -105,7 +105,7 @@ export function DockTab({
           onClose?.();
         }}
       >
-        <Icon name="xmark" />
+        <AnimatedIcon glyph="xmark" />
       </button>
     </div>
   );

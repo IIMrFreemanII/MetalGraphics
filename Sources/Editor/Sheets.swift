@@ -156,7 +156,7 @@ final class QuickOpenRow : SingleChildElement {
 
   @UIElementBuilder var body: [UIElement] {
     ListRow(height: 38, margin: 0, spacing: 8, action: { self.onOpen(self.item.path) }) {
-      Image(icon: .document)
+      AnimatedIcon(.document)
         .foregroundColor(FileRowView.documentColor(self.item.name))
       VStack(alignment: .leading, spacing: 1) {
         Text(self.item.name)

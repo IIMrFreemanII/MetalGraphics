@@ -356,6 +356,8 @@ final class EditorGutterView : UIRenderableElement {
 
   /// Where fold chevrons are, between the numbers and the text.
   static let foldColumn: Float = 14
+  /// The fold marks' glyph, square: its chevron comes to 7 pt tall.
+  static let foldGlyphSize: Float = 10
 
   /// Whether `x`, in the window, is in the chevrons' column.
   func isInFoldColumn(_ x: Float) -> Bool {
@@ -449,16 +451,15 @@ final class EditorGutterView : UIRenderableElement {
         number /= 10
       } while number > 0
       if folding, let folded = editor.foldState(ofLine: visible.line) {
-        // ⌄ over what can fold, › over what is folded.
+        // ⌄ over what can fold, › over what is folded: the chevron, turned or at rest.
         var color = theme.gutterForeground
         color.w *= folded ? opacity : opacity * 0.55
         let center = float2(self.position.x + self.size.x - Self.foldColumn * 0.5 - 1, baseline - editor.layout.baseFont.size * 0.35)
-        let points: [float2] = folded ? [float2(-1.5, -3.5), float2(2, 0), float2(-1.5, 3.5)]
-                                      : [float2(-3.5, -1.5), float2(0, 2), float2(3.5, -1.5)]
-        for i in 0 ..< 2 {
-          renderer.draw(stroke: effect.apply(to: center + points[i]) - half, to: effect.apply(to: center + points[i + 1]) - half,
-                        width: 1.3 * scale, color: color)
-        }
+        let side = Self.foldGlyphSize * scale
+        AnimatedIcon.draw(
+          .chevronRight, active: !folded, in: renderer,
+          topLeft: effect.apply(to: center) - half - side * 0.5, size: side, color: color
+        )
       }
       guard editor.showsLineNumbers else { continue }
       var color = visible.line == caretLine ? theme.gutterCurrentLine : theme.gutterForeground

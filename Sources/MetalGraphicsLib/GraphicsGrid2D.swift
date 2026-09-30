@@ -203,7 +203,9 @@ class GraphicsGrid2D {
     var prevY = Int(-1)
     for y in StepSequence(from: boxBottomRight.y, to: boxTopLeft.y, step: self.cellSize) {
       if y.isBetween(gridBottomRight.y...gridTopLeft.y) {
-        let yIndex = Int(floor(remap(y, float2(self.bounds.bottom, self.bounds.top), float2(0, Float(self.size.y)))))
+        // The far edge belongs to the last cell, as the shader's `gridCell` has it: one past
+        // would wrap into the next row's first cell and file the shape there twice.
+        let yIndex = min(Int(floor(remap(y, float2(self.bounds.bottom, self.bounds.top), float2(0, Float(self.size.y))))), Int(self.size.y) - 1)
 
         if prevY == yIndex {
           continue
@@ -213,7 +215,7 @@ class GraphicsGrid2D {
         var prevX = Int(-1)
         for x in StepSequence(from: boxTopLeft.x, to: boxBottomRight.x, step: self.cellSize) {
           if x.isBetween(gridTopLeft.x...gridBottomRight.x) {
-            let xIndex = Int(floor(remap(x, float2(self.bounds.left, self.bounds.right), float2(0, Float(self.size.x)))))
+            let xIndex = min(Int(floor(remap(x, float2(self.bounds.left, self.bounds.right), float2(0, Float(self.size.x))))), Int(self.size.x) - 1)
 
             if prevX == xIndex {
               continue

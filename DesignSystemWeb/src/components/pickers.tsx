@@ -1,5 +1,5 @@
 import { React, cx, type Common } from "../react";
-import { Icon } from "./foundation";
+import { AnimatedIcon } from "./motion";
 import { Slider, Stepper } from "./controls";
 
 // ── ColorPicker ─────────────────────────────────────────────────────────
@@ -118,8 +118,8 @@ export function CalendarView({ date, today, min, max, className, style }: Common
       <div className="mg-calendar__header">
         <span className="mg-calendar__title">{title}</span>
         <span style={{ flex: 1 }} />
-        <button type="button" className="mg-calendar__step" aria-label="Previous month"><Icon name="chevronLeft" /></button>
-        <button type="button" className="mg-calendar__step" aria-label="Next month"><Icon name="chevronRight" /></button>
+        <button type="button" className="mg-calendar__step" aria-label="Previous month"><AnimatedIcon glyph="chevronLeft" /></button>
+        <button type="button" className="mg-calendar__step" aria-label="Next month"><AnimatedIcon glyph="chevronRight" /></button>
       </div>
       <div className="mg-calendar__grid" role="grid" aria-label={title}>
         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (

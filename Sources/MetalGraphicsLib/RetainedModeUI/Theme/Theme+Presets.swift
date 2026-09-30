@@ -163,7 +163,7 @@ extension Theme {
     )
   }()
 
-  /// A code editor's look in the design system: SF Mono 12.5 on 20 pt lines, a 52 pt gutter.
+  /// A code editor's look in the design system: JetBrains Mono 12.5 on 20 pt lines, a 52 pt gutter.
   private static func code(_ base: EditorTheme) -> EditorTheme {
     var theme = base
     theme.font = ThemeTypography.standard.mono

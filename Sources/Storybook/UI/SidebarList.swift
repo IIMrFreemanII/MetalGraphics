@@ -36,7 +36,7 @@ final class SidebarList : ModelWatcher {
           ListRow(name, height: NavigationMetrics.sidebarRowHeight, margin: 0, action: {
             if model.expanded.contains(name) { model.expanded.remove(name) } else { model.expanded.insert(name) }
           }, content: {
-            Image(icon: open ? .chevronDown : .chevronRight).foregroundColor(.secondaryLabel)
+            AnimatedIcon(.chevronRight, active: open).foregroundColor(.secondaryLabel)
           })
         )
         guard open else { continue }

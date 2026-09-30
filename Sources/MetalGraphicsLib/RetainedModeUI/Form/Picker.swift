@@ -101,8 +101,19 @@ public final class Picker : FormControl {
     case .menu:
       self.menuTitle.text = self.selectedTitle
       let title = self.menuTitle
+      let chevrons = self.menuIndicator != .hidden
       let button = HittableView(onTap: nil) {
-        PopupFace(chevrons: self.menuIndicator != .hidden) { title }
+        if chevrons {
+          // The arrows on the face's accent tile: the animated up-down glyph.
+          PopupFace(chevrons: true) { title }
+            .overlay(alignment: .trailing) {
+              AnimatedIcon(.upDown).foregroundColor(.accentForeground)
+                .frame(width: PopupFace.chevronWidth, height: PopupFace.chevronWidth)
+                .padding(.trailing, 3)
+            }
+        } else {
+          PopupFace(chevrons: false) { title }
+        }
       }
       button.onTap = { [unowned self] _ in self.openMenu() }
       self.menuButton = button
@@ -309,7 +320,8 @@ public final class Picker : FormControl {
 /// What marks a picker option selected, behind or beside the option it wraps: a raised white
 /// segment, a check mark at the trailing edge, or — in a menu — a check mark at the leading edge
 /// and a highlight under the row the pointer or the arrow keys are on. `progress` is how
-/// selected, for the fade.
+/// selected, for the fade. The check is the animated checkmark: it draws itself on when the
+/// option is chosen.
 final class PickerMark : UIRenderableElement {
   enum Kind {
     case segment
@@ -324,12 +336,31 @@ final class PickerMark : UIRenderableElement {
   private(set) var size: float2 = .zero
   private(set) var progress: Float
   private var highlighted = false
+  /// Drawn on as it is selected and off as it is not: the checkmark's state.
+  private var check: AnimatedIcon? = nil
 
   init(_ kind: Kind, selected: Bool, @UIElementBuilder content: () -> [UIElement]) {
     self.kind = kind
     self.progress = selected ? 1 : 0
     super.init()
-    self.applyContent(content())
+    let content = content()
+    guard kind != .segment else {
+      self.applyContent(content)
+      return
+    }
+    let check = AnimatedIcon(.checkmark, active: selected)
+      .foregroundColor(kind == .check ? FormMetrics.accentColor : FormMetrics.labelColor)
+    self.check = check
+    let body = content.count == 1 ? content[0] : VStack(alignment: .leading, spacing: 0) { () -> [UIElement] in return content }
+    self.applyContent([
+      body.overlay(alignment: kind == .check ? .trailing : .leading) {
+        if kind == .check {
+          check.frame(width: Self.checkWidth)
+        } else {
+          check.frame(width: Self.checkWidth).padding(.leading, 4)
+        }
+      },
+    ])
   }
 
   override func mount(_ context: UIContext) {
@@ -345,6 +376,7 @@ final class PickerMark : UIRenderableElement {
       unsafeDowncast(element, to: PickerMark.self).progress = value.x
       context.invalidate()
     }
+    self.check?.setActive(value > 0.5, context)
   }
 
   func setHighlighted(_ value: Bool, _ context: UIContext) {
@@ -385,21 +417,9 @@ final class PickerMark : UIRenderableElement {
       let radii = float4(repeating: 5 * s)
       renderer.draw(roundedRect: origin - 0.5 * s, size: size + s, radii: radii, color: float4.shadow.withAlpha(0.5 * alpha))
       renderer.draw(roundedRect: origin, size: size, radii: radii, color: float4.segmentSelected.withAlpha(alpha))
-    case .check:
-      let center = float2(origin.x + size.x - Self.checkWidth * 0.5 * s, origin.y + size.y * 0.5)
-      Self.drawCheck(renderer, at: center, scale: s, color: FormMetrics.accentColor, alpha: alpha)
-    case .menuItem:
-      let center = float2(origin.x + (Self.checkWidth * 0.5 + 4) * s, origin.y + size.y * 0.5)
-      Self.drawCheck(renderer, at: center, scale: s, color: FormMetrics.labelColor, alpha: alpha)
+    case .check, .menuItem:
+      break  // the check is its `AnimatedIcon`
     }
-  }
-
-  static func drawCheck(_ renderer: Graphics2D, at center: float2, scale s: Float, color: float4, alpha: Float) {
-    var ink = color
-    ink.w *= alpha
-    let corner = center + float2(-1.5, 3.5) * s
-    renderer.draw(stroke: center + float2(-5, 0) * s, to: corner, width: 2 * s, color: ink)
-    renderer.draw(stroke: corner, to: center + float2(5, -5) * s, width: 2 * s, color: ink)
   }
 }
 
@@ -463,20 +483,12 @@ final class PopupFace : UIRenderableElement {
     border.w *= effect.opacity
     renderer.draw(roundedRect: origin, size: size, radii: radii, color: border, strokeWidth: 0.5 * s)
     guard self.chevrons else { return }
-    // The tile, inset 3 from the trailing edge, and the arrows on it.
+    // The tile, inset 3 from the trailing edge; the arrows on it are an `AnimatedIcon` over the face.
     let tile = Self.chevronWidth * s
     let tileOrigin = float2(origin.x + size.x - 3 * s - tile, origin.y + (size.y - tile) * 0.5)
     renderer.draw(
       roundedRect: tileOrigin, size: float2(repeating: tile), radii: float4(repeating: 4 * s),
       color: FormMetrics.accentColor.withAlpha(effect.opacity)
     )
-    let ink = float4.accentForeground.withAlpha(effect.opacity)
-    let center = tileOrigin + tile * 0.5
-    let w = 1.3 * s
-    // ⌃ above ⌄
-    renderer.draw(stroke: center + float2(-2.5, -1.5) * s, to: center + float2(0, -4) * s, width: w, color: ink)
-    renderer.draw(stroke: center + float2(0, -4) * s, to: center + float2(2.5, -1.5) * s, width: w, color: ink)
-    renderer.draw(stroke: center + float2(-2.5, 1.5) * s, to: center + float2(0, 4) * s, width: w, color: ink)
-    renderer.draw(stroke: center + float2(0, 4) * s, to: center + float2(2.5, 1.5) * s, width: w, color: ink)
   }
 }

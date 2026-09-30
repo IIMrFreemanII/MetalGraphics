@@ -1,5 +1,6 @@
 import { React, cx, type Common } from "../react";
-import { Icon, type IconName } from "./foundation";
+import { type IconName } from "./foundation";
+import { AnimatedIcon, glyphFor } from "./motion";
 
 export type ButtonVariant = "borderless" | "plain" | "bordered" | "prominent";
 
@@ -31,7 +32,7 @@ export function Button({
       onClick={onClick}
       style={style}
     >
-      {icon && <Icon name={icon} />}
+      {icon && <AnimatedIcon glyph={glyphFor(icon)} />}
       {children}
     </button>
   );
@@ -92,7 +93,7 @@ export function TextField({
 }) {
   return (
     <label className={cx("mg-text-field", className)} data-state={state} style={{ "--field-width": width ? `${width}px` : undefined, ...style } as React.CSSProperties}>
-      {icon && <Icon name={icon} className="mg-text-field__icon" />}
+      {icon && <AnimatedIcon glyph={glyphFor(icon)} className="mg-text-field__icon" />}
       <input
         className="mg-text-field__input"
         type={secure ? "password" : "text"}
@@ -174,7 +175,7 @@ export function Picker({
       <span>{selected}</span>
       {chevrons && (
         <span className="mg-popup__arrows">
-          <Icon name="upDown" />
+          <AnimatedIcon glyph="upDown" />
         </span>
       )}
     </button>
@@ -185,7 +186,7 @@ function FormRowLike({ checked, onClick, children }: { checked: boolean; onClick
   return (
     <div className="mg-form-row mg-inline-picker__option" role="radio" aria-checked={checked} tabIndex={0} onClick={onClick}>
       <span>{children as any}</span>
-      {checked && <Icon name="checkmark" className="mg-inline-picker__check" />}
+      <AnimatedIcon glyph="checkmark" active={checked} className="mg-inline-picker__check" />
     </div>
   );
 }
@@ -268,7 +269,7 @@ export function ProgressView({ value = 0.5, width, label, className, style }: Co
   );
 }
 
-/** − and + keys that step a number; a key at the end of the range dims. Mirrors `Stepper`. */
+/** − and + keys that step a number; a key at the end of the range dims its glyph and shakes "no" when pressed. Mirrors `Stepper`. */
 export function Stepper({
   value: controlled,
   defaultValue = 0,
@@ -288,11 +289,11 @@ export function Stepper({
   };
   return (
     <div className={cx("mg-stepper", className)} role="group" aria-label={label} style={style}>
-      <button type="button" className="mg-stepper__key" aria-label="Decrement" disabled={value - step < min} onClick={() => set(value - step)}>
-        −
+      <button type="button" className="mg-stepper__key" aria-label="Decrement" aria-disabled={value - step < min} onClick={() => value - step >= min && set(value - step)}>
+        <AnimatedIcon glyph="stepperMinus" active={value - step < min} />
       </button>
-      <button type="button" className="mg-stepper__key" aria-label="Increment" disabled={value + step > max} onClick={() => set(value + step)}>
-        +
+      <button type="button" className="mg-stepper__key" aria-label="Increment" aria-disabled={value + step > max} onClick={() => value + step <= max && set(value + step)}>
+        <AnimatedIcon glyph="stepperPlus" active={value + step > max} />
       </button>
     </div>
   );
@@ -321,9 +322,7 @@ export function DisclosureGroup({
           onToggle?.(!expanded);
         }}
       >
-        <svg className="mg-disclosure__chevron" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-          <path d="M5 3 L9 7 L5 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <AnimatedIcon glyph="chevronRight" active={expanded} className="mg-disclosure__chevron" />
         {label}
       </button>
       {expanded && <div className="mg-disclosure__content">{children}</div>}

@@ -45,6 +45,8 @@ final class UIHarness {
     self.input.prevMousePosition = outside
 
     self.context.clock = { [unowned self] in self.now }
+    // As the app's resize does: the hit grid covers the whole harness, as the render grid does.
+    self.context.resizeHitGrid(for: size)
     self.root.mounted = true
     self.root.setChild(tree(), self.context)
     self.step()

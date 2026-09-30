@@ -22,7 +22,7 @@ Debug builds reload Swift (via InjectionNext), shaders and the ReactiveUI macros
 
 ## Design system
 
-Everything draws with a `Theme` (frosted glass, light and dark, following the system): colour roles as `float4` (`.secondaryLabel`, `.selection`), glass materials by role (`.glass(.popover)`), SF type, radii. Never hard-code a UI colour; use a role. Translucent windows: `RetainedScene(..., chrome: .translucent)`. Tokens, switching, chrome, glass: `docs/DesignSystem.md`.
+Everything draws with a `Theme` (frosted glass, light and dark, following the system): colour roles as `float4` (`.secondaryLabel`, `.selection`), glass materials by role (`.glass(.popover)`), JetBrains Mono type (bundled; `.system` draws it), radii. Never hard-code a UI colour; use a role. Translucent windows: `RetainedScene(..., chrome: .translucent)`. Tokens, switching, chrome, glass: `docs/DesignSystem.md`.
 
 Before building or restyling any UI in MetalGraphicsLib, Demo, Editor or Storybook, load the `design-system` skill (`.claude/skills/design-system/SKILL.md`) and apply its checklist: match the design canvas "MetalGraphics Frosted Glass", reuse the library's components (`ListRow`, `KindBadge`, `ThemeIcon`, `Form`, `FindBar`, `Menu`, `Tooltip`/`.help`, `Sidebar`, `DockTabBar`, `.glass(role)`… every one has a story in the Storybook), never an app-local copy of one; take every colour, size and font from the theme. A component the design system has and the library lacks goes into the library, public, with the web version's props and a story. `DesignLintTests` fails on a colour written out; a deliberate one carries `// design: <reason>`. Name the board the change matches, and any departure from it, in the final summary.
 

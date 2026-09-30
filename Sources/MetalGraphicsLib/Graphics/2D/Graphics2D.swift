@@ -211,6 +211,11 @@ public class Graphics2D {
   public let profiler = FrameProfiler()
   /// This window's vector path atlas. See `VectorBaker`.
   let vectorBaker = VectorBaker()
+  /// The animated glyphs' shapes, baked once for the window and shared by every `AnimatedIcon`
+  /// in it: each draw sets a shape's colour, width, trim and transform, then draws it.
+  var glyphShapes: [AnimatedIcon.ShapeKey: VectorShape] = [:]
+  /// The rest poses of glyphs drawn without an element (fold marks), per glyph and state.
+  var glyphPoses: [AnimatedIcon.PoseKey: [GlyphPose]] = [:]
 
   /// The window's size in points, as of the frame's `UIContext.update`.
   public internal(set) var size = float2()
@@ -1431,6 +1436,9 @@ public class Graphics2D {
   public func render(into texture: MTLTexture, pixelsPerPoint: Float, _ cb: (Rect) -> Void) {
     let windowRect = Rect(position: float2(), size: self.size)
     self.setPixelsPerPoint(pixelsPerPoint)
+    // No view resizes the grid here: without this a window past 500 points drew only the
+    // grid's 500 in its middle.
+    self.fitGrid(to: self.size)
 
     self.beginFrame()
     cb(windowRect)
@@ -1443,6 +1451,28 @@ public class Graphics2D {
     }
     guard self.encodeFrame(into: texture, commandBuffer, damage: damage) else { return }
     self.finishFrame(commandBuffer)
+  }
+
+  /// The grid covers the window in cells of a fixed size, centred on it, so a new window size
+  /// means a new cell count. Pixels outside the grid are background only. Nothing when the size
+  /// already fits: a compare per call.
+  func fitGrid(to windowSize: float2) {
+    let newGridSize = int2(floor(windowSize / self.grid.cellSize)) &+ 1
+    guard newGridSize.x > 0, newGridSize.y > 0, newGridSize != self.grid.size else {
+      return
+    }
+
+    let prevCellSize = self.grid.cellSize
+    let prevPosition = self.grid.position
+    // Deferred rather than applied here: `endFrame` runs this immediately before mapping
+    // shapes into the grid, so the replacement never lands mid-frame.
+    self.resizeCb = { [unowned self] in
+      self.grid = GraphicsGrid2D(
+        position: prevPosition, size: newGridSize, cellSize: prevCellSize, graphics: self
+      )
+      // Other cells: nothing of the last frame's damage carries over.
+      self.needsFullDamage = true
+    }
   }
 
   /// Every shape is laid out anew for a new scale, and snapped to other pixels.

@@ -4,7 +4,7 @@ import XCTest
 
 // The theme, exported for the web: `DesignSystemWeb/generated/` holds `tokens.json` (design tokens
 // for claude.ai/design), `tokens.css` (the same as CSS variables, light and dark) and `icons.json`
-// (the `ThemeIcon` glyphs). The web components in `DesignSystemWeb/` draw with nothing else, so
+// (the `ThemeIcon` glyphs) and `animated-icons.json` (the `AnimatedGlyph` specs). The web components in `DesignSystemWeb/` draw with nothing else, so
 // the design-system project `/design-sync` pushes stays what `Theme+Presets.swift` says.
 //
 // This fails when the files are not what the theme exports now. After changing the theme:
@@ -26,6 +26,7 @@ final class DesignTokenExportTests: XCTestCase {
       "tokens.json": DesignTokenExport.json(),
       "tokens.css": DesignTokenExport.css(),
       "icons.json": DesignTokenExport.icons(),
+      "animated-icons.json": DesignTokenExport.animatedIcons(),
     ]
     for (name, contents) in files.sorted(by: { $0.key < $1.key }) {
       let url = Self.generated.appendingPathComponent(name)
@@ -65,8 +66,8 @@ final class DesignTokenExportTests: XCTestCase {
 // MARK: - Export
 
 enum DesignTokenExport {
-  // The web draws everything in JetBrains Mono with its ligatures, a choice for the design canvases
-  // (it ships with the design system; SF may not). The app itself keeps SF.
+  // Everything draws in JetBrains Mono with its ligatures, the web as the app (`TextFont.systemFamily`):
+  // the design system ships it.
   static let sansStack = #""JetBrains Mono", ui-monospace, Menlo, monospace"#
   static let monoStack = #""JetBrains Mono", ui-monospace, Menlo, monospace"#
 
@@ -239,6 +240,67 @@ enum DesignTokenExport {
     JSON.object(ThemeIcon.allCases.map { ("\($0)", .string($0.svg)) }).rendered() + "\n"
   }
 
+  // MARK: animated-icons.json
+
+  /// The animated glyphs as the template writes them: each glyph's box, stroke, triggers, markup
+  /// and CSS, the shared rules and keyframes, and the spring as CSS `linear()`, sampled as the
+  /// template's `spring()` samples it. The web's `AnimatedIcon` injects them as they are.
+  static func animatedIcons() -> String {
+    let glyphs = AnimatedGlyph.allCases.map { glyph -> (String, JSON) in
+      let s = glyph.source
+      var o: [(String, JSON)] = [
+        ("box", .array([.number(s.box.x), .number(s.box.y)])),
+        ("weight", .number(s.weight)),
+        ("triggers", .array(s.triggers.map { .string($0.rawValue) })),
+      ]
+      if let state = s.state { o.append(("state", .string(state))) }
+      if s.defaultActive { o.append(("defaultActive", .bool(true))) }
+      if !s.component.isEmpty { o.append(("component", .string(s.component))) }
+      o.append(("markup", .string(s.markup)))
+      o.append(("css", .array(s.css.map(JSON.string))))
+      if !s.morphs.isEmpty { o.append(("morphs", .object(s.morphs.sorted { $0.key < $1.key }.map { ($0.key, .string($0.value)) }))) }
+      if !s.snippetCSS.isEmpty { o.append(("snippetCss", .array(s.snippetCSS.map(JSON.string)))) }
+      if let p = s.pointer { o.append(("pointer", .array([.number(p.x), .number(p.y)]))) }
+      return (glyph.rawValue, .object(o))
+    }
+    let (linear, ms) = springLinear()
+    return JSON.object([
+      ("spring", .object([
+        ("stiffness", .number(GlyphEasing.springStiffness)), ("damping", .number(GlyphEasing.springDamping)),
+        ("ms", .number(Float(ms))), ("linear", .string(linear)),
+      ])),
+      ("morphSpring", .object([("stiffness", .number(MorphSpring.stiffness)), ("damping", .number(MorphSpring.damping))])),
+      ("base", .array(AnimatedGlyphSource.base.map(JSON.string))),
+      ("keyframes", .object(AnimatedGlyphSource.keyframes.map { ($0.name, .string($0.body)) })),
+      ("glyphs", .object(glyphs)),
+    ]).rendered() + "\n"
+  }
+
+  /// The template's `spring(210, .38)`: stepped at 2 kHz until it settles, sampled at 45 points.
+  private static func springLinear() -> (String, Int) {
+    let k = Double(GlyphEasing.springStiffness), c = 2 * Double(GlyphEasing.springDamping) * k.squareRoot(), dt = 1.0 / 2000
+    var x = 0.0, v = 0.0, t = 0.0, settle = 0.0
+    var samples: [Double] = []
+    while t < 3 {
+      v += (-k * (x - 1) - c * v) * dt; x += v * dt; t += dt; samples.append(x)
+      if abs(x - 1) < 0.001 && abs(v) < 0.01 {
+        if settle == 0 { settle = t }
+        if t - settle > 0.02 { break }
+      } else {
+        settle = 0
+      }
+    }
+    let n = 44
+    var out: [String] = []
+    for i in 0...n {
+      let value = i == 0 ? 0 : i == n ? 1 : samples[min(samples.count - 1, Int((Double(i) / Double(n) * Double(samples.count - 1)).rounded()))]
+      // as JavaScript's +x.toFixed(3) prints it
+      let r = (value * 1000).rounded() / 1000
+      out.append(r == r.rounded() ? String(Int(r)) : String(r))
+    }
+    return ("linear(\(out.joined(separator: ", ")))", Int((t * 1000).rounded()))
+  }
+
   // MARK: The theme, as named lists
 
   private static func fonts(_ t: ThemeTypography) -> [(String, TextFont)] {
@@ -387,6 +449,8 @@ enum DesignTokenExport {
 private indirect enum JSON {
   case string(String)
   case number(Float)
+  case bool(Bool)
+  case array([JSON])
   case object([(String, JSON)])
 
   func rendered(_ indent: String = "") -> String {
@@ -397,6 +461,17 @@ private indirect enum JSON {
     case .number(let n):
       let rounded = (Double(n) * 1000).rounded() / 1000
       return rounded == rounded.rounded() ? String(Int(rounded)) : String(rounded)
+    case .bool(let b):
+      return b ? "true" : "false"
+    case .array(let items):
+      // Numbers and short leaves on one line; objects one per line.
+      if items.allSatisfy({ if case .object = $0 { false } else { true } }) {
+        return "[" + items.map { $0.rendered() }.joined(separator: ", ") + "]"
+      }
+      let inner = indent + "  "
+      return "[\n" + items.map { inner + $0.rendered(inner) }.joined(separator: ",\n") + "\n\(indent)]"
+    case .object(let members) where members.isEmpty:
+      return "{}"
     case .object(let members):
       let inner = indent + "  "
       let body = members.map { "\(inner)\(JSON.string($0.0).rendered()): \($0.1.rendered(inner))" }

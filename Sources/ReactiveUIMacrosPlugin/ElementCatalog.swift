@@ -338,6 +338,13 @@ enum ElementCatalog {
              ArgSpec("icon", "setIcon", animatable: true)],
       arity: .leaf
     ),
+    "AnimatedIcon": TypeSpec(
+      name: "AnimatedIcon",
+      args: [ArgSpec(nil, "setGlyph", animatable: true), ArgSpec("trigger", "setTrigger", animatable: true),
+             ArgSpec("active", "setActive", animatable: true), ArgSpec("loop", "setLoop", animatable: true),
+             ArgSpec("mount", nil)],
+      arity: .leaf
+    ),
     "VectorCanvas": TypeSpec(
       name: "VectorCanvas", args: [ArgSpec("width", nil), ArgSpec("height", nil)], arity: .multi
     ),
@@ -648,6 +655,7 @@ enum ElementCatalog {
     "Rectangle", "Background", "Frame", "Padding", "VStack", "HStack", "ZStack", "Grid", "GridRow",
     "ViewThatFits", "LayoutView", "ExpandedFrame", "ScrollView", "Image", "VectorCanvas", "Circle", "Ellipse",
     "RoundedRectangle", "Capsule", "Path", "Divider", "Spacer", "FlexFrame", "EmptyElement", "Form",
+    "AnimatedIcon",
   ]
 
   /// Every one animates: colour and size interpolate, and what the others' relayout moves
@@ -969,7 +977,7 @@ enum ElementCatalog {
     // receiver.
     "font": textModifier("font", setter: "setFont"),
     "foregroundColor": textModifier(
-      "foregroundColor", setter: "setForegroundColor", inPlaceOn: textStyled.union(["Image"])
+      "foregroundColor", setter: "setForegroundColor", inPlaceOn: textStyled.union(["Image", "AnimatedIcon"])
     ),
     "foregroundStyle": textModifier(
       "foregroundStyle", setter: "setForegroundColor", inPlaceOn: textStyled.union(["Image"])
@@ -1001,6 +1009,19 @@ enum ElementCatalog {
     "leadingIcon": ModifierSpec(
       name: "leadingIcon", labels: [nil], produces: "TextField", setter: nil, combine: .identity,
       inPlaceOn: ["TextField", "SecureField"]
+    ),
+    // An animated glyph's size and pace: set on it in place.
+    "iconSize": ModifierSpec(
+      name: "iconSize", labels: [nil], produces: "AnimatedIcon", setter: "setIconSize", combine: .identity,
+      animatable: true, inPlaceOn: ["AnimatedIcon"]
+    ),
+    "scale": ModifierSpec(
+      name: "scale", labels: [nil], produces: "AnimatedIcon", setter: "setScale", combine: .identity,
+      animatable: true, inPlaceOn: ["AnimatedIcon"]
+    ),
+    "speed": ModifierSpec(
+      name: "speed", labels: [nil], produces: "AnimatedIcon", setter: "setSpeed", combine: .identity,
+      animatable: true, inPlaceOn: ["AnimatedIcon"]
     ),
     // How an image is sized and drawn: constant, built once with it.
     "resizable": ModifierSpec(

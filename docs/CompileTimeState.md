@@ -605,7 +605,8 @@ Text(self.title)
 
 The text modifiers are SwiftUI's. Fonts are a `TextFont` — `.largeTitle` … `.caption2`,
 `.system(size:weight:design:)`, `.custom("Georgia", size:)` — with `.bold()`, `.italic()`,
-`.weight(_:)`, `.monospaced()` and `.monospacedDigit()`. `.system` is San Francisco; an unstyled
+`.weight(_:)`, `.monospaced()` and `.monospacedDigit()`. `.system` is the design system's
+JetBrains Mono (bundled; `TextFont.systemFamily = .sanFrancisco` makes it SF); an unstyled
 `Text` draws at 16pt in it, in black. `TextFont` is not named `Font`, which would clash with
 SwiftUI's. The modifiers:
 

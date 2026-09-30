@@ -50,7 +50,7 @@ final class ConsolePanel : SingleChildElement {
         // The product Run starts; a click picks the next.
         Button { BuildController.shared.selectNextProduct() } label: {
           Text(self.product.isEmpty ? "No Product" : self.product)
-          Image(icon: .upDown)
+          AnimatedIcon(.upDown)
             .foregroundColor(Self.productColor)
         }
         .buttonStyle(.bordered)

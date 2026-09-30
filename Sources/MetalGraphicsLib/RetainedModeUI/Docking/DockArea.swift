@@ -86,6 +86,26 @@ public final class DockArea : MultiChildElement {
 
   /// Where the docked content and the floats' frames start, window coordinates.
   private var contentOrigin: float2 { self.position + float2(0, self.titleBarHeight) }
+
+  /// The content a float is kept in, in the content's coordinates (`DockFloat.frame`'s): below
+  /// the window's title bar row too. What is above the area — a navigation bar and its toolbar,
+  /// the traffic lights — is drawn by others, over the float or under it; a float's top never
+  /// goes there, so its bar, the handle that moves it, is never hidden and never hides them.
+  private var floatBounds: (min: float2, max: float2) {
+    let top = max(self.contentOrigin.y, self.context?.titleBar.top ?? 0)
+    let min = float2(0, top - self.contentOrigin.y)
+    return (min, simd_max(self.position + self.size - self.contentOrigin, min))
+  }
+
+  /// `origin` moved the least that keeps a float of `size` in its area, as a window is kept on
+  /// screen: its top not above `floatBounds`, and `DockMetrics.floatKeptInView` of its bar
+  /// inside them. It may hang off the other edges.
+  private func clampedOrigin(_ origin: float2, size: float2) -> float2 {
+    let bounds = self.floatBounds
+    let kept = simd_min(DockMetrics.floatKeptInView, size)
+    let lo = float2(bounds.min.x - size.x + kept.x, bounds.min.y)
+    return simd_clamp(origin, lo, simd_max(bounds.max - kept, lo))
+  }
   private var contentSize: float2 { simd_max(self.size - float2(0, self.titleBarHeight), .zero) }
 
   /// Brings the elements up to the layout, if it changed since they were built.
@@ -235,6 +255,9 @@ public final class DockArea : MultiChildElement {
     self.titleBar?.calcPosition(position)
     self.docked.calcPosition(self.contentOrigin)
     for float in self.floatOrder {
+      // Kept in, as a move keeps it: a layout saved in a bigger window, or above where the area
+      // now starts, is placed back. The saved frame is left until the float moves.
+      float.frame.origin = self.clampedOrigin(float.frame.origin, size: float.frame.size)
       self.place(float, at: self.contentOrigin + float.frame.origin, in: position)
     }
     self.placeLeaving(in: position)
@@ -295,7 +318,8 @@ public final class DockArea : MultiChildElement {
     case .moving(let id, let grab):
       guard let view = self.floatViews[id] else { return }
       if !input.isPointerInView, self.tearOut(view, grab: grab) { return }
-      let origin = point - grab
+      // Stops where it may not go: drawn where it will land.
+      let origin = self.contentOrigin + self.clampedOrigin(point - grab - self.contentOrigin, size: view.frame.size)
       guard origin != view.dragOrigin, let context = self.context else { return }
       // Drawn at the pointer by an offset, laid out there once the drag commits.
       context.invalidate(view.dragOrigin == nil ? [.render, .treeOrder] : .render)
@@ -489,7 +513,8 @@ public final class DockArea : MultiChildElement {
     var maxX = frame.x + frame.width, maxY = frame.y + frame.height
     let minimum = DockMetrics.minFloat
     if edges.x > 0 { minX = min(minX + delta.x, maxX - minimum.x) }
-    if edges.y > 0 { minY = min(minY + delta.y, maxY - minimum.y) }
+    // The top stops where a move stops it.
+    if edges.y > 0 { minY = max(min(minY + delta.y, maxY - minimum.y), self.floatBounds.min.y) }
     if edges.z > 0 { maxX = max(maxX + delta.x, minX + minimum.x) }
     if edges.w > 0 { maxY = max(maxY + delta.y, minY + minimum.y) }
     let resized = DockRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)

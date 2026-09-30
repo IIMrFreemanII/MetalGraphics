@@ -63,7 +63,8 @@ reference is the design canvas **"MetalGraphics Frosted Glass"**
   (`Theme+Presets.swift`), and a line in `docs/DesignSystem.md` ▸ Tokens. Take the value from the
   canvas's token objects, and add it there too if it is new.
 - **Type** from `theme.typography` (`body` 13, `callout` 12, `subheadline` 11, `headline` 13
-  semibold, `mono` 12.5…), **radii** from `theme.radii` (xs 3 badges, sm 5, md 6 rows, buttons,
+  semibold, `mono` 12.5…), all JetBrains Mono: `.system` draws the bundled face, so never
+  `.custom` a family for UI text (docs/DesignSystem.md ▸ Type). **Radii** from `theme.radii` (xs 3 badges, sm 5, md 6 rows, buttons,
   fields, lg 10 cards and popovers, xl 12 sheets), **spacing** from `theme.spacing`,
   **shadows** from `theme.shadows`, **motion** from `theme.motion` (hover 0.12 s ease-out).
   Build-time code reads `Theme.current`, and only for what is the same in light and dark;

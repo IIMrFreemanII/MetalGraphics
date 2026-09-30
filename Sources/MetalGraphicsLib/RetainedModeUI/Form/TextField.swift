@@ -615,8 +615,8 @@ final class FieldBox : UIRenderableElement {
   /// Capped in a form's row: see `FormMetrics.fieldWidth`.
   private var maxWidth: Float? = nil
   /// Drawn before the text, which starts after it: by the box, outside the text's clip, so not
-  /// a child of it.
-  private var icon: Image? = nil
+  /// a child of it. Mounted with the box, so it plays when the field is hovered.
+  private var icon: AnimatedIcon? = nil
   private static let iconGap: Float = 6
   /// Where a caret goes before each character of what is shown, and after the last; see
   /// `caretOffsets`. Set whenever the text changes.
@@ -648,7 +648,7 @@ final class FieldBox : UIRenderableElement {
       self.icon = nil
       return
     }
-    self.icon = Image(icon: icon).foregroundColor(FormMetrics.secondaryColor)
+    self.icon = AnimatedIcon(icon: icon).foregroundColor(FormMetrics.secondaryColor)
   }
 
   /// From the box's left edge to the text.
@@ -659,9 +659,11 @@ final class FieldBox : UIRenderableElement {
 
   override func mount(_ context: UIContext) {
     context.registerRenderableView(self)
+    self.icon?.handleMount(context, in: self)
   }
 
   override func unmount(_ context: UIContext) {
+    self.icon?.handleUnmount(context)
     context.unregisterRenderableView(self)
     self.focused = false
   }

@@ -37,7 +37,7 @@ public final class SidebarLink : SingleChildElement {
 
   public init(_ title: String, icon: ThemeIcon? = nil, selected: Bool = false, action: (() -> Void)? = nil) {
     self.row = ListRow(title, selected: selected, height: NavigationMetrics.sidebarRowHeight, margin: 0, action: action, content: {
-      if let icon { Image(icon: icon).foregroundColor(.secondaryLabel) }
+      if let icon { AnimatedIcon(icon: icon).foregroundColor(.secondaryLabel) }
     })
     super.init()
     self.applyContent([self.row])

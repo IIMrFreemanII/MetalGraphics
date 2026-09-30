@@ -29,6 +29,9 @@ open class VectorShape: UIElement, Hittable, PointerHandling {
   public internal(set) var scaleAnchor: float2? = nil
   public internal(set) var offset: float2 = .zero
   public internal(set) var opacity: Float = 1
+  /// A map applied after offset, rotation and scale, in canvas units: what an `AnimatedIcon`
+  /// part's skew and uneven scale go through. Only the one `VectorItem` changes, never a bake.
+  var extraTransform: (linear: float2x2, translation: float2)? = nil
 
   // MARK: Hittable
 
@@ -141,8 +144,14 @@ open class VectorShape: UIElement, Hittable, PointerHandling {
     let scaleAnchor = self.scaleAnchor ?? center
     let rotationAnchor = self.rotationAnchor ?? center
     let turn = float2x2(rotation: self.rotation * .pi / 180)
-    let linear = turn * scale
-    let translation = turn * (scaleAnchor * (1 - scale) - rotationAnchor) + rotationAnchor + self.offset
+    var linear = turn * scale
+    var translation = turn * (scaleAnchor * (1 - scale) - rotationAnchor) + rotationAnchor + self.offset
+    if let extra = self.extraTransform {
+      linear = extra.linear * linear
+      translation = extra.linear * translation + extra.translation
+      // squashed flat (a scale through zero): nothing to draw, and no inverse
+      guard abs(linear.determinant) > 1e-6 else { return }
+    }
     // canvas -> points
     let toPoints = linear * unitScale
     let toPointsOffset = origin + translation * unitScale

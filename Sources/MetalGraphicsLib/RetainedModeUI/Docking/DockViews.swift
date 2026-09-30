@@ -22,6 +22,9 @@ enum DockMetrics {
   static let floatRadius: Float = 7
   static let minPane: Float = 60
   static let minFloat = float2(180, 110)
+  /// How much of a float stays in its area, whatever moves it: the height of a panel bar and a
+  /// little more than a tab's width, enough to take it by its bar again. Its top never leaves.
+  static let floatKeptInView = float2(60, 30)
   static let markerSize: Float = 28
   static let markerSpacing: Float = 34
   static let edgeInset: Float = 10
@@ -332,7 +335,11 @@ final class DockTabItem : MultiChildElement {
   var onClose: (() -> Void)?
   private weak var context: UIContext?
   private let fill = DockTabFill()
-  private let icon: Image
+  /// The animated glyph, playing as the tab is hovered: drawn 16 square, centred on the
+  /// `DockTabMetrics.iconSize` slot the title is laid out after.
+  private let icon: AnimatedIcon
+  /// The close button's cross, shown while the pointer is on the tab.
+  private let closeIcon: AnimatedIcon
   private let title: Text
   private let badgeText: Text
   private let press: HittableView
@@ -353,19 +360,23 @@ final class DockTabItem : MultiChildElement {
   init(panel: String) {
     self.panel = panel
     self.title = Text("").font(.system(size: DockTabMetrics.panel.fontSize)).foregroundColor(.secondaryLabel).lineLimit(1)
-    self.icon = Image(icon: .document)
+    self.icon = AnimatedIcon(.document).iconSize(DockTabMetrics.iconSize.y)
     self.icon.isHidden = true
+    self.closeIcon = AnimatedIcon(.xmark).foregroundColor(DockMetrics.glyphColor.withAlpha(0))
     self.badgeText = Text("").font(.system(size: 10, weight: .bold)).foregroundColor(.accentForeground).lineLimit(1)
     self.badgeText.isHidden = true
     self.press = HittableView {}
     self.close = HittableView {}
     super.init()
+    self.icon.explicitHost = self.press
+    self.closeIcon.explicitHost = self.close
     self.fill.item = self
     self.press.onPress = { [unowned self] down, input in
       if down { self.onPickUp?(input) }
     }
     self.press.onHover = { [unowned self] hovered, _ in
       self.fill.isHovered = hovered
+      self.showCloseIcon()
       self.context?.invalidate(.render)
     }
     // A tap goes to the topmost view that takes taps, and a press to the topmost that takes
@@ -374,9 +385,17 @@ final class DockTabItem : MultiChildElement {
     self.close.onTap = { [unowned self] _ in self.onClose?() }
     self.close.onHover = { [unowned self] hovered, _ in
       self.fill.isCloseHovered = hovered
+      self.showCloseIcon()
       self.context?.invalidate(.render)
     }
-    self.applyContent([self.fill, self.icon, self.title, self.badgeText, self.press, self.close])
+    self.applyContent([self.fill, self.icon, self.title, self.badgeText, self.closeIcon, self.press, self.close])
+  }
+
+  /// The cross shows while the pointer is on the tab or its close button.
+  private func showCloseIcon() {
+    guard let context = self.context else { return }
+    let shown = self.fill.isHovered || self.fill.isCloseHovered
+    self.closeIcon.setForegroundColor(DockMetrics.glyphColor.withAlpha(shown ? 1 : 0), context)
   }
 
   override func mount(_ context: UIContext) {
@@ -414,7 +433,7 @@ final class DockTabItem : MultiChildElement {
     let icon = info?.icon ?? fallback?.0
     if icon != self.iconKind {
       self.iconKind = icon
-      if let icon { self.icon.setIcon(icon, context) }
+      if let icon { self.icon.setGlyph(AnimatedGlyph(icon), context) }
       self.updateIcon(context)
     }
     let color = info?.icon != nil ? info?.iconColor : fallback?.1
@@ -494,6 +513,7 @@ final class DockTabItem : MultiChildElement {
     let textWidth = max(self.size.x - self.leadingWidth - self.trailingWidth, 0)
     _ = self.title.calcSize(ProposedSize(width: textWidth, height: nil))
     _ = self.icon.calcSize(ProposedSize(DockTabMetrics.iconSize))
+    _ = self.closeIcon.calcSize(.unspecified)
     _ = self.badgeText.calcSize(.unspecified)
     _ = self.press.calcSize(ProposedSize(self.size))
     _ = self.close.calcSize(ProposedSize(float2(repeating: self.metrics.closeSize)))
@@ -504,7 +524,8 @@ final class DockTabItem : MultiChildElement {
     self.position = position
     self.fill.calcPosition(position)
     let iconSize = self.icon.getSize()
-    self.icon.calcPosition(position + float2(self.metrics.padding, ((self.size.y - iconSize.y) * 0.5).rounded()))
+    let slot = DockTabMetrics.iconSize.x
+    self.icon.calcPosition(position + float2(self.metrics.padding + ((slot - iconSize.x) * 0.5).rounded(), ((self.size.y - iconSize.y) * 0.5).rounded()))
     let textSize = self.title.getSize()
     self.title.calcPosition(position + float2(self.leadingWidth, ((self.size.y - textSize.y) * 0.5).rounded()))
     if self.badge > 0 {
@@ -516,6 +537,8 @@ final class DockTabItem : MultiChildElement {
     }
     self.press.calcPosition(position)
     self.close.calcPosition(self.closeRect.min)
+    let rect = self.closeRect
+    self.closeIcon.calcPosition(rect.min + ((rect.max - rect.min - self.closeIcon.getSize()) * 0.5).rounded(.toNearestOrAwayFromZero))
   }
 }
 
@@ -571,7 +594,7 @@ final class DockTabFill : FormGraphic {
     }
 
     guard self.isHovered || self.isCloseHovered else { return }
-    // The cross, in the close button's rect, moved as the tab is.
+    // The close button's hover square, in its rect, moved as the tab is.
     let close = item.closeRect
     let min = origin + (close.min - item.position) * scale
     let side = (close.max.x - close.min.x) * scale
@@ -579,11 +602,7 @@ final class DockTabFill : FormGraphic {
       renderer.draw(roundedRect: min, size: float2(side, side), radii: float4(repeating: 4 * scale),
                     color: float4.hover.withAlpha(opacity))
     }
-    let inset = (side - 7 * scale) * 0.5
-    var color = DockMetrics.glyphColor
-    color.w *= opacity
-    renderer.draw(stroke: min + inset, to: min + side - inset, width: 1.3 * scale, color: color)
-    renderer.draw(stroke: min + float2(side - inset, inset), to: min + float2(inset, side - inset), width: 1.3 * scale, color: color)
+    // The cross over it is the tab's `closeIcon`.
   }
 }
 

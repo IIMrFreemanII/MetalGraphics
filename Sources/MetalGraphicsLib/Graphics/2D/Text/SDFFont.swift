@@ -68,6 +68,12 @@ public final class FontManager: @unchecked Sendable {
 
   // MARK: - Faces
 
+  /// Forgets every resolved face, for `TextFont.systemFamily`: text laid out after this
+  /// resolves anew.
+  func removeResolvedFaces() {
+    self.lock.withLock { self.faces.removeAll(keepingCapacity: true) }
+  }
+
   /// The CoreText font `font` draws with.
   func face(for font: TextFont) -> ResolvedFace {
     if let face = self.lock.withLock({ self.faces[font] }) {
@@ -90,15 +96,20 @@ public final class FontManager: @unchecked Sendable {
   private static func makeFace(_ font: TextFont) -> ResolvedFace {
     let size = CGFloat(max(font.size, 0))
     var ctFont: CTFont
+    var lineMetrics: LineMetrics?
     switch font.face {
-    case .system(let design):
-      let system = NSFont.systemFont(ofSize: size, weight: (font.weight ?? .regular).systemWeight)
-      var made: NSFont? = system
-      if let systemDesign = design.systemDesign, let descriptor = system.fontDescriptor.withDesign(systemDesign) {
-        made = NSFont(descriptor: descriptor, size: size)
+    case .system(let design) where TextFont.systemFamily == .jetBrainsMono && design.isJetBrainsMono:
+      // The design system's type, in the line box SF has in that design: code keeps SF Mono's.
+      // SF when the bundle lacks it.
+      let sf = Self.sanFrancisco(design, weight: font.weight, size: size)
+      if let bundled = BundledFonts.jetBrainsMono(font.weight ?? .regular, size: size) {
+        ctFont = bundled
+        lineMetrics = LineMetrics(bundled, in: LineMetrics(sf))
+      } else {
+        ctFont = sf
       }
-      ctFont = (made ?? system) as CTFont
-      ctFont = Self.pinnedOpticalSize(ctFont, size: size)
+    case .system(let design):
+      ctFont = Self.sanFrancisco(design, weight: font.weight, size: size)
     case .custom(let face):
       ctFont = CTFontCreateWithName(face.name as CFString, size, nil)
       if let weight = font.weight {
@@ -134,7 +145,18 @@ public final class FontManager: @unchecked Sendable {
       ctFont = CTFontCreateCopyWithAttributes(ctFont, size, nil, descriptor)
     }
 
-    return ResolvedFace(font: ctFont, oblique: oblique)
+    return ResolvedFace(font: ctFont, oblique: oblique, lineMetrics: lineMetrics)
+  }
+
+  /// San Francisco in `design`, as SwiftUI's `.system`, at an optical size pinned by
+  /// `pinnedOpticalSize`.
+  private static func sanFrancisco(_ design: TextFont.Design, weight: TextFont.Weight?, size: CGFloat) -> CTFont {
+    let system = NSFont.systemFont(ofSize: size, weight: (weight ?? .regular).systemWeight)
+    var made: NSFont? = system
+    if let systemDesign = design.systemDesign, let descriptor = system.fontDescriptor.withDesign(systemDesign) {
+      made = NSFont(descriptor: descriptor, size: size)
+    }
+    return Self.pinnedOpticalSize((made ?? system) as CTFont, size: size)
   }
 
   /// San Francisco's outlines change with size, along its optical size axis, under one PostScript
@@ -295,5 +317,11 @@ extension TextFont.Design {
     case .rounded: .rounded
     case .monospaced: .monospaced
     }
+  }
+
+  /// JetBrains Mono draws the default and monospaced designs; it has no rounded or serif one,
+  /// which stay SF's.
+  var isJetBrainsMono: Bool {
+    self == .default || self == .monospaced
   }
 }

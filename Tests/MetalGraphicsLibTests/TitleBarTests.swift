@@ -192,7 +192,8 @@ final class DockTabStyleTests: XCTestCase {
 
   func testATabShowsItsIconEditedDotAndBadge() {
     let space = self.makeSpace()
-    let h = UIHarness(size: float2(600, 300)) { DockArea(space, host: "main") }
+    // Wide enough that no tab is squeezed, with the dot or without.
+    let h = UIHarness(size: float2(900, 300)) { DockArea(space, host: "main") }
     h.settle()
     let width = self.tab("main", h).size.x
     space.decorate(panel: "main") { $0.isEdited = true }

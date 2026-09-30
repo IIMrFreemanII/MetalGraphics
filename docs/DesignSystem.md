@@ -39,9 +39,16 @@ A `Theme` (`Theme.light`, `Theme.dark`) holds:
 - `palette`: hues for badges and swatches.
 - `materials`: a `GlassMaterial` per `ThemeMaterial` (`popover`, `menu`, `tooltip`, `sheet`,
   `floatingPanel`, `dropMarker`, `bar`).
-- `typography`: SF throughout. largeTitle 26, title 22, title2 17, title3 15, headline 13
-  semibold, body 13, callout 12, subheadline 11, footnote 10, mono 12.5. The same in light and
-  dark, so switching appearance never lays anything out.
+- `typography`: JetBrains Mono throughout, with its ligatures, as the design canvas and the web
+  mirror draw it. largeTitle 26, title 22, title2 17, title3 15, headline 13 semibold, body 13,
+  callout 12, subheadline 11, footnote 10, mono 12.5. The same in light and dark, so switching
+  appearance never lays anything out.
+- **Type.** `.system` fonts and the text styles draw in JetBrains Mono, which the library
+  bundles (`Resources/Fonts`, SIL OFL 1.1) in four weights: regular, medium, semibold and bold;
+  lighter weights draw regular and heavier bold. It keeps SF's line box, its glyphs centred in
+  it as the web's `line-height` places them, so rows, buttons and fields keep their heights;
+  only the widths of text change. `.rounded` and `.serif` stay SF's, and
+  `TextFont.systemFamily = .sanFrancisco`, set before the first window, makes `.system` SF.
 - `spacing` (2 to 32), `radii` (xs 3 badges, sm 5 rows, md 6 buttons and fields, lg 10 cards
   and popovers, xl 12 sheets), `shadows`, `motion`.
 - `editor`: the `EditorTheme` a `TextEditor` shows unless it was given one.
@@ -101,6 +108,29 @@ The shapes the design canvas draws, in the library. Each has a story in the Stor
 - **`KindBadge("S", color: .hue(.badgeStruct))`**: a symbol's kind, 16 pt, white letter.
 - **`Image(icon: .folder)`**: the design's glyphs (`ThemeIcon`: chevrons, folder, document,
   magnifier, cross, up-down arrows, check), SVGs baked once into the atlas and tinted like text.
+- **`AnimatedIcon(.folder)`**: the 63 animated glyphs (`AnimatedGlyph`) of the Claude Design
+  template "Animated icons": its 56 (chevrons, folder, document, trash, bell, lock, eye,
+  play/pause, sort, splits, sidebars, the Swift and file-type documents, language badges…) and
+  seven in its manner (calendar, clock, color, slider, toggle, code, dock). Each is its own box,
+  the static `ThemeIcon`'s size at `.scale(1)` (`.iconSize(n)` fits the longer side to n). Its
+  host (the nearest `HittableView`: a `ListRow`, a `Button`, any `.onHover`) plays it as the
+  template's host does: a one-shot as the pointer enters, a pose held while it stays, a squash
+  while pressed (a host that takes no press itself, a row tapped on mouse down, still tells its
+  icons the button is down: `HittableView.isPointerDown`). `active: Bool?` holds a state (nil for none: the checkmark drawn, sort
+  unsorted); `loop` repeats a motion; `mount` plays an entrance, `replay` again. Each glyph is
+  its markup and CSS as the template writes them (`AnimatedGlyph+Template.swift`), read by
+  `AnimatedGlyphStyle` and evaluated as a browser would: matching rules, transitions (the
+  template's spring, `spring(210, .38)`, settling in 1.338 s), keyframe animations over them;
+  the same source is exported to `DesignSystemWeb/generated/animated-icons.json`. Shapes are
+  baked once per window and shared; a part moves by its vector item's transform. It draws only
+  while something moves; loops and the spinner step on timed wakes at 30 Hz. Caps and joins are
+  round, as every vector stroke here is; the web draws the template's butt caps and miters. The
+  components draw their glyphs with it: `DisclosureGroup`'s chevron (`.chevronRight` turned),
+  `Picker`'s arrows and checks (and `Menu`'s items'), `Stepper`'s keys (`.stepperMinus`,
+  `.stepperPlus`, active at the end of the range), `TextField.leadingIcon`, `SidebarLink`'s icon,
+  `FindBar`'s and `CalendarView`'s ‹ ›, a menu button's ⌄, a dock tab's document and close cross,
+  and the code editor's fold marks (`AnimatedIcon.draw`, without motion). A `ThemeIcon` maps to
+  the glyph of the same name.
 - **Buttons** fill `.fillHover`/`.hover` while hovered and `.fillPressed` while pressed;
   prominent ones lighten and darken their tint.
 - **Forms** are a column at most 600 wide, centred, of outlined cards; section headers are 12 pt
@@ -109,7 +139,7 @@ The shapes the design canvas draws, in the library. Each has a story in the Stor
 - **A text field** can show an icon before its text: `.leadingIcon(.magnifier)`.
 - **A menu picker** ends in an accent tile with up-down arrows.
 - **Dock tabs** come in two styles, `.panel` and `.document` (`docs/Docking.md`, Tabs).
-- **The code editor** of the theme is SF Mono 12.5 on 20 pt lines with a 52 pt gutter
+- **The code editor** of the theme is JetBrains Mono 12.5 on 20 pt lines with a 52 pt gutter
   (`EditorTheme.lineHeight`, `.minGutterWidth`).
 - **`ListRow(label, subtitle:, detail:, status:)`**: a row with its label, a second line in the
   secondary colour, a detail at the trailing edge and a severity square (`ListRowStatus`); the
@@ -210,7 +240,10 @@ two tab styles, the close button on hover and a tab's decorations; `ThemeScopeTe
 another appearance; `DesignComponentsTests`, `MenuAndSurfaceTests` and `DockChromeTests` the
 components shown in place; `DesignLintTests` that no colour is written out. The Storybook's
 `ComponentGoldenTests` keep a golden of every component, light and dark, and `ParityTests` check
-that every web component has a Swift story.
+that every web component has a Swift story. `AnimatedIconTests` cover the animated glyphs: every one at rest
+and held active, the spring against the template's samples, hover, press, the three states,
+draw-on and off, entrances, loops and the spinner on wakes, the eye following the pointer and
+the play/pause morph.
 
 ## On the web (claude.ai/design)
 
@@ -227,6 +260,7 @@ project with `/design-sync`.
   chrome (`MG.Window`, `MG.TrafficLights`), docking (`MG.FloatingPanel`, `MG.DropMarkers`) and the Editor's pieces
   (`MG.CodeEditor`, `MG.FindBar`, `MG.CompletionList`, `MG.StatusBar`). After changing a component here, change its
   web version too.
-- **Type:** the web draws JetBrains Mono; the app keeps SF.
+- **Type:** both draw JetBrains Mono, with its ligatures; the app keeps SF's line heights, as the
+  web's `line-height` does.
 
 See `DesignSystemWeb/README.md`.

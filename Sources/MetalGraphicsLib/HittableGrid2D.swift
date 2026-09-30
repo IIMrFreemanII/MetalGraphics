@@ -203,7 +203,7 @@ public class HittableGrid2D {
       let location = Self.location(point, in: space, of: view)
       self.nextChain[index].location = location
       if let old = self.hoverChain.first(where: { $0.view === view }) {
-        if old.location != location, view.pointer?.onContinuousHover != nil {
+        if old.location != location, view.pointer?.onContinuousHover != nil || (view as? HittableView)?.followsPointer == true {
           self.hoverCalls.append((self.nextChain[index], .moved))
         }
       } else {
@@ -222,8 +222,10 @@ public class HittableGrid2D {
       case .entered:
         view.onHover?(true, input)
         view.pointer?.onContinuousHover?(.active(entry.location))
+        if let host = view as? HittableView, host.followsPointer { host.notifyPointer(point) }
       case .moved:
         view.pointer?.onContinuousHover?(.active(entry.location))
+        if let host = view as? HittableView, host.followsPointer { host.notifyPointer(point) }
       }
     }
     self.hoverCalls.removeAll(keepingCapacity: true)
@@ -264,7 +266,20 @@ public class HittableGrid2D {
     }
 
     // After the press below, so a click whose down and up land in one frame still ends.
-    defer { self.endPress(input, time: time) }
+    defer {
+      self.endPress(input, time: time)
+      self.releasePointerDown(input)
+    }
+
+    // The button down over the views under the pointer that have followers, whether or not
+    // they take the press: an `AnimatedIcon` in a row squashes as the row is pressed.
+    if input.leftMouseDown {
+      for entry in self.hoverChain {
+        guard let host = entry.view as? HittableView, host.hasFollowers, host.mounted else { continue }
+        host.isPointerDown = true
+        self.pointerDownHosts.append(host)
+      }
+    }
 
     // A press goes to the topmost view that takes one: the one drawn over the others.
     if input.leftMouseDown, let index = self.topmost(at: input, where: { $0.handlesEvents && $0.handlesPress }) {
@@ -288,6 +303,15 @@ public class HittableGrid2D {
     } else if input.mouseDown, let index = self.topmost(at: input, where: { $0.handlesEvents && $0.onTap != nil }) {
       self.views[index].onTap?(input)
     }
+  }
+
+  /// Views told the button is down over them, until it comes up.
+  private var pointerDownHosts: [HittableView] = []
+
+  private func releasePointerDown(_ input: Input) {
+    guard input.leftMouseUp, !self.pointerDownHosts.isEmpty else { return }
+    for host in self.pointerDownHosts { host.isPointerDown = false }
+    self.pointerDownHosts.removeAll(keepingCapacity: true)
   }
 
   /// Moves the press in progress to `view`, which gets its drags and its release from now on:
@@ -396,7 +420,8 @@ public class HittableGrid2D {
     var prevY = Int(-1)
     for y in StepSequence(from: boxBottomRight.y, to: boxTopLeft.y, step: self.cellSize) {
       if y.isBetween(gridBottomRight.y...gridTopLeft.y) {
-        let yIndex = Int(floor(remap(y, float2(self.bounds.bottom, self.bounds.top), float2(0, Float(self.cellCount.y)))))
+        // The far edge belongs to the last cell: one past would wrap into the next row.
+        let yIndex = min(Int(floor(remap(y, float2(self.bounds.bottom, self.bounds.top), float2(0, Float(self.cellCount.y))))), Int(self.cellCount.y) - 1)
 
         if prevY == yIndex {
           continue
@@ -406,7 +431,7 @@ public class HittableGrid2D {
         var prevX = Int(-1)
         for x in StepSequence(from: boxTopLeft.x, to: boxBottomRight.x, step: self.cellSize) {
           if x.isBetween(gridTopLeft.x...gridBottomRight.x) {
-            let xIndex = Int(floor(remap(x, float2(self.bounds.left, self.bounds.right), float2(0, Float(self.cellCount.x)))))
+            let xIndex = min(Int(floor(remap(x, float2(self.bounds.left, self.bounds.right), float2(0, Float(self.cellCount.x))))), Int(self.cellCount.x) - 1)
 
             if prevX == xIndex {
               continue

@@ -31,6 +31,11 @@ None at the first sync.
 - Component metrics are copied by hand from the Swift sources (`src/styles.css` names each one). A Swift component
   change does not fail any test here, only a token change does. Re-check the matching web component after
   changing one in Swift.
+- `generated/animated-icons.json` is the template's glyphs (markup, CSS, keyframes, the spring as `linear()`), from
+  the Swift `AnimatedGlyph+Template.swift`; `AnimatedIcon` (`src/components/motion.tsx`) injects the CSS once and
+  drives each svg's `data-*` flags as the template's `<mg-anim-icon>` does. A new glyph is a Swift case plus its
+  source, re-recorded, then the `AnimatedGlyphName` union. The template's own script is kept in
+  `.design-sync/reference/mg-anim-icons.js` to diff against when the Claude Design template changes.
 - `generated/icons.json` must keep the nine `ThemeIcon` names. The `IconName` union in `src/components/foundation.tsx`
   fails to compile when they drift.
 - The Design System artifact (https://claude.ai/artifact/MxLvtzovjjZmjCcsg5ntF7) is a copy built by

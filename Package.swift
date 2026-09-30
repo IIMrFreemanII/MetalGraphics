@@ -31,6 +31,8 @@ let package = Package(
     .target(
       name: "MetalGraphicsLib",
       exclude: ["Shaders"],
+      // JetBrains Mono, the design system's type (SIL OFL 1.1, `Fonts/OFL.txt`).
+      resources: [.copy("Resources/Fonts")],
       swiftSettings: swiftSettings,
       plugins: ["MetalShaders"]
     ),

@@ -1,5 +1,6 @@
 import { React, cx, type Common } from "../react";
-import { Glass, Icon } from "./foundation";
+import { Glass } from "./foundation";
+import { AnimatedIcon } from "./motion";
 import { Button, TextField } from "./controls";
 import { KindBadge, ListRow } from "./lists";
 
@@ -99,7 +100,7 @@ export function CodeEditor({
                 {lineNumbers && <span className="mg-code__number">{firstLineNumber + i}</span>}
                 {folding && (
                   <span className="mg-code__fold">
-                    {line.fold && <Icon name={line.fold === "open" ? "chevronDown" : "chevronRight"} />}
+                    {line.fold && <AnimatedIcon glyph="chevronRight" trigger="none" active={line.fold === "open"} />}
                   </span>
                 )}
               </span>

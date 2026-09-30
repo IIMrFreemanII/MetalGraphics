@@ -15,6 +15,10 @@ public final class Stepper : FormControl {
   private let label: Text
   private let decrement = StepperGlyph(plus: false)
   private let increment = StepperGlyph(plus: true)
+  /// The keys' − and +: the animated glyphs, playing as the pointer is on their key, and active
+  /// (dimmed, shaking "no" when pressed) at the end of the range.
+  private let decrementIcon = AnimatedIcon(.stepperMinus).foregroundColor(FormMetrics.labelColor)
+  private let incrementIcon = AnimatedIcon(.stepperPlus).foregroundColor(FormMetrics.labelColor)
 
   init(_ label: String, value: Double, range: ClosedRange<Double>, step: Double, onValueChange: ((Double) -> Void)?) {
     self.value = value
@@ -24,8 +28,9 @@ public final class Stepper : FormControl {
     let label = Text(label).font(FormMetrics.font).foregroundColor(FormMetrics.labelColor)
     self.label = label
     let (decrement, increment) = (self.decrement, self.increment)
-    let down = HittableView(onTap: nil) { decrement }
-    let up = HittableView(onTap: nil) { increment }
+    let (minus, plus) = (self.decrementIcon, self.incrementIcon)
+    let down = HittableView(onTap: nil) { decrement.overlay { minus } }
+    let up = HittableView(onTap: nil) { increment.overlay { plus } }
     super.init(content: HStack(spacing: FormMetrics.labelSpacing) {
       label
       Spacer()
@@ -94,10 +99,19 @@ public final class Stepper : FormControl {
     self.commit { report(value) }
   }
 
-  /// Dims the button whose way is blocked.
+  /// Marks the key whose way is blocked: its glyph's end-of-range state.
   private func updateEnds(_ context: UIContext?) {
-    self.decrement.setEnabled(self.value > self.range.lowerBound, context)
-    self.increment.setEnabled(self.value < self.range.upperBound, context)
+    Self.block(self.decrementIcon, self.value <= self.range.lowerBound, context)
+    Self.block(self.incrementIcon, self.value >= self.range.upperBound, context)
+  }
+
+  private static func block(_ icon: AnimatedIcon, _ blocked: Bool, _ context: UIContext?) {
+    if let context {
+      icon.setActive(blocked, context)
+    } else {
+      icon.active = blocked
+      icon.restyleAtRest()
+    }
   }
 
   public func setValue<V: BinaryInteger>(_ value: V, _ context: UIContext, animation: UIAnimation? = nil) -> Void {
@@ -117,21 +131,14 @@ public final class Stepper : FormControl {
   }
 }
 
-/// One half of a stepper: a − or a + on a white key.
+/// One half of a stepper: the white key a − or a + (an `AnimatedIcon` over it) sits on.
 final class StepperGlyph : FormGraphic {
   static let size = float2(24, 22)
   let plus: Bool
-  private var enabled = true
 
   init(plus: Bool) {
     self.plus = plus
     super.init()
-  }
-
-  func setEnabled(_ value: Bool, _ context: UIContext?) {
-    guard value != self.enabled else { return }
-    self.enabled = value
-    context?.invalidate()
   }
 
   override func sizeThatFits(_ proposal: ProposedSize) -> float2 {
@@ -144,14 +151,5 @@ final class StepperGlyph : FormGraphic {
       radii: (self.plus ? float4(5, 5, 0, 0) : float4(0, 0, 5, 5)) * scale,  // trailing corners, or leading
       color: float4.controlButton.withAlpha(opacity)
     )
-    var ink = FormMetrics.labelColor
-    ink.w *= opacity * (self.enabled ? 1 : 0.3)
-    let center = origin + size * 0.5
-    let arm = 4.5 * scale
-    let width = 1.6 * scale
-    renderer.draw(stroke: center - float2(arm, 0), to: center + float2(arm, 0), width: width, color: ink)
-    if self.plus {
-      renderer.draw(stroke: center - float2(0, arm), to: center + float2(0, arm), width: width, color: ink)
-    }
   }
 }

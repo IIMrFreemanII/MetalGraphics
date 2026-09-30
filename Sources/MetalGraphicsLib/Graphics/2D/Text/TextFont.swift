@@ -4,10 +4,29 @@ import CoreText
 /// A font, as SwiftUI's `Font`: a face, a size, and the weight, slant and digit style to draw it
 /// in. Not named `Font`, which would clash with SwiftUI's in a file that imports both.
 ///
-/// `.system` and the text styles are San Francisco, with its real weights and designs; `.custom`
-/// is any installed family, with the nearest weight the family has. A face with no italic is
-/// slanted when `italic()` asks for one.
+/// `.system` and the text styles draw in the design system's type: JetBrains Mono, bundled with
+/// the library, for the default and monospaced designs, in four weights (regular, medium,
+/// semibold, bold); rounded and serif are San Francisco's. `TextFont.systemFamily = .sanFrancisco`
+/// makes `.system` SwiftUI's again. `.custom` is any installed family, with the nearest weight
+/// the family has. A face with no italic is slanted when `italic()` asks for one.
 public struct TextFont: Hashable, Sendable {
+  /// What `.system` draws in.
+  public enum SystemFamily: Hashable, Sendable {
+    /// JetBrains Mono, with its ligatures: the design system's type, as the design canvas and
+    /// the web mirror draw it.
+    case jetBrainsMono
+    /// San Francisco, as SwiftUI's `.system`.
+    case sanFrancisco
+  }
+
+  /// What `.system` and the text styles draw in, for every window. Set it before the first
+  /// window opens: text laid out already keeps its face until it is laid out again.
+  nonisolated(unsafe) public static var systemFamily: SystemFamily = .jetBrainsMono {
+    didSet {
+      if systemFamily != oldValue { FontManager.shared.removeResolvedFaces() }
+    }
+  }
+
   public enum Weight: Hashable, Sendable, CaseIterable {
     case ultraLight, thin, light, regular, medium, semibold, bold, heavy, black
 
@@ -188,4 +207,40 @@ struct ResolvedFace {
   let font: CTFont
   /// Asked for italic, but the face has none: slanted when its glyphs are baked.
   let oblique: Bool
+  /// The line box its lines take, when it is not the font's own. See `metrics`.
+  var lineMetrics: LineMetrics? = nil
+
+  /// How tall its lines are. JetBrains Mono as `.system` keeps San Francisco's line box, its
+  /// glyphs centred in it, as the web mirror's `line-height` has it: every row, button and
+  /// field keeps the height the design gives it.
+  var metrics: LineMetrics {
+    self.lineMetrics ?? LineMetrics(self.font)
+  }
+}
+
+/// A line box: above the baseline, below it, and the gap after.
+struct LineMetrics {
+  var ascent: Float
+  var descent: Float
+  var leading: Float
+
+  init(ascent: Float, descent: Float, leading: Float) {
+    self.ascent = ascent
+    self.descent = descent
+    self.leading = leading
+  }
+
+  /// `font`'s own.
+  init(_ font: CTFont) {
+    self.init(ascent: Float(CTFontGetAscent(font)), descent: Float(CTFontGetDescent(font)), leading: Float(CTFontGetLeading(font)))
+  }
+
+  var height: Float { self.ascent + self.descent + self.leading }
+
+  /// `font`'s glyphs centred in a box as tall as `box`, as CSS's `line-height` places them.
+  init(_ font: CTFont, in box: LineMetrics) {
+    let own = LineMetrics(font)
+    let half = (box.height - own.ascent - own.descent) * 0.5
+    self.init(ascent: own.ascent + half, descent: own.descent + half, leading: 0)
+  }
 }

@@ -361,7 +361,7 @@
 }
 .mg-stepper__key:first-child { border-radius: 5px 0 0 5px; }
 .mg-stepper__key:last-child { border-radius: 0 5px 5px 0; }
-.mg-stepper__key:disabled { opacity: 0.3; }
+.mg-stepper__key[aria-disabled="true"] { cursor: default; }
 
 /* ── DisclosureGroup (Form/DisclosureGroup.swift) ─────────────────────── */
 
@@ -379,8 +379,8 @@
   font: var(--mg-font-body);
   text-align: left;
 }
-.mg-disclosure__chevron { color: var(--mg-color-secondary-label); transition: transform var(--mg-motion-interaction-duration) var(--mg-motion-interaction-easing); }
-.mg-disclosure[data-expanded] .mg-disclosure__chevron { transform: rotate(90deg); }
+/* The chevron is an AnimatedIcon (disclosure): it turns itself while expanded. */
+.mg-disclosure__chevron { color: var(--mg-color-secondary-label); }
 .mg-disclosure__content { padding-top: 9px; }
 
 /* ── LabeledContent (Form/LabeledContent.swift) ───────────────────────── */

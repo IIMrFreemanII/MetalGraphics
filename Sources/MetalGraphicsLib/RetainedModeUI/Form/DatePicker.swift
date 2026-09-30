@@ -286,7 +286,8 @@ public final class TimePanel : SingleChildElement {
 ///     CalendarView(selection: start, in: today ... end) { day in start = day }
 public final class CalendarView : SingleChildElement {
   public static let cellSize = float2(32, 28)
-  static let titleFont = TextFont.custom(FontManager.shared.font(named: "HelveticaNeue-Medium"), size: 14)
+  /// The month: the design's type at 14, medium, as the web mirror's `.mg-calendar__title`.
+  static let titleFont = TextFont.system(size: 14, weight: .medium)
   static var dayFont: TextFont { Theme.current.typography.body }
   /// What day it is, for the one drawn in the accent: the wall clock, or a fixed day in a test.
   nonisolated(unsafe) static var today: () -> Date = Date.init
@@ -337,9 +338,8 @@ public final class CalendarView : SingleChildElement {
       })
       return week
     })
-    let previous = DisclosureChevron()
-    previous.progress = 2   // turned to point left
-    let next = DisclosureChevron()
+    let previous = AnimatedIcon(.chevronLeft).foregroundColor(FormMetrics.secondaryColor)
+    let next = AnimatedIcon(.chevronRight).foregroundColor(FormMetrics.secondaryColor)
     let title = self.title
     self.applyContent([
       VStack(alignment: .leading, spacing: 6) {
